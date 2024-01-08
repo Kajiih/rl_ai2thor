@@ -1,0 +1,10 @@
+# Default config
+
+# === Object manipulation actions ===
+hand_movement_actions: True
+
+manualInteract: True # Picked up objects don't teleport to hand
+placeStationary: False # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
+
+# === Object interaction actions ===
+liquid_interaction_actions: False

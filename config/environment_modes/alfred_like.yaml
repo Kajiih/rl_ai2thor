@@ -1,0 +1,15 @@
+# Mode similar to ALFRED
+
+# === Navigation actions ===
+crouch_actions: False
+
+# === Object manipulation actions ===
+drop_actions: False
+throw_actions: False
+push_pull_actions: False
+
+# === Object interaction actions ===
+useUp_actions: False
+liquid_interaction_actions: False
+
+partial_openness: False # If True, objects can be opened partially with a parameter

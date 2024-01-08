@@ -1,0 +1,31 @@
+# Default config which is also the full simulation without hand movement mode
+
+action_categories:
+  # === Navigation actions ===
+  movement_actions: True
+  body_rotation_actions: True
+  head_rotation_actions: True
+  crouch_actions: True
+
+  # === Object manipulation actions ===
+  pickup_put_actions: True
+  drop_actions: True
+  throw_actions: True
+  push_pull_actions: True
+  hand_movement_actions: False
+
+  # === Object interaction actions ===
+  open_close_actions: True
+  toggle_actions: True
+  slice_actions: True
+  useUp_actions: True
+  liquid_interaction_actions: True
+  break_actions: False
+  clean_dirty_actions: False
+
+action_parameters:
+  manualInteract: False # Picked up objects don't teleport to hand
+  placeStationary: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
+
+partial_openness: True # If True, objects can be opened partially with a parameter
+simple_movement_actions: False # Only keep MoveAhead, should at least be used with body_rotation_actions
