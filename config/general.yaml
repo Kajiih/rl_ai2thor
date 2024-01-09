@@ -1,17 +1,17 @@
 # General config file for ai2thor RL benchmark.
 
 seed: 0
-max_steps: 1000 # ** WIP **
+max_episode_steps: 1000
 environment_mode: default # navigation_only, cups_like, alfred_like, default, full_with_hand_movement
 
 discrete_actions: False # If True, all actions requiring a parameter will be discretized
 traget_closest_object: False # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
 
-use_done_action: False # If True, the agent has to explicitly end the episode with the done action after completing the task  # ** WIP **
+use_done_action: False # If True, the agent has to explicitly end the episode with the done action after completing the task  # !! Not implemented yet !!
 
-gray_scale: False # ** WIP **
+gray_scale: False # !! Not implemented yet !!
 
-action_parameters: # ** Should not be modified **
+action_parameters: # ** Not supposed to be modified **
   forceAction: False # If True, some actions will be performed even if they are not valid because it would cause clipping, because the target object is not visible, etc.
   forceVisible: True # If True, hand movement actions will fail if the target object is not visible
 

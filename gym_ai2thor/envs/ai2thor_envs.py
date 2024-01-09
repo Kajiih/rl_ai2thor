@@ -1,22 +1,19 @@
 """
 Gymnasium interface for ai2thor environment.
 """
-from typing import Optional, Any
-from numpy.typing import ArrayLike
-
+import dataclasses
 from abc import abstractmethod
 from dataclasses import dataclass, field
-import dataclasses
-
-import numpy as np
+from typing import Any, Optional
 
 import ai2thor.controller
 import ai2thor.server
 import gymnasium as gym
+import numpy as np
 import yaml
+from numpy.typing import ArrayLike
 
 from utils import update_nested_dict
-
 
 # %% Auxiliary functions
 
@@ -62,9 +59,7 @@ class ITHOREnv(gym.Env):
                 if self.config["action_categories"][action_category]:
                     self.action_availablities[action_category] = True
             else:
-                raise ValueError(
-                    f"Unknown action category {action_category} in environment mode config."
-                )
+                raise ValueError(f"Unknown action category {action_category} in environment mode config.")
         # Handle specific action cases
         if self.config["simple_movement_actions"]:
             self.action_availablities["MoveBack"] = False
@@ -72,25 +67,18 @@ class ITHOREnv(gym.Env):
             self.action_availablities["MoveRight"] = False
         if self.config["use_done_action"]:
             self.action_availablities["Done"] = True
+        if self.config["partial_openness"] and self.config["open_close_actions"]:
+            self.action_availablities["OpenObject"] = False
+            self.action_availablities["CloseObject"] = False
 
         # Create action space dictionary
-        available_actions = [
-            action_name
-            for action_name, available in self.action_availablities.items()
-            if available
-        ]
+        available_actions = [action_name for action_name, available in self.action_availablities.items() if available]
         self.action_idx_to_name = dict(enumerate(available_actions))
-        action_space_dict: dict[str, gym.Space] = {
-            "action_index": gym.spaces.Discrete(len(self.action_idx_to_name))
-        }
+        action_space_dict: dict[str, gym.Space] = {"action_index": gym.spaces.Discrete(len(self.action_idx_to_name))}
         if not self.config["discrete_actions"]:
-            action_space_dict["action_parameter"] = gym.spaces.Box(
-                low=0, high=1, shape=(1,)
-            )
+            action_space_dict["action_parameter"] = gym.spaces.Box(low=0, high=1, shape=(1,))
         if not self.config["target_closest_object"]:
-            action_space_dict["target_object_position"] = gym.spaces.Box(
-                low=0, high=1, shape=(2,)
-            )
+            action_space_dict["target_object_position"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
         self.action_space = gym.spaces.Dict(action_space_dict)
 
@@ -101,9 +89,7 @@ class ITHOREnv(gym.Env):
             controller_parameters["width"],
         )
         nb_channels = 1 if self.config["grayscale"] else 3
-        self.observation_space = gym.spaces.Box(
-            low=0, high=255, shape=(resolution[0], resolution[1], nb_channels)
-        )
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
 
         # === Initialize ai2thor controller ===
         self.config["controller_parameters"]["agentMode"] = "default"
@@ -118,6 +104,7 @@ class ITHOREnv(gym.Env):
         }
         self.last_event = ai2thor.server.Event(dummy_metadata)
         # TODO: Check if this is correct ^
+        self.step_count = 0
 
     def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
         """
@@ -135,9 +122,7 @@ class ITHOREnv(gym.Env):
         """
         # === Get action name, parameters and ai2thor action ===
         if not self.action_space.contains(action):
-            raise gym.error.InvalidAction(
-                f"Action {action} is not contained in the action space"
-            )
+            raise gym.error.InvalidAction(f"Action {action} is not contained in the action space")
         action_name = self.action_idx_to_name[action["action_index"]]
         env_action = ACTIONS_BY_NAME[action_name]
         target_object_coordinates = action.get("target_object_position", None)
@@ -148,16 +133,11 @@ class ITHOREnv(gym.Env):
         if env_action.has_target_object:
             if self.config["target_closest_object"]:
                 # Look for the closest operable object for the action
-                visible_objects = [
-                    obj for obj in self.last_event.metadata["objects"] if obj["visible"]
-                ]
+                visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
                 object_required_property = env_action.object_required_property
                 closest_operable_object, search_distance = None, np.inf
                 for obj in visible_objects:
-                    if (
-                        obj[object_required_property]
-                        and obj["distance"] < search_distance
-                    ):
+                    if obj[object_required_property] and obj["distance"] < search_distance:
                         closest_operable_object = obj
                         search_distance = obj["distance"]
                 if closest_operable_object is not None:
@@ -196,11 +176,14 @@ class ITHOREnv(gym.Env):
         else:
             new_event = failed_action_event
         # TODO: Add logging of the event, especially when the action fails
+
+        self.step_count += 1
+
         observation = new_event.frame
         reward = 0
         # TODO: Implement reward
         terminated = False
-        truncated = False
+        truncated = self.step_count >= self.config["max_episode_steps"]
         info = new_event.metadata
 
         self.last_event = new_event
@@ -224,6 +207,7 @@ class ITHOREnv(gym.Env):
 
         # Setup the scene
         # Chose the task
+        self.step_count = 0
 
         return observation, info
 
@@ -246,7 +230,8 @@ class EnvironmentAction:
         parameter_name (str, optional): Name of the quantitative parameter of the action (if any).
         other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor parameters of the action
             that take a fixed value (e.g. "up" and "right" for MoveHeldObject) and their value.
-        config_dependent_parameters (set[str], optional): Set of parameters that depend on the environment config.
+        config_dependent_parameters (set[str], optional): Set of parameters that depend on
+            the environment config.
 
     Methods:
         perform():
@@ -289,9 +274,7 @@ class EnvironmentAction:
         if self.has_target_object:
             action_parameters["objectId"] = target_object_id
         for parameter_name in self.config_dependent_parameters:
-            action_parameters[parameter_name] = env.config["action_parameters"][
-                parameter_name
-            ]
+            action_parameters[parameter_name] = env.config["action_parameters"][parameter_name]
         event = env.controller.step(
             action=self.ai2thor_action,
             **action_parameters,
@@ -380,11 +363,7 @@ class VisibleWaterCondition(BaseActionCondition):
             bool: Whether the agent has visible running water in its field of view.
         """
         for obj in env.last_event.metadata["objects"]:
-            if (
-                obj["visible"]
-                and obj["isToggledOn"]
-                and obj["objectType"] in ["Faucet", "ShowerHead"]
-            ):
+            if obj["visible"] and obj["isToggledOn"] and obj["objectType"] in ["Faucet", "ShowerHead"]:
                 return True
         return False
 
@@ -414,10 +393,7 @@ class HoldingObjectTypeCondition(BaseActionCondition):
         Returns:
             bool: Whether the agent is holding an object of the required type.
         """
-        return (
-            env.last_event.metadata["inventoryObjects"][0]["objectType"]
-            == self.object_type
-        )
+        return env.last_event.metadata["inventoryObjects"][0]["objectType"] == self.object_type
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
         return f"Agent needs to hold an object of type {self.object_type} to perform action {action.name} ({action.ai2thor_action} in ai2thor)!"
@@ -469,9 +445,7 @@ class ConditionalExecutionAction(EnvironmentAction):
         if self.action_condition(env):
             event = super().perform(env, action_parameter, target_object_id)
         else:
-            event = self.fail_perform(
-                env, error_message=self.action_condition.error_message(self)
-            )
+            event = self.fail_perform(env, error_message=self.action_condition.error_message(self))
 
         return event
 
@@ -641,7 +615,6 @@ open_object_action = EnvironmentAction(
     name="OpenObject",
     ai2thor_action="OpenObject",
     action_category="open_close_actions",
-    parameter_name="openness",
     has_target_object=True,
     object_required_property="openable",
     config_dependent_parameters={"forceAction"},
@@ -650,6 +623,15 @@ close_object_action = EnvironmentAction(
     name="CloseObject",
     ai2thor_action="CloseObject",
     action_category="open_close_actions",
+    has_target_object=True,
+    object_required_property="openable",
+    config_dependent_parameters={"forceAction"},
+)
+partial_open_object_action = EnvironmentAction(
+    name="PartialOpenObject",
+    ai2thor_action="OpenObject",
+    action_category="special",
+    parameter_name="openness",
     has_target_object=True,
     object_required_property="openable",
     config_dependent_parameters={"forceAction"},
@@ -755,8 +737,9 @@ ALL_ACTIONS = [
     throw_object_action,
     push_object_action,
     pull_object_action,
-    open_object_action,
     close_object_action,
+    open_object_action,
+    partial_open_object_action,
     toggle_object_on_action,
     toggle_object_off_action,
     fill_object_with_liquid_action,

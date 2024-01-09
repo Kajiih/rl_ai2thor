@@ -27,5 +27,5 @@ action_parameters:
   manualInteract: False # Picked up objects don't teleport to hand
   placeStationary: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
 
-partial_openness: True # If True, objects can be opened partially with a parameter  # ** WIP **
+partial_openness: True # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
 simple_movement_actions: False # Only keep MoveAhead, should at least be used with body_rotation_actions
