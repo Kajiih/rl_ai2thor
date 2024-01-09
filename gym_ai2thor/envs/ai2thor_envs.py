@@ -1,13 +1,7 @@
 """
 Gymnasium interface for ai2thor environment.
-
-Based on the code from cups-rl: https://github.com/TheMTank/cups-rl (MIT License)
-# TODO: Check if we keep this
-
-# TODO: Check and add type annotations
 """
-from shutil import move
-from typing import Optional, Any, Callable
+from typing import Optional, Any
 from numpy.typing import ArrayLike
 
 from abc import abstractmethod
@@ -24,125 +18,7 @@ import yaml
 from utils import update_nested_dict
 
 
-# %% Action definitions
-ACTION_CATEGORIES = set(
-    [
-        "movement_actions",
-        "body_rotation_actions",
-        "camera_rotation_actions",
-        "crouch_actions",
-        "done_actions",
-        "hand_movement_actions",
-        "pickup_put_actions",
-        "drop_actions",
-        "throw_actions",
-        "push_pull_actions",
-        "open_close_actions",
-        "toggle_actions",
-        "liquid_manipulation_actions",
-        "break_actions",
-        "slice_actions",
-        "use_up_actions",
-        "clean_dirty_actions",
-    ]
-)
-ALL_ACTIONS = {
-    # Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
-    "movement_actions": ["MoveAhead", "MoveBack", "MoveLeft", "MoveRight"],
-    "body_rotation_actions": ["RotateLeft", "RotateRight"],
-    "camera_rotation_actions": ["LookUp", "LookDown"],
-    "crouch_actions": ["Crouch", "Stand"],
-    # note: "Teleport", "TeleportFull" are not available to the agent
-    "done_actions": ["Done"],
-    # Object manipulation actions (see: https://ai2thor.allenai.org/ithor/documentation/interactive-physics)
-    "hand_movement_actions": [
-        "MoveHeldObjectAheadBack",
-        "MoveHeldObjectRightLeft",
-        "MoveHeldObjectUpDown",
-        "RotateHeldObjectRoll",  # Around forward-back axis
-        "RotateHeldObjectPitch",  # Around left-right axis
-        "RotateHeldObjectYaw",  # Around up-down axis
-    ],
-    "pickup_put_actions": ["PickupObject", "PutObject"],
-    "drop_actions": [
-        "DropHandObject"
-    ],  # Like throwing but with 0 force, meant to be used in tandem with the Move/Rotate hand movement actions
-    "throw_actions": ["ThrowObject"],
-    "push_pull_actions": [
-        "PushObject",
-        "PullObject",
-    ],  # Syntactic sugar for DirectionalPush with a pushAngle of 0 and 180 degrees
-    # note: "DirectionalPush", "TouchThenApplyForce" are not available because we keep only actions with a single parameter
-    # Object interaction actions (see: https://ai2thor.allenai.org/ithor/documentation/object-state-changes)
-    "open_close_actions": ["OpenObject", "CloseObject"],
-    # ? Keep only OpenObject when action space is continuous?
-    "toggle_actions": ["ToggleObject"],
-    "liquid_manipulation_actions": ["FillObjectWithLiquid", "EmptyLiquidFromObject"],
-    "break_actions": ["BreakObject"],
-    "slice_actions": ["SliceObject"],
-    "use_up_actions": ["UseUpObject"],
-    "clean_dirty_actions": ["DirtyObject", "CleanObject"],
-    # note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
-}
-PARAMETERIZED_ACTIONS = set(
-    [
-        "MoveAhead",
-        "MoveBack",
-        "MoveLeft",
-        "MoveRight",
-        "RotateLeft",
-        "RotateRight",
-        "LookUp",
-        "LookDown",
-        "MoveHeldObjectAheadBack",
-        "MoveHeldObjectRightLeft",
-        "MoveHeldObjectUpDown",
-        "RotateHeldObjectRoll",
-        "RotateHeldObjectPitch",
-        "RotateHeldObjectYaw",
-        "ThrowObject",
-        "PushObject",
-        "PullObject",
-        "OpenObject",
-    ]
-)
-ACTION_TO_REQUIRED_PROPERTY = {
-    "PickupObject": "pickupable",
-    "PutObject": "receptacle",
-    "PushObject": "moveable",
-    "PullObject": "moveable",
-    "OpenObject": "openable",
-    "CloseObject": "openable",
-    "BreakObject": "breakable",
-    "SliceObject": "sliceable",
-    "ToggleObject": "toggleable",
-    "FillObjectWithLiquid": "canFillWithLiquid",
-    "EmptyLiquidFromObject": "canFillWithLiquid",
-    "UseUpObject": "canBeUsedUp",
-    "DirtyObject": "dirtyable",
-    "CleanObject": "dirtyable",
-}
-OPENABLE_OBJECTS = {}  # TODO: Add openable objects
-BREAKABLE_OBJECTS = {}  # TODO: Add breakable objects
-SLICEABLE_OBJECTS = {}  # TODO: Add sliceable objects
-TOGGLEABLE_OBJECTS = {}  # TODO: Add toggleable objects
-CAN_BE_FILLED_OBJECTS = {}  # TODO: Add fillable objects
-CAN_BE_USED_UP_OBJECTS = {}  # TODO: Add usable objects
-DIRTYABLE_OBJECTS = {}  # TODO: Add cleanable objects
-
-OBJECTS_BY_PROPERTY = {
-    "pickupable": {},
-    "receptacle": {},
-    "moveable": {},
-    "openable": OPENABLE_OBJECTS,
-    "breakable": BREAKABLE_OBJECTS,
-    "sliceable": SLICEABLE_OBJECTS,
-    "toggleable": TOGGLEABLE_OBJECTS,
-    "canFillWithLiquid": CAN_BE_FILLED_OBJECTS,
-    "canBeUsedUp": CAN_BE_USED_UP_OBJECTS,
-    "dirtyable": DIRTYABLE_OBJECTS,
-}
-# TODO: Delete - Unused
+# %% Auxiliary functions
 
 
 # %% Environment definitions
@@ -159,7 +35,7 @@ class ITHOREnv(gym.Env):
 
     def __init__(
         self,
-        custom_config: Optional[dict] = None,  # TODO: Check if we keep this like this
+        custom_config: Optional[dict] = None,
     ) -> None:
         """
         Initialize the environment.
@@ -170,34 +46,32 @@ class ITHOREnv(gym.Env):
         # === Get full config ===
         with open("config/general.yaml", "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
+        # Merge enviroment mode config with general config
+        with open(f"{self.config['enviroment_mode']}.yaml", "r", encoding="utf-8") as f:
+            enviroment_mode_config = yaml.safe_load(f)
+        update_nested_dict(self.config, enviroment_mode_config)
         # Update config with user config
         if custom_config is not None:
             update_nested_dict(self.config, custom_config)
 
-        with open(f"{self.config['enviroment_mode']}.yaml", "r", encoding="utf-8") as f:
-            self.enviroment_mode_config = yaml.safe_load(f)
-
         # === Get action space ===
-        self.action_availablities = {
-            action_name: False
-            for action_category in ACTION_CATEGORIES
-            for action_name in ALL_ACTIONS[action_category]
-        }
-        # TODO: Check if we keep this or replace with a simple set of available actions
+        self.action_availablities = {action.name: False for action in ALL_ACTIONS}
         # Update the available actions with the environment mode config
-        for action_category in self.enviroment_mode_config["action_categories"]:
+        for action_category in self.config["action_categories"]:
             if action_category in ACTION_CATEGORIES:
-                if self.enviroment_mode_config["action_categories"][action_category]:
+                if self.config["action_categories"][action_category]:
                     self.action_availablities[action_category] = True
             else:
                 raise ValueError(
-                    f"Unknown action category in environment mode config: {action_category}"
+                    f"Unknown action category {action_category} in environment mode config."
                 )
-
-        if self.enviroment_mode_config["simple_movement_actions"]:
+        # Handle specific action cases
+        if self.config["simple_movement_actions"]:
             self.action_availablities["MoveBack"] = False
             self.action_availablities["MoveLeft"] = False
             self.action_availablities["MoveRight"] = False
+        if self.config["use_done_action"]:
+            self.action_availablities["Done"] = True
 
         # Create action space dictionary
         available_actions = [
@@ -244,9 +118,8 @@ class ITHOREnv(gym.Env):
         }
         self.last_event = ai2thor.server.Event(dummy_metadata)
         # TODO: Check if this is correct ^
-        self.held_object = None
 
-    def step(self, action: dict) -> tuple[ArrayLike, float, bool, dict]:
+    def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
         """
         Take a step in the environment.
 
@@ -256,26 +129,29 @@ class ITHOREnv(gym.Env):
         Returns:
             observation(ArrayLike): Observation of the environment.
             reward (float): Reward of the action.
-            done (bool): Whether the episode is done.
+            terminated (bool): Whether the agent reaches a terminal state (realized the task).
+            truncated (bool): Whether the limit of steps per episode has been reached.
             info (dict): Additional information about the environment.
         """
-        # === Get action name and parameters ===
+        # === Get action name, parameters and ai2thor action ===
         if not self.action_space.contains(action):
             raise gym.error.InvalidAction(
                 f"Action {action} is not contained in the action space"
             )
         action_name = self.action_idx_to_name[action["action_index"]]
+        env_action = ACTIONS_BY_NAME[action_name]
         target_object_coordinates = action.get("target_object_position", None)
         action_parameter = action.get("action_parameter", None)
 
         # === Identify the target object if needed for the action ===
-        if action_name in ACTION_TO_REQUIRED_PROPERTY:
+        failed_action_event = None
+        if env_action.has_target_object:
             if self.config["target_closest_object"]:
                 # Look for the closest operable object for the action
                 visible_objects = [
                     obj for obj in self.last_event.metadata["objects"] if obj["visible"]
                 ]
-                object_required_property = ACTION_TO_REQUIRED_PROPERTY[action_name]
+                object_required_property = env_action.object_required_property
                 closest_operable_object, search_distance = None, np.inf
                 for obj in visible_objects:
                     if (
@@ -287,10 +163,11 @@ class ITHOREnv(gym.Env):
                 if closest_operable_object is not None:
                     target_object_id = closest_operable_object["objectId"]
                 else:
-                    raise ValueError(
-                        f"No object found with property {object_required_property} to perform action {action_name}"
+                    failed_action_event = env_action.fail_perform(
+                        env=self,
+                        error_message=f"No operable object found to perform action {action_name} in the agent's field of view.",
                     )
-                    # TODO: Log this event, make action fail and don't raise an error
+                    target_object_id = None
             else:
                 query = self.controller.step(
                     action="GetObjectsInFrame",
@@ -301,14 +178,34 @@ class ITHOREnv(gym.Env):
                 if bool(query):
                     target_object_id = query.metadata["actionReturn"]
                 else:
-                    raise ValueError(
-                        f"No object found at position {target_object_coordinates}"
+                    failed_action_event = env_action.fail_perform(
+                        env=self,
+                        error_message=f"No object found at position {target_object_coordinates} to perform action {action_name}.",
                     )
+                    target_object_id = None
                     # TODO: Implement a range of tolerance
-                    # TODO: Log this event, make action fail and don't raise an error
         else:
             target_object_id = None
         # === Perform the action ===
+        if failed_action_event is None:
+            new_event = env_action.perform(
+                self,
+                action_parameter=action_parameter,
+                target_object_id=target_object_id,
+            )
+        else:
+            new_event = failed_action_event
+        # TODO: Add logging of the event, especially when the action fails
+        observation = new_event.frame
+        reward = 0
+        # TODO: Implement reward
+        terminated = False
+        truncated = False
+        info = new_event.metadata
+
+        self.last_event = new_event
+
+        return observation, reward, terminated, truncated, info
 
     def reset(self, seed: Optional[int] = None) -> tuple[ArrayLike, dict]:
         """
@@ -320,17 +217,13 @@ class ITHOREnv(gym.Env):
         super().reset(seed=seed)
 
         self.last_event = self.controller.reset()
-        # TODO: Check if the event is correct
+        observation = self.last_event.frame  # type: ignore
+        info = self.last_event.metadata
+
         # TODO: Add scene id handling
 
         # Setup the scene
         # Chose the task
-
-        observation = self._get_obs()
-        info = self._get_info()
-
-        if self.render_mode == "human":
-            self._render_frame()
 
         return observation, info
 
@@ -338,6 +231,7 @@ class ITHOREnv(gym.Env):
         self.controller.stop()
 
 
+# %% Action Classes
 @dataclass
 class EnvironmentAction:
     """
@@ -346,10 +240,12 @@ class EnvironmentAction:
     Attributes:
         name (str): Name of the action in the RL environment.
         ai2thor_action (str): Name of the ai2thor action corresponding to the environment's action.
+        action_category (str): Category of the action (e.g. movement_actions for MoveAhead).
         has_target_object (bool, optional): Whether the action requires a target object.
+        object_required_property (str, optional): Name of the required property of the target object.
         parameter_name (str, optional): Name of the quantitative parameter of the action (if any).
-        other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor parameters of the action that take
-            a fixed value (e.g. "up" and "right" for MoveHeldObject) and their value.
+        other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor parameters of the action
+            that take a fixed value (e.g. "up" and "right" for MoveHeldObject) and their value.
         config_dependent_parameters (set[str], optional): Set of parameters that depend on the environment config.
 
     Methods:
@@ -360,8 +256,10 @@ class EnvironmentAction:
 
     name: str
     ai2thor_action: str
+    action_category: str
     _: dataclasses.KW_ONLY  # Following arguments are keyword-only
     has_target_object: bool = False
+    object_required_property: Optional[str] = None
     parameter_name: Optional[str] = None
     other_ai2thor_parameters: dict[str, Any] = field(default_factory=dict)
     config_dependent_parameters: set[str] = field(default_factory=set)
@@ -372,7 +270,7 @@ class EnvironmentAction:
         env: ITHOREnv,
         action_parameter: Optional[float] = None,
         target_object_id: Optional[str] = None,
-    ) -> ai2thor.server.Event:
+    ) -> ai2thor.server.MultiAgentEvent:
         """
         Perform the action in the environment.
 
@@ -382,7 +280,7 @@ class EnvironmentAction:
             target_object_id (str, optional): ID of the target object for the action.
 
         Returns:
-            event (ai2thor.controller.Event): Event returned by the controller.
+            event (ai2thor.controller.MultiAgentEvent): Event returned by the controller.
         """
 
         action_parameters = self.other_ai2thor_parameters.copy()
@@ -398,7 +296,28 @@ class EnvironmentAction:
             action=self.ai2thor_action,
             **action_parameters,
         )
-        return event  # type: ignore
+        return event
+
+    def fail_perform(
+        self,
+        env: ITHOREnv,
+        error_message: str,
+    ) -> ai2thor.server.MultiAgentEvent:
+        """
+        Generate an event corresponding to the failure of the action.
+
+        Args:
+            env (ITHOREnv): Environment in which the action was performed.
+            error_message (str): Error message to log in the event.
+
+        Returns:
+            event (ai2thor.server.MultiAgentEvent): Event for the failed action.
+        """
+        event = env.controller.step(action="Done")
+        event.metadata["lastAction"] = self.ai2thor_action
+        event.metadata["lastActionSuccess"] = False
+        event.metadata["errorMessage"] = error_message
+        return event
 
 
 @dataclass
@@ -444,42 +363,6 @@ class BaseActionCondition:
 
 
 @dataclass
-class HoldingObjectTypeCondition(BaseActionCondition):
-    """
-    Condition for actions that require the agent to be holding an object of a
-    specific type (e.g. SliceObject requires the agent to hold a knife).
-
-    Attributes:
-        object_type (str): Type of object that the agent needs to hold.
-    """
-
-    object_type: str
-
-    def __call__(self, env: ITHOREnv) -> bool:
-        """
-        Check whether the agent is holding an object of the required type.
-
-        Args:
-            env (ITHOREnv): Environment in which to check the condition.
-
-        Returns:
-            bool: Whether the agent is holding an object of the required type.
-        """
-        return (
-            env.last_event.metadata["inventoryObjects"][0]["objectType"]
-            == self.object_type
-        )
-
-    def _base_error_message(self, action: EnvironmentAction) -> str:
-        return f"Agent needs to hold an object of type {self.object_type} to perform action {action.ai2thor_action}!"
-
-
-slice_object_condition = HoldingObjectTypeCondition(
-    object_type="Knife",
-    overriding_message="Agent needs to hold a knife to slice an object!",
-)
-
-
 class VisibleWaterCondition(BaseActionCondition):
     """
     Condition for actions that require the agent to have running water in its
@@ -509,12 +392,46 @@ class VisibleWaterCondition(BaseActionCondition):
         return f"Agent needs to have visible running water to perform action {action.ai2thor_action}!"
 
 
+@dataclass
+class HoldingObjectTypeCondition(BaseActionCondition):
+    """
+    Condition for actions that require the agent to be holding an object of a
+    specific type (e.g. SliceObject requires the agent to hold a knife).
+
+    Attributes:
+        object_type (str): Type of object that the agent needs to hold.
+    """
+
+    object_type: str
+
+    def __call__(self, env: ITHOREnv) -> bool:
+        """
+        Check whether the agent is holding an object of the required type.
+
+        Args:
+            env (ITHOREnv): Environment in which to check the condition.
+
+        Returns:
+            bool: Whether the agent is holding an object of the required type.
+        """
+        return (
+            env.last_event.metadata["inventoryObjects"][0]["objectType"]
+            == self.object_type
+        )
+
+    def _base_error_message(self, action: EnvironmentAction) -> str:
+        return f"Agent needs to hold an object of type {self.object_type} to perform action {action.name} ({action.ai2thor_action} in ai2thor)!"
+
+
 fill_object_with_liquid_condition = VisibleWaterCondition(
     overriding_message="Agent needs to have visible running water to fill an object with liquid!"
 )
-
 clean_object_condition = VisibleWaterCondition(
     overriding_message="Agent needs to have visible running water to clean an object!"
+)
+slice_object_condition = HoldingObjectTypeCondition(
+    object_type="Knife",
+    overriding_message="Agent needs to hold a knife to slice an object!",
 )
 
 
@@ -537,7 +454,7 @@ class ConditionalExecutionAction(EnvironmentAction):
         env: ITHOREnv,
         action_parameter: Optional[float] = None,
         target_object_id: Optional[str] = None,
-    ) -> ai2thor.server.Event:
+    ) -> ai2thor.server.MultiAgentEvent:
         """
         Perform the action in the environment.
 
@@ -547,74 +464,89 @@ class ConditionalExecutionAction(EnvironmentAction):
             target_object_id (str, optional): ID of the target object for the action.
 
         Returns:
-            event (ai2thor.controller.Event): Event returned by the controller.
+            event (ai2thor.controller.MultiAgentEvent): Event returned by the controller.
         """
         if self.action_condition(env):
             event = super().perform(env, action_parameter, target_object_id)
         else:
-            event = env.controller.step(action="Done")
-            event.metadata["lastAction"] = self.ai2thor_action
-            event.metadata["lastActionSuccess"] = False
-            event.metadata["errorMessage"] = self.action_condition.error_message(self)
+            event = self.fail_perform(
+                env, error_message=self.action_condition.error_message(self)
+            )
 
-        return event  # type: ignore
+        return event
 
 
+# %% Action definitions
+# Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
 move_ahead_action = EnvironmentAction(
     name="MoveAhead",
     ai2thor_action="MoveAhead",
+    action_category="movement_actions",
     parameter_name="moveMagnitude",
 )
 move_back_action = EnvironmentAction(
     name="MoveBack",
     ai2thor_action="MoveBack",
+    action_category="movement_actions",
     parameter_name="moveMagnitude",
 )
 move_left_action = EnvironmentAction(
     name="MoveLeft",
     ai2thor_action="MoveLeft",
+    action_category="movement_actions",
     parameter_name="moveMagnitude",
 )
 move_right_action = EnvironmentAction(
     name="MoveRight",
     ai2thor_action="MoveRight",
+    action_category="movement_actions",
     parameter_name="moveMagnitude",
 )
 rotate_left_action = EnvironmentAction(
     name="RotateLeft",
     ai2thor_action="RotateLeft",
+    action_category="body_rotation_actions",
     parameter_name="degrees",
 )
 rotate_right_action = EnvironmentAction(
     name="RotateRight",
     ai2thor_action="RotateRight",
+    action_category="body_rotation_actions",
     parameter_name="degrees",
 )
 look_up_action = EnvironmentAction(
     name="LookUp",
     ai2thor_action="LookUp",
+    action_category="camera_rotation_actions",
     parameter_name="degrees",
 )
 look_down_action = EnvironmentAction(
     name="LookDown",
     ai2thor_action="LookDown",
+    action_category="camera_rotation_actions",
     parameter_name="degrees",
 )
 crouch_action = EnvironmentAction(
     name="Crouch",
     ai2thor_action="Crouch",
+    action_category="crouch_actions",
 )
 stand_action = EnvironmentAction(
     name="Stand",
     ai2thor_action="Stand",
+    action_category="crouch_actions",
 )
 done_action = EnvironmentAction(
     name="Done",
     ai2thor_action="Done",
+    action_category="done_actions",
 )
+# Note: "Teleport", "TeleportFull" are not available to the agent
+# Object manipulation actions (see: https://ai2thor.allenai.org/ithor/documentation/interactive-physics)
 move_held_object_ahead_back_action = EnvironmentAction(
     name="MoveHeldObjectAheadBack",
     ai2thor_action="MoveHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="ahead",
     other_ai2thor_parameters={"right": 0, "up": 0},
     config_dependent_parameters={"forceVisible"},
@@ -622,6 +554,7 @@ move_held_object_ahead_back_action = EnvironmentAction(
 move_held_object_right_left_action = EnvironmentAction(
     name="MoveHeldObjectRightLeft",
     ai2thor_action="MoveHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="right",
     other_ai2thor_parameters={"ahead": 0, "up": 0},
     config_dependent_parameters={"forceVisible"},
@@ -629,6 +562,7 @@ move_held_object_right_left_action = EnvironmentAction(
 move_held_object_up_down_action = EnvironmentAction(
     name="MoveHeldObjectUpDown",
     ai2thor_action="MoveHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="up",
     other_ai2thor_parameters={"ahead": 0, "right": 0},
     config_dependent_parameters={"forceVisible"},
@@ -636,125 +570,212 @@ move_held_object_up_down_action = EnvironmentAction(
 rotate_held_object_roll_action = EnvironmentAction(
     name="RotateHeldObjectRoll",
     ai2thor_action="RotateHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="roll",
     other_ai2thor_parameters={"pitch": 0, "yaw": 0},
-)
+)  # Around forward-back axis
 rotate_held_object_pitch_action = EnvironmentAction(
     name="RotateHeldObjectPitch",
     ai2thor_action="RotateHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="pitch",
     other_ai2thor_parameters={"roll": 0, "yaw": 0},
-)
+)  # Around left-right axis
 rotate_held_object_yaw_action = EnvironmentAction(
     name="RotateHeldObjectYaw",
     ai2thor_action="RotateHeldObject",
+    action_category="hand_movement_actions",
     parameter_name="yaw",
     other_ai2thor_parameters={"roll": 0, "pitch": 0},
-)
+)  # Around up-down axis
 pickup_object_action = EnvironmentAction(
     name="PickupObject",
     ai2thor_action="PickupObject",
+    action_category="pickup_put_actions",
     has_target_object=True,
+    object_required_property="pickupable",
     config_dependent_parameters={"forceAction"},
 )
 put_object_action = EnvironmentAction(
     name="PutObject",
     ai2thor_action="PutObject",
+    action_category="pickup_put_actions",
     has_target_object=True,
+    object_required_property="receptacle",
     config_dependent_parameters={"forceAction, manualInteract"},
 )
 drop_hand_object_action = EnvironmentAction(
     name="DropHandObject",
     ai2thor_action="DropHandObject",
+    action_category="drop_actions",
     config_dependent_parameters={"forceAction, placeStationary"},
-)
+)  # Like throwing but with 0 force, meant to be used in tandem with the Move/Rotate hand movement actions
 throw_object_action = EnvironmentAction(
     name="ThrowObject",
     ai2thor_action="ThrowObject",
+    action_category="throw_actions",
     parameter_name="moveMagnitude",
     config_dependent_parameters={"forceAction"},
 )
 push_object_action = EnvironmentAction(
     name="PushObject",
     ai2thor_action="PushObject",
+    action_category="push_pull_actions",
     parameter_name="moveMagnitude",
     has_target_object=True,
+    object_required_property="moveable",
     config_dependent_parameters={"forceAction"},
 )
 pull_object_action = EnvironmentAction(
     name="PullObject",
     ai2thor_action="PullObject",
+    action_category="push_pull_actions",
     parameter_name="moveMagnitude",
     has_target_object=True,
+    object_required_property="moveable",
     config_dependent_parameters={"forceAction"},
 )
+# Note: "DirectionalPush", "TouchThenApplyForce" are not available because we keep only actions with a single parameter
+# Object interaction actions (see: https://ai2thor.allenai.org/ithor/documentation/object-state-changes)
 open_object_action = EnvironmentAction(
     name="OpenObject",
     ai2thor_action="OpenObject",
+    action_category="open_close_actions",
     parameter_name="openness",
     has_target_object=True,
+    object_required_property="openable",
     config_dependent_parameters={"forceAction"},
 )
 close_object_action = EnvironmentAction(
     name="CloseObject",
     ai2thor_action="CloseObject",
+    action_category="open_close_actions",
     has_target_object=True,
+    object_required_property="openable",
     config_dependent_parameters={"forceAction"},
 )
 toggle_object_on_action = EnvironmentAction(
     name="ToggleObjectOn",
     ai2thor_action="ToggleObjectOn",
+    action_category="toggle_actions",
     has_target_object=True,
+    object_required_property="toggleable",
     config_dependent_parameters={"forceAction"},
 )
 toggle_object_off_action = EnvironmentAction(
     name="ToggleObjectOff",
     ai2thor_action="ToggleObjectOff",
+    action_category="toggle_actions",
     has_target_object=True,
+    object_required_property="toggleable",
     config_dependent_parameters={"forceAction"},
 )
 fill_object_with_liquid_action = ConditionalExecutionAction(
     name="FillObjectWithLiquid",
     ai2thor_action="FillObjectWithLiquid",
+    action_category="liquid_manipulation_actions",
     has_target_object=True,
+    object_required_property="canFillWithLiquid",
     config_dependent_parameters={"forceAction"},
     action_condition=fill_object_with_liquid_condition,
 )
 empty_liquid_from_object_action = EnvironmentAction(
     name="EmptyLiquidFromObject",
     ai2thor_action="EmptyLiquidFromObject",
+    action_category="liquid_manipulation_actions",
     has_target_object=True,
+    object_required_property="canFillWithLiquid",
     config_dependent_parameters={"forceAction"},
 )
 break_object_action = EnvironmentAction(
     name="BreakObject",
     ai2thor_action="BreakObject",
+    action_category="break_actions",
     has_target_object=True,
+    object_required_property="breakable",
     config_dependent_parameters={"forceAction"},
 )
 slice_object_action = ConditionalExecutionAction(
     name="SliceObject",
     ai2thor_action="SliceObject",
+    action_category="slice_actions",
     has_target_object=True,
+    object_required_property="sliceable",
     config_dependent_parameters={"forceAction"},
     action_condition=slice_object_condition,
 )
 use_up_object_action = EnvironmentAction(
     name="UseUpObject",
     ai2thor_action="UseUpObject",
+    action_category="use_up_actions",
     has_target_object=True,
+    object_required_property="canBeUsedUp",
     config_dependent_parameters={"forceAction"},
 )
 dirty_object_action = EnvironmentAction(
     name="DirtyObject",
     ai2thor_action="DirtyObject",
+    action_category="clean_dirty_actions",
     has_target_object=True,
+    object_required_property="dirtyable",
     config_dependent_parameters={"forceAction"},
 )
 clean_object_action = ConditionalExecutionAction(
     name="CleanObject",
     ai2thor_action="CleanObject",
+    action_category="clean_dirty_actions",
     has_target_object=True,
+    object_required_property="dirtyable",
     config_dependent_parameters={"forceAction"},
     action_condition=clean_object_condition,
 )
+# Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
+
+ALL_ACTIONS = [
+    move_ahead_action,
+    move_back_action,
+    move_left_action,
+    move_right_action,
+    rotate_left_action,
+    rotate_right_action,
+    look_up_action,
+    look_down_action,
+    crouch_action,
+    stand_action,
+    done_action,
+    move_held_object_ahead_back_action,
+    move_held_object_right_left_action,
+    move_held_object_up_down_action,
+    rotate_held_object_roll_action,
+    rotate_held_object_pitch_action,
+    rotate_held_object_yaw_action,
+    pickup_object_action,
+    put_object_action,
+    drop_hand_object_action,
+    throw_object_action,
+    push_object_action,
+    pull_object_action,
+    open_object_action,
+    close_object_action,
+    toggle_object_on_action,
+    toggle_object_off_action,
+    fill_object_with_liquid_action,
+    empty_liquid_from_object_action,
+    break_object_action,
+    slice_object_action,
+    use_up_object_action,
+    dirty_object_action,
+    clean_object_action,
+]
+
+ACTION_CATEGORIES = set(action.action_category for action in ALL_ACTIONS)
+ACTIONS_BY_CATEGORY = {category: [] for category in ACTION_CATEGORIES}
+for action in ALL_ACTIONS:
+    category = action.action_category
+    ACTIONS_BY_CATEGORY[category].append(action)
+ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
+
+
+# %% Task definitions
+
+# TODO: Implement tasks

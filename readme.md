@@ -34,6 +34,17 @@ Virutal env: `rl_thor_benchmark`
   - [] Implement grayscale image mode
   - [] Implement variable openness
   - [] Handle default parameter value for actions
+  - [] Update environment mode configs (like default)
+  - [] Handle done actions
+  - [] Add reward
+  - [] Handle episode termination (task success/failure)
+  - [] Handle truncation (timeout)
+  - [] Handle depth frame and instance segmentation frame
+  - [] Handle data saving from config
+  - [] Handle step info better
+  - [] Check seed, randomization and reproducibility
+  - [] Handle reset at the end of the episode
+  - [] Add logging of steps
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env

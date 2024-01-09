@@ -1,18 +1,31 @@
 # Navigation mode config
 
-# === Navigation actions ===
-head_rotation_actions: False
-crouch_actions: False
+action_categories:
+  # === Navigation actions ===
+  movement_actions: True
+  body_rotation_actions: True
+  head_rotation_actions: False
+  crouch_actions: False
 
-# === Object manipulation actions ===
-pickup_put_actions: False
-drop_actions: False
-throw_actions: False
-push_pull_actions: False
+  # === Object manipulation actions ===
+  pickup_put_actions: False
+  drop_actions: False
+  throw_actions: False
+  push_pull_actions: False
+  hand_movement_actions: False
 
-# === Object interaction actions ===
-open_close_actions: False
-toggle_actions: False
-liquid_interaction_actions: False
-slice_actions: False
-useUp_actions: False
+  # === Object interaction actions ===
+  open_close_actions: False
+  toggle_actions: False
+  slice_actions: False
+  useUp_actions: False
+  liquid_interaction_actions: False
+  break_actions: False
+  clean_dirty_actions: False
+
+action_parameters:
+  manualInteract: False # Picked up objects don't teleport to hand
+  placeStationary: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
+
+partial_openness: True # If True, objects can be opened partially with a parameter  # ** WIP **
+simple_movement_actions: False # Only keep MoveAhead, should at least be used with body_rotation_actions
