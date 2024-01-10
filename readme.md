@@ -24,22 +24,22 @@ Virutal env: `rl_thor_benchmark`
 
 ### Dev TODOs
 
-- [Started] Add Gymnasium interface
+- [`Started`] Add Gymnasium interface
 
-  - [Started] Create iTHOR environment class
+  - [`Started`] Create iTHOR environment class
 
     - [] Add FlattenActionWrapper
       - [] Handle render modes
-    - [ToTest] Implement target object through position
+    - [`ToTest`] Implement target object through position
     - [] Add scene id handling at reset
     - [] Implement grayscale image mode
-    - [ToTest] Implement variable openness
-    - [ToTest] Handle default parameter value for actions
-      - [ToTest] Handle changing default parameter value from config
+    - [`ToTest`] Implement variable openness
+    - [`ToTest`] Handle default parameter value for actions
+      - [`ToTest`] Handle changing default parameter value from config
     - [] Handle done actions
     - [] Add reward
     - [] Handle episode termination (task success/failure)
-    - [ToTest] Handle truncation (timeout)
+    - [`ToTest`] Handle truncation (timeout)
     - [] Handle depth frame and instance segmentation frame
     - [] Handle data saving from config
     - [] Handle step info better
@@ -47,6 +47,7 @@ Virutal env: `rl_thor_benchmark`
     - [] Handle reset at the end of the episode
     - [] Update docstrings and documentation
     - [] Make gridsize and moveMagnitude paramters coherent (for `MoveAhead`-type actions)
+    - [] Make the whole framework split-aware ('train', 'test' splits, ...)
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env

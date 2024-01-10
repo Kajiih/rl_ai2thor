@@ -16,6 +16,50 @@ from numpy.typing import ArrayLike
 from utils import update_nested_dict, nested_dict_get
 
 
+# %% Task definitions
+@dataclass
+class BaseTask:
+    """
+    Base class for tasks in the environment.
+
+    Methods:
+        get_reward(event): Returns the reward corresponding to the event.
+    """
+
+    @abstractmethod
+    def get_reward(self, event: ai2thor.server.Event) -> tuple[float, bool]:
+        """
+        Returns the reward corresponding to the event.
+
+        Returns:
+            reward (float): Reward obtained at the step.
+            done (bool): Whether the episode finished at this step.
+        """
+        raise NotImplementedError
+
+
+class UndefinedTask(BaseTask):
+    """
+    Undefined task raising an error when used.
+    """
+
+    def get_reward(self, event):
+        raise NotImplementedError(
+            "Task is undefined. This is an unexpected behavior, maybe you forgot to reset the environment?"
+        )
+
+
+@dataclass
+class DummyTask(BaseTask):
+    """
+    Dummy task for testing purposes.
+    A reward of 0 is returned at each step and the episode is never terminated.
+    """
+
+    def get_reward(self, event):
+        return 0, False
+
+
 # %% Environment definitions
 class ITHOREnv(gym.Env):
     """
@@ -120,6 +164,7 @@ class ITHOREnv(gym.Env):
         }
         self.last_event = ai2thor.server.Event(dummy_metadata)
         # TODO: Check if this is correct ^
+        self.task = UndefinedTask()
         self.step_count = 0
 
     def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
@@ -203,9 +248,8 @@ class ITHOREnv(gym.Env):
         self.step_count += 1
 
         observation = new_event.frame
-        reward = 0
+        reward, terminated = self.task.get_reward(new_event)
         # TODO: Implement reward
-        terminated = False
         truncated = self.step_count >= self.config["max_episode_steps"]
         info = new_event.metadata
 
@@ -230,12 +274,23 @@ class ITHOREnv(gym.Env):
 
         # Setup the scene
         # Chose the task
+        self.task = self._sample_task()
+
         self.step_count = 0
 
         return observation, info
 
     def close(self):
         self.controller.stop()
+
+    # TODO: Implement task sampling
+    def _sample_task(self) -> BaseTask:
+        """
+        Sample a task for the environment.
+        # TODO: Make it dependant on the scene..?
+        """
+        # Temporarily return a dummy task
+        return DummyTask()
 
 
 # %% Action Classes
@@ -878,21 +933,3 @@ for action in ALL_ACTIONS:
     category = action.action_category
     ACTIONS_BY_CATEGORY[category].append(action)
 ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
-
-
-# %% Task definitions
-@dataclass
-class BaseTask:
-    """
-    Base class for tasks in the environment.
-    """
-
-    @abstractmethod
-    def get_reward(self, event):
-        """
-        Returns the reward given the corresponding information (state, dictionary with objects
-        collected, distance to goal, etc.) depending on the task.
-        :return: (args, kwargs) First elemnt represents the reward obtained at the step
-                                Second element represents if episode finished at this step
-        """
-        raise NotImplementedError
