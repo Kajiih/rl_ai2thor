@@ -13,9 +13,7 @@ import numpy as np
 import yaml
 from numpy.typing import ArrayLike
 
-from utils import update_nested_dict
-
-# %% Auxiliary functions
+from utils import update_nested_dict, nested_dict_get
 
 
 # %% Environment definitions
@@ -69,7 +67,11 @@ class ITHOREnv(gym.Env):
             self.action_availablities["MoveRight"] = False
         if self.config["use_done_action"]:
             self.action_availablities["Done"] = True
-        if self.config["partial_openness"] and self.config["open_close_actions"]:
+        if (
+            self.config["partial_openness"]
+            and self.config["open_close_actions"]
+            and not self.config["discrete_actions"]
+        ):
             self.action_availablities["OpenObject"] = False
             self.action_availablities["CloseObject"] = False
 
@@ -244,19 +246,40 @@ class EnvironmentAction:
 
     Attributes:
         name (str): Name of the action in the RL environment.
-        ai2thor_action (str): Name of the ai2thor action corresponding to the environment's action.
-        action_category (str): Category of the action (e.g. movement_actions for MoveAhead).
-        has_target_object (bool, optional): Whether the action requires a target object.
-        object_required_property (str, optional): Name of the required property of the target object.
-        parameter_name (str, optional): Name of the quantitative parameter of the action (if any).
-        other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor parameters of the action
-            that take a fixed value (e.g. "up" and "right" for MoveHeldObject) and their value.
-        config_dependent_parameters (set[str], optional): Set of parameters that depend on
-            the environment config.
+        ai2thor_action (str): Name of the ai2thor action corresponding to the
+            environment's action.
+        action_category (str): Category of the action (e.g. movement_actions
+            for MoveAhead).
+        has_target_object (bool, optional): Whether the action requires a target
+            object.
+        object_required_property (str, optional): Name of the required property
+            of the target object.
+        parameter_name (str, optional): Name of the quantitative parameter of
+            the action.
+        parameter_range (tuple[float, float], optional): Range of the quantitative
+            parameter of the action. Can be overriden by the config.
+        parameter_discrete_value (float, optional): Value of the quantitative
+            parameter of the action in discrete environment mode. Can be
+            overriden by the config.
+        other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor
+            parameters of the action that take a fixed value (e.g. "up" and
+            "right" for MoveHeldObject) and their value.
+        config_dependent_parameters (set[str], optional): Set of parameters
+            that depend on the environment config.
 
     Methods:
-        perform():
+        perform(
+            env (ITHOREnv): Environment in which to perform the action.
+            action_parameter (float, optional): Quantitative parameter of the action.
+            target_object_id (str, optional): ID of the target object for the action.
+        ) -> ai2thor.server.MultiAgentEvent:
             Perform the action in the environment and return the event.
+
+        fail_perform(
+            env (ITHOREnv): Environment in which the action was performed.
+            error_message (str): Error message to log in the event.
+        ) -> ai2thor.server.MultiAgentEvent:
+            Generate an event corresponding to the failure of the action.
 
     """
 
@@ -267,10 +290,11 @@ class EnvironmentAction:
     has_target_object: bool = False
     object_required_property: Optional[str] = None
     parameter_name: Optional[str] = None
+    parameter_range: Optional[tuple[float, float]] = None
+    parameter_discrete_value: Optional[float] = None
     other_ai2thor_parameters: dict[str, Any] = field(default_factory=dict)
     config_dependent_parameters: set[str] = field(default_factory=set)
 
-    # TODO: Check if this is correct
     def perform(
         self,
         env: ITHOREnv,
@@ -291,6 +315,32 @@ class EnvironmentAction:
 
         action_parameters = self.other_ai2thor_parameters.copy()
         if self.parameter_name is not None:
+            # Deal with the discrete/continuous environment mode
+            if action_parameter is None:
+                assert self.parameter_discrete_value is not None
+                assert env.config["discrete_actions"]
+                # Override the action parameter with the value from the config
+                action_parameter = nested_dict_get(
+                    d=env.config,
+                    keys=["action_parameter_data", self.name, "discrete_value"],
+                    default=self.parameter_discrete_value,
+                )
+            else:
+                # Rescale the action parameter
+                if self.parameter_range is not None:
+                    # Override the range with the value from the config
+                    parameter_range = nested_dict_get(
+                        d=env.config,
+                        keys=["action_parameter_data", self.name, "range"],
+                        default=self.parameter_range,
+                    )
+                    action_parameter = parameter_range[0] + action_parameter * (
+                        parameter_range[1] - parameter_range[0]
+                    )
+                else:
+                    raise ValueError(
+                        f"Action {self.ai2thor_action} requires a parameter but no parameter range is defined."
+                    )
             action_parameters[self.parameter_name] = action_parameter
         if self.has_target_object:
             action_parameters["objectId"] = target_object_id
@@ -395,6 +445,7 @@ class VisibleWaterCondition(BaseActionCondition):
         return False
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
+        """Default error message for the condition."""
         return f"Agent needs to have visible running water to perform action {action.ai2thor_action}!"
 
 
@@ -426,6 +477,7 @@ class HoldingObjectTypeCondition(BaseActionCondition):
         )
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
+        """Default error message for the condition."""
         return f"Agent needs to hold an object of type {self.object_type} to perform action {action.name} ({action.ai2thor_action} in ai2thor)!"
 
 
@@ -489,48 +541,64 @@ move_ahead_action = EnvironmentAction(
     ai2thor_action="MoveAhead",
     action_category="movement_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 1),
+    parameter_discrete_value=0.25,
 )
 move_back_action = EnvironmentAction(
     name="MoveBack",
     ai2thor_action="MoveBack",
     action_category="movement_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 1),
+    parameter_discrete_value=0.25,
 )
 move_left_action = EnvironmentAction(
     name="MoveLeft",
     ai2thor_action="MoveLeft",
     action_category="movement_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 1),
+    parameter_discrete_value=0.25,
 )
 move_right_action = EnvironmentAction(
     name="MoveRight",
     ai2thor_action="MoveRight",
     action_category="movement_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 1),
+    parameter_discrete_value=0.25,
 )
 rotate_left_action = EnvironmentAction(
     name="RotateLeft",
     ai2thor_action="RotateLeft",
     action_category="body_rotation_actions",
     parameter_name="degrees",
+    parameter_range=(0, 180),
+    parameter_discrete_value=90,
 )
 rotate_right_action = EnvironmentAction(
     name="RotateRight",
     ai2thor_action="RotateRight",
     action_category="body_rotation_actions",
     parameter_name="degrees",
+    parameter_range=(0, 180),
+    parameter_discrete_value=90,
 )
 look_up_action = EnvironmentAction(
     name="LookUp",
     ai2thor_action="LookUp",
     action_category="camera_rotation_actions",
     parameter_name="degrees",
+    parameter_range=(0, 90),
+    parameter_discrete_value=30,
 )
 look_down_action = EnvironmentAction(
     name="LookDown",
     ai2thor_action="LookDown",
     action_category="camera_rotation_actions",
     parameter_name="degrees",
+    parameter_range=(0, 90),
+    parameter_discrete_value=30,
 )
 crouch_action = EnvironmentAction(
     name="Crouch",
@@ -554,6 +622,8 @@ move_held_object_ahead_back_action = EnvironmentAction(
     ai2thor_action="MoveHeldObject",
     action_category="hand_movement_actions",
     parameter_name="ahead",
+    parameter_range=(-0.5, 0.5),
+    # parameter_discrete_value=0.25,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"right": 0, "up": 0},
     config_dependent_parameters={"forceVisible"},
 )
@@ -562,6 +632,8 @@ move_held_object_right_left_action = EnvironmentAction(
     ai2thor_action="MoveHeldObject",
     action_category="hand_movement_actions",
     parameter_name="right",
+    parameter_range=(-0.5, 0.5),
+    # parameter_discrete_value=0.25,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"ahead": 0, "up": 0},
     config_dependent_parameters={"forceVisible"},
 )
@@ -570,6 +642,8 @@ move_held_object_up_down_action = EnvironmentAction(
     ai2thor_action="MoveHeldObject",
     action_category="hand_movement_actions",
     parameter_name="up",
+    parameter_range=(-0.5, 0.5),
+    # parameter_discrete_value=0.25,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"ahead": 0, "right": 0},
     config_dependent_parameters={"forceVisible"},
 )
@@ -578,6 +652,8 @@ rotate_held_object_roll_action = EnvironmentAction(
     ai2thor_action="RotateHeldObject",
     action_category="hand_movement_actions",
     parameter_name="roll",
+    parameter_range=(-180, 180),
+    # parameter_discrete_value=90,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"pitch": 0, "yaw": 0},
 )  # Around forward-back axis
 rotate_held_object_pitch_action = EnvironmentAction(
@@ -585,6 +661,8 @@ rotate_held_object_pitch_action = EnvironmentAction(
     ai2thor_action="RotateHeldObject",
     action_category="hand_movement_actions",
     parameter_name="pitch",
+    parameter_range=(-180, 180),
+    # parameter_discrete_value=90,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"roll": 0, "yaw": 0},
 )  # Around left-right axis
 rotate_held_object_yaw_action = EnvironmentAction(
@@ -592,6 +670,8 @@ rotate_held_object_yaw_action = EnvironmentAction(
     ai2thor_action="RotateHeldObject",
     action_category="hand_movement_actions",
     parameter_name="yaw",
+    parameter_range=(-180, 180),
+    # parameter_discrete_value=90,  # ! Should not be used in discrete environment mode
     other_ai2thor_parameters={"roll": 0, "pitch": 0},
 )  # Around up-down axis
 pickup_object_action = EnvironmentAction(
@@ -621,6 +701,8 @@ throw_object_action = EnvironmentAction(
     ai2thor_action="ThrowObject",
     action_category="throw_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 100),
+    parameter_discrete_value=50,
     config_dependent_parameters={"forceAction"},
 )
 push_object_action = EnvironmentAction(
@@ -628,6 +710,8 @@ push_object_action = EnvironmentAction(
     ai2thor_action="PushObject",
     action_category="push_pull_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 200),
+    parameter_discrete_value=100,
     has_target_object=True,
     object_required_property="moveable",
     config_dependent_parameters={"forceAction"},
@@ -637,6 +721,8 @@ pull_object_action = EnvironmentAction(
     ai2thor_action="PullObject",
     action_category="push_pull_actions",
     parameter_name="moveMagnitude",
+    parameter_range=(0, 200),
+    parameter_discrete_value=100,
     has_target_object=True,
     object_required_property="moveable",
     config_dependent_parameters={"forceAction"},
@@ -664,6 +750,8 @@ partial_open_object_action = EnvironmentAction(
     ai2thor_action="OpenObject",
     action_category="_special",
     parameter_name="openness",
+    parameter_range=(0, 1),
+    # parameter_discrete_value=1,  # ! Should not be used in discrete environment mode
     has_target_object=True,
     object_required_property="openable",
     config_dependent_parameters={"forceAction"},
@@ -690,6 +778,7 @@ fill_object_with_liquid_action = ConditionalExecutionAction(
     action_category="liquid_manipulation_actions",
     has_target_object=True,
     object_required_property="canFillWithLiquid",
+    other_ai2thor_parameters={"fillLiquid": "water"},
     config_dependent_parameters={"forceAction"},
     action_condition=fill_object_with_liquid_condition,
 )
@@ -792,5 +881,18 @@ ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
 
 
 # %% Task definitions
+@dataclass
+class BaseTask:
+    """
+    Base class for tasks in the environment.
+    """
 
-# TODO: Implement tasks
+    @abstractmethod
+    def get_reward(self, event):
+        """
+        Returns the reward given the corresponding information (state, dictionary with objects
+        collected, distance to goal, etc.) depending on the task.
+        :return: (args, kwargs) First elemnt represents the reward obtained at the step
+                                Second element represents if episode finished at this step
+        """
+        raise NotImplementedError

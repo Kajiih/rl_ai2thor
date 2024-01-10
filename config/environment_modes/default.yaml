@@ -27,5 +27,66 @@ action_parameters:
   manualInteract: False # Picked up objects don't teleport to hand
   placeStationary: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
 
-partial_openness: True # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
+partial_openness: True # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled and environment is continous) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
 simple_movement_actions: False # Only keep MoveAhead, should at least be used with body_rotation_actions
+
+action_parameter_data:
+  # === Navigation actions ===
+  MoveAhead:
+    range: [0, 1]
+    discrete_value: 0.25
+  MoveBack:
+    range: [0, 1]
+    discrete_value: 0.25
+  MoveLeft:
+    range: [0, 1]
+    discrete_value: 0.25
+  MoveRight:
+    range: [0, 1]
+    discrete_value: 0.25
+  RotateLeft:
+    range: [0, 180]
+    discrete_value: 90
+  RotateRight:
+    range: [0, 180]
+    discrete_value: 90
+  LookUp:
+    range: [0, 90]
+    discrete_value: 30
+  LookDown:
+    range: [0, 90]
+    discrete_value: 30
+  # === Object manipulation actions ===
+  MoveHeldObject:
+    ahead:
+      range: [-0.5, 0.5]
+      # discrete_value: 0.25 # ! Should not be used in discrete environment mode
+    right:
+      range: [-0.5, 0.5]
+      # discrete_value: 0.25 # ! Should not be used in discrete environment mode
+    up:
+      range: [-0.5, 0.5]
+      # discrete_value: 0.25 # ! Should not be used in discrete environment mode
+  RotateHeldObject:
+    roll:
+      range: [-180, 180]
+      # discrete_value: 90 # ! Should not be used in discrete environment mode
+    pitch:
+      range: [-180, 180]
+      # discrete_value: 90 # ! Should not be used in discrete environment mode
+    yaw:
+      range: [-180, 180]
+      # discrete_value: 90 # ! Should not be used in discrete environment mode
+    ThrowObject:
+      range: [0, 100]
+      discrete_value: 50
+    PushObject:
+      range: [0, 200]
+      discrete_value: 100
+    PullObject:
+      range: [0, 200]
+      discrete_value: 100
+  # === Object interaction actions ===
+  PartialOpenObject:
+    range: [0, 1]
+    # discrete_value: 1 # ! Should not be used in discrete environment mode

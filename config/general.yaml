@@ -19,9 +19,9 @@ controller_parameters:
   visibilityDistance: 1.5
 
   # Step sizes
-  gridSize: 0.25
+  gridSize: 0.25 # ** Don't affect the moveMagnitude of MoveAhead, MoveBack, MoveLeft, MoveRight here
   snapToGrid: True
-  rotateStepDegrees: 90
+  # rotateStepDegrees: 90 # TODO: Remove (deprecated)
 
   # Image modalities  # ! Unused # TODO: Remove
   # renderDepthImage: False

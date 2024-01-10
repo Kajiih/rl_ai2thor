@@ -27,22 +27,26 @@ Virutal env: `rl_thor_benchmark`
 - [Started] Add Gymnasium interface
 
   - [Started] Create iTHOR environment class
-  - [] Add FlattenActionWrapper
-    - [] Handle render modes
-  - [ToTest] Implement target object through position
-  - [] Add scene id handling at reset
-  - [] Implement grayscale image mode
-  - [ToTest] Implement variable openness
-  - [] Handle default parameter value for actions
-  - [] Handle done actions
-  - [] Add reward
-  - [] Handle episode termination (task success/failure)
-  - [ToTest] Handle truncation (timeout)
-  - [] Handle depth frame and instance segmentation frame
-  - [] Handle data saving from config
-  - [] Handle step info better
-  - [] Check seed, randomization and reproducibility
-  - [] Handle reset at the end of the episode
+
+    - [] Add FlattenActionWrapper
+      - [] Handle render modes
+    - [ToTest] Implement target object through position
+    - [] Add scene id handling at reset
+    - [] Implement grayscale image mode
+    - [ToTest] Implement variable openness
+    - [ToTest] Handle default parameter value for actions
+      - [ToTest] Handle changing default parameter value from config
+    - [] Handle done actions
+    - [] Add reward
+    - [] Handle episode termination (task success/failure)
+    - [ToTest] Handle truncation (timeout)
+    - [] Handle depth frame and instance segmentation frame
+    - [] Handle data saving from config
+    - [] Handle step info better
+    - [] Check seed, randomization and reproducibility
+    - [] Handle reset at the end of the episode
+    - [] Update docstrings and documentation
+    - [] Make gridsize and moveMagnitude paramters coherent (for `MoveAhead`-type actions)
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env
@@ -54,12 +58,16 @@ Virutal env: `rl_thor_benchmark`
 
 ### Final TODOs
 
-- [] Check and remove ipdb traces from code
+- [] Check the different config files
+- [] Check and remove ipdb traces
+- [] Check and remove asserts
 - [] Check remaining TODOs in code
 - [] Check and remove unused code
 - [] Check and remove unused dependencies
 - [] Check and remove unused files
 - [] Test the framework with clean install
+- [] Double docstrings and comments
+- [] Add documentation
 
 ## Interesting Github Issues
 
