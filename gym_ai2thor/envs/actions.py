@@ -1,5 +1,5 @@
 """
-Actions for AI2THOR RL Environment.
+Module for actions for AI2THOR RL Environment, interfaces between the agent and the ai2thor controller.
 
 This module provides classes and definitions for handling actions, conditions, and interactions within the AI2THOR simulated environment
 
@@ -55,17 +55,18 @@ Constants:
 - ACTIONS_BY_NAME: Dictionary mapping action names to their corresponding definitions.
 """
 
-from abc import abstractmethod
 import dataclasses
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import ai2thor.server
 from ai2thor_envs import ITHOREnv
+
 from utils import nested_dict_get
+from ai2thor_types import EventLike
 
 
-# %% Action Classes
+# === Action Classes ===
 @dataclass
 class EnvironmentAction:
     """
@@ -99,13 +100,13 @@ class EnvironmentAction:
             env (ITHOREnv): Environment in which to perform the action.
             action_parameter (float, optional): Quantitative parameter of the action.
             target_object_id (str, optional): ID of the target object for the action.
-        ) -> ai2thor.server.MultiAgentEvent:
+        ) -> EventLike:
             Perform the action in the environment and return the event.
 
         fail_perform(
             env (ITHOREnv): Environment in which the action was performed.
             error_message (str): Error message to log in the event.
-        ) -> ai2thor.server.MultiAgentEvent:
+        ) -> EventLike:
             Generate an event corresponding to the failure of the action.
 
     """
@@ -127,7 +128,7 @@ class EnvironmentAction:
         env: ITHOREnv,
         action_parameter: Optional[float] = None,
         target_object_id: Optional[str] = None,
-    ) -> ai2thor.server.MultiAgentEvent:
+    ) -> EventLike:
         """
         Perform the action in the environment.
 
@@ -137,7 +138,7 @@ class EnvironmentAction:
             target_object_id (str, optional): ID of the target object for the action.
 
         Returns:
-            event (ai2thor.controller.MultiAgentEvent): Event returned by the controller.
+            event (EventLike): Event returned by the controller.
         """
 
         action_parameters = self.other_ai2thor_parameters.copy()
@@ -185,7 +186,7 @@ class EnvironmentAction:
         self,
         env: ITHOREnv,
         error_message: str,
-    ) -> ai2thor.server.MultiAgentEvent:
+    ) -> EventLike:
         """
         Generate an event corresponding to the failure of the action.
 
@@ -194,7 +195,7 @@ class EnvironmentAction:
             error_message (str): Error message to log in the event.
 
         Returns:
-            event (ai2thor.server.MultiAgentEvent): Event for the failed action.
+            event (EventLike): Event for the failed action.
         """
         event = env.controller.step(action="Done")
         event.metadata["lastAction"] = self.ai2thor_action
@@ -243,6 +244,47 @@ class BaseActionCondition:
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
         return f"Condition {self.__class__.__name__} not met for action {action.ai2thor_action}!"
+
+
+@dataclass
+class ConditionalExecutionAction(EnvironmentAction):
+    """
+    Class for actions that can only be performed under certain conditions that
+    are not natively handled by ai2thor (e.g. SliceObject can only be performed
+    if the agent is holding a knife).
+
+    Attributes:
+        condition_function (Callable): Function that takes the environment as input
+            and returns a boolean indicating whether the action can be performed.
+    """
+
+    action_condition: BaseActionCondition
+
+    def perform(
+        self,
+        env: ITHOREnv,
+        action_parameter: Optional[float] = None,
+        target_object_id: Optional[str] = None,
+    ) -> EventLike:
+        """
+        Perform the action in the environment.
+
+        Args:
+            env (ITHOREnv): Environment in which to perform the action.
+            action_parameter (float, optional): Quantitative parameter of the action.
+            target_object_id (str, optional): ID of the target object for the action.
+
+        Returns:
+            event (EventLike): Event returned by the controller.
+        """
+        if self.action_condition(env):
+            event = super().perform(env, action_parameter, target_object_id)
+        else:
+            event = self.fail_perform(
+                env, error_message=self.action_condition.error_message(self)
+            )
+
+        return event
 
 
 @dataclass
@@ -320,48 +362,7 @@ slice_object_condition = HoldingObjectTypeCondition(
 )
 
 
-@dataclass
-class ConditionalExecutionAction(EnvironmentAction):
-    """
-    Class for actions that can only be performed under certain conditions that
-    are not natively handled by ai2thor (e.g. SliceObject can only be performed
-    if the agent is holding a knife).
-
-    Attributes:
-        condition_function (Callable): Function that takes the environment as input
-            and returns a boolean indicating whether the action can be performed.
-    """
-
-    action_condition: BaseActionCondition
-
-    def perform(
-        self,
-        env: ITHOREnv,
-        action_parameter: Optional[float] = None,
-        target_object_id: Optional[str] = None,
-    ) -> ai2thor.server.MultiAgentEvent:
-        """
-        Perform the action in the environment.
-
-        Args:
-            env (ITHOREnv): Environment in which to perform the action.
-            action_parameter (float, optional): Quantitative parameter of the action.
-            target_object_id (str, optional): ID of the target object for the action.
-
-        Returns:
-            event (ai2thor.controller.MultiAgentEvent): Event returned by the controller.
-        """
-        if self.action_condition(env):
-            event = super().perform(env, action_parameter, target_object_id)
-        else:
-            event = self.fail_perform(
-                env, error_message=self.action_condition.error_message(self)
-            )
-
-        return event
-
-
-# %% Environment action definitions
+# == Actions definitions ==
 # Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
 move_ahead_action = EnvironmentAction(
     name="MoveAhead",
@@ -661,6 +662,8 @@ clean_object_action = ConditionalExecutionAction(
 )
 # Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
 
+
+# === Constants ===
 ALL_ACTIONS = [
     move_ahead_action,
     move_back_action,

@@ -1,19 +1,21 @@
 """
 Gymnasium interface for AI2THOR RL environment.
+
+TODO: Finish module docstrings.
 """
 
 from typing import Optional
 
 import ai2thor.controller
-import ai2thor.server
+from ai2thor.server import Event
 import gymnasium as gym
 import numpy as np
 import yaml
-from actions import ACTION_CATEGORIES, ACTIONS_BY_NAME, ALL_ACTIONS
 from numpy.typing import ArrayLike
-from tasks import BaseTask, DummyTask, UndefinedTask
 
 from utils import update_nested_dict
+from tasks import BaseTask, DummyTask, UndefinedTask
+from actions import ACTION_CATEGORIES, ACTIONS_BY_NAME, ALL_ACTIONS
 
 
 # %% Environment definitions
@@ -118,7 +120,7 @@ class ITHOREnv(gym.Env):
             "screenWidth": self.config["controller_parameters"]["width"],
             "screenHeight": self.config["controller_parameters"]["height"],
         }
-        self.last_event = ai2thor.server.Event(dummy_metadata)
+        self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
         self.task = UndefinedTask()
         self.step_count = 0
@@ -199,12 +201,13 @@ class ITHOREnv(gym.Env):
             )
         else:
             new_event = failed_action_event
+        new_event.metadata["target_object_id"] = target_object_id
         # TODO: Add logging of the event, especially when the action fails
 
         self.step_count += 1
 
         observation = new_event.frame
-        reward, terminated = self.task.get_reward(new_event)
+        reward, terminated = self.task.get_reward(self.last_event, new_event)
         # TODO: Implement reward
         truncated = self.step_count >= self.config["max_episode_steps"]
         info = new_event.metadata

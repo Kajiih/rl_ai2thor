@@ -9,10 +9,10 @@ action_categories:
 
   # === Object manipulation actions ===
   pickup_put_actions: True
-  drop_actions: True
-  throw_actions: True
+  drop_actions: True # Need pickup_put_actions to be True
+  throw_actions: True # Need pickup_put_actions to be True
   push_pull_actions: True
-  hand_movement_actions: False
+  hand_movement_actions: False # Need pickup_put_actions to be True
 
   # === Object interaction actions ===
   open_close_actions: True

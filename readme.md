@@ -28,6 +28,10 @@ Virutal env: `rl_thor_benchmark`
 
   - [`Started`] Create iTHOR environment class
 
+    - [] Add checking if actions are compatible with each other
+      - [] Can't be 100% accurate, but we can do some checks (e.g.`hand_movements` implies `pickup`, ...)
+    - [] Handle sliced items in tasks
+      - [] In candidate objects
     - [] Add FlattenActionWrapper
       - [] Handle render modes
     - [`ToTest`] Implement target object through position
@@ -48,6 +52,7 @@ Virutal env: `rl_thor_benchmark`
     - [] Update docstrings and documentation
     - [] Make gridsize and moveMagnitude paramters coherent (for `MoveAhead`-type actions)
     - [] Make the whole framework split-aware ('train', 'test' splits, ...)
+    - [] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env
