@@ -4,6 +4,7 @@
 # python >= 3.10 (kw_only attributes)
 ai2thor #(developped with in 5.0.0)
 gymnasium #(developped with in 0.29.1)
+networkx
 
 
 ###################
@@ -12,3 +13,5 @@ gymnasium #(developped with in 0.29.1)
 ipykernel
 jupyter
 matplotlib
+# pygraphviz # https://pygraphviz.github.io/documentation/stable/install.html
+# pytest

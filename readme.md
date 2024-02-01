@@ -53,6 +53,7 @@ Virutal env: `rl_thor_benchmark`
     - [] Make gridsize and moveMagnitude paramters coherent (for `MoveAhead`-type actions)
     - [] Make the whole framework split-aware ('train', 'test' splits, ...)
     - [] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
+    - [] Add parameters to relations and properties
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env
