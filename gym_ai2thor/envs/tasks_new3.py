@@ -87,6 +87,8 @@ ObjId = NewType("ObjId", str)
 
 # %% === Items ===
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
+# TODO: Store relation in a list and store the results using the id of the relation to simplify the code
+# TODO: Store the results in the class and write methods to return views of the results to simplify the code
 class TaskItem[T: Hashable]:
     """
     An item in the definition of a task.
@@ -339,9 +341,18 @@ class TaskItem[T: Hashable]:
 
     def compute_interesting_candidates(
         self, scene_objects_dict: dict[ObjId, Any]
-    ) -> set[ObjId]:
+    ) -> tuple[
+        set[ObjId],
+        dict[
+            Literal["properties", "relations"],
+            dict[ObjPropId, dict[ObjId, bool]]
+            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+        ],
+        dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
+    ]:
         """
-        Return the set of interesting candidates for the item.
+        Return the set of interesting candidates for the item and the results and scores
+        of each object for the item.
 
         The interesting candidates are those that can lead to a maximum of task advancement
         depending on the assignment of objects to the other items.
@@ -362,6 +373,10 @@ class TaskItem[T: Hashable]:
 
         Returns:
             interesting_candidates (set[ObjId]): Set of interesting candidates for the item.
+            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]):
+                Results of each object for the item.
+            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+                Scores of each object for the item.
         """
 
         # Compute the results of each object for the item
@@ -406,7 +421,7 @@ class TaskItem[T: Hashable]:
                     interesting_candidates.append(candidate_id)
                     break
 
-        return set(interesting_candidates)
+        return set(interesting_candidates), objects_results, objects_scores
 
     def _get_stronger_candidate(
         self,
@@ -594,7 +609,24 @@ class ItemOverlapClass[T: Hashable]:
 
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[ObjId, Any]
-    ) -> list[dict[TaskItem[T], ObjId]]:
+    ) -> tuple[
+        list[dict[TaskItem[T], ObjId]],
+        dict[
+            TaskItem[T],
+            dict[
+                Literal["properties", "relations"],
+                dict[ObjPropId, dict[ObjId, bool]]
+                | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            ],
+        ],
+        dict[
+            TaskItem[T],
+            dict[
+                ObjId,
+                dict[Literal["sum_property_scores", "sum_relation_scores"], float],
+            ],
+        ],
+    ]:
         """
         Return the interesting assignments of objects to the items in the overlap class.
 
@@ -614,10 +646,24 @@ class ItemOverlapClass[T: Hashable]:
             interesting_assignments (list[dict[TaskItem[T], ObjId]]):
                 List of the interesting assignments of objects to the items in the overlap class.
         """
-        interesting_candidates = {
+        interesting_candidates_data = {
             item: item.compute_interesting_candidates(scene_objects_dict)
             for item in self.items
         }
+        # Extract the interesting candidates, results and scores
+        interesting_candidates = {
+            item: data[0] for item, data in interesting_candidates_data.items()
+        }
+        items_results = {
+            item: data[1] for item, data in interesting_candidates_data.items()
+        }
+        items_scores: dict[
+            TaskItem[T],
+            dict[
+                ObjId,
+                dict[Literal["sum_property_scores", "sum_relation_scores"], float],
+            ],
+        ] = {item: data[2] for item, data in interesting_candidates_data.items()}
 
         # Filter the valid assignments to keep only the ones with interesting candidates
         interesting_assignments = []
@@ -627,7 +673,7 @@ class ItemOverlapClass[T: Hashable]:
             ):
                 interesting_assignments.append(assignment)
 
-        return interesting_assignments
+        return interesting_assignments, items_results, items_scores
 
 
 # === Properties and Relations ===
@@ -886,12 +932,20 @@ class GraphTask[T: Hashable]:
             for overlap_class in overlap_classes.values()
         ]
 
+        # Compute max task advancement
+        # Total number of properties and relations of the items
+        self.max_task_advancement = sum(
+            len(item.properties) + len(item.relations) for item in self.items
+        )
+
         # TODO: Finish this method
         # Add the first computation of the graph with interesting candidates
 
     # TODO: Add trying only the top k interesting assignements according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
     # TODO: Implement this method
-    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict]:
+    def get_task_advancement(
+        self, event: EventLike
+    ) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -902,6 +956,10 @@ class GraphTask[T: Hashable]:
         assignments of the overlap classes. Interesting global assignments are the ones
         constructed with only interesting overlap class assignments.
 
+        For a given global assignment, the task advancement is the sum of the property
+        scores of the assigned objects for each item and the sum of their relations scores
+        for relations that have a satisfying object assigned to the related item (i.e. we
+        consider strictly satisfied relations and not semi satisfied relations).
 
         Args:
             event (EventLike): Event corresponding to the state of the scene.
@@ -909,21 +967,76 @@ class GraphTask[T: Hashable]:
         Returns:
             task_advancement (float): Task advancement.
             is_completed (bool): True if the task is completed.
-            info (dict): Additional information about the task advancement.
+            info (dict[str, Any]): Additional information about the task advancement.
         """
-        # Compute the intersting assignemnts for each overlap class
-        interesting_assignments = [
+        # Compute the intersting assignemnts for each overlap class and the results and scores of each candidate for each item
+        overlap_classes_assignment_data = [
             overlap_class.compute_interesting_assignments(event.metadata["objects"])
             for overlap_class in self.overlap_classes
         ]
+        # Extract the interesting assignments, results and scores
+        interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
+        # Merge the results and scores of the items
+        items_results = {
+            item: item_result
+            for overlap_class_assignment_data in overlap_classes_assignment_data
+            for item, item_result in overlap_class_assignment_data[1].items()
+        }
+        items_scores = {
+            item: item_score
+            for overlap_class_assignment_data in overlap_classes_assignment_data
+            for item, item_score in overlap_class_assignment_data[2].items()
+        }
+
         # Construct a generator of the cartesian product of the interesting assignments
-        global_assignments = itertools.product(*interesting_assignments)
+        assignment_products = itertools.product(*interesting_assignments)
 
         max_task_advancement = 0
+        best_assignment = {}
         is_terminated = False
-        
-        # 
-        
+
+        # Compute the task advancement for each global assignment
+        for assignment_product in assignment_products:
+            # Merge the assignments of the overlap classes
+            global_assignment = {
+                item: obj_id
+                for overlap_class_assignment in assignment_product
+                for item, obj_id in overlap_class_assignment.items()
+            }
+            task_advancement = 0
+            # Add the property scores
+            for item, obj_id in global_assignment.items():
+                task_advancement += items_scores[item][obj_id]["sum_property_scores"]
+            # Add the strictly satisfied relation scores
+            for item, obj_id in global_assignment.items():
+                item_relations_results: dict[
+                    T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]
+                ] = items_results[item][
+                    "relations"
+                ]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
+                for related_item, relations in item_relations_results.items():
+                    related_item_assigned_obj_id = global_assignment[related_item]
+                    for relation_type_id, relations_by_obj_id in relations.items():
+                        satisfying_obj_ids = relations_by_obj_id[obj_id]
+                        if related_item_assigned_obj_id in satisfying_obj_ids:
+                            task_advancement += 1
+            if task_advancement > max_task_advancement:
+                max_task_advancement = task_advancement
+                best_assignment = global_assignment
+                if task_advancement == self.max_task_advancement:
+                    is_terminated = True
+                    break
+
+        # Add info about the task advancement
+        info = {}
+        # Add best assignement, mapping between item ids and the assigned object ids
+        info["best_assignment"] = {
+            item.id: obj_id for item, obj_id in best_assignment.items()
+        }
+        # TODO: Add other info
+
+        return max_task_advancement, is_terminated, info
+
     # TODO: Improve this
     def __repr__(self) -> str:
         return f"GraphTask({self.task_graph})"
