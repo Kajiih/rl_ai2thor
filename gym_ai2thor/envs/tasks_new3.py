@@ -86,6 +86,7 @@ ObjId = NewType("ObjId", str)
 
 
 # %% === Items ===
+# TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
 class TaskItem[T: Hashable]:
     """
     An item in the definition of a task.
@@ -172,24 +173,6 @@ class TaskItem[T: Hashable]:
                 return False
         return True
 
-    # TODO? Delete: Unused
-    def _nb_satisfied_prop(self, obj_metadata: dict[ObjMetadataId, Any]) -> int:
-        """
-        Return the number of properties satisfied by the given object.
-
-        Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
-
-        Returns:
-            nb_satisfied_prop (int): Number of properties satisfied by the given object.
-        """
-        nb_satisfied_prop = sum(
-            1
-            for prop, prop_value in self.properties.items()
-            if obj_metadata[prop.target_ai2thor_property] == prop_value
-        )
-        return nb_satisfied_prop
-
     def _get_properties_satisfaction(
         self, obj_metadata: dict[ObjMetadataId, Any]
     ) -> dict[ObjPropId, bool]:
@@ -209,49 +192,6 @@ class TaskItem[T: Hashable]:
             for prop, prop_value in self.properties.items()
         }
         return prop_satisfaction
-
-    # TODO? Delete: Unused
-    def _nb_semi_satisfied_relations(
-        self, obj_metadata: dict[ObjMetadataId, Any]
-    ) -> int:
-        """
-        Return the number of relations semi satisfied by the given object.
-
-        Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
-
-        Returns:
-            nb_semi_satisfied_relations (int): Number of relations semi satisfied by the given object.
-        """
-        nb_semi_satisfied_relations = sum(
-            1 for relation in self.relations if relation.is_semi_satisfied(obj_metadata)
-        )
-        return nb_semi_satisfied_relations
-
-    # TODO? Delete: Unused
-    def _get_relations_semi_satisfaction(
-        self, obj_metadata: dict[ObjMetadataId, Any]
-    ) -> dict[T, dict[RelationTypeId, bool]]:
-        """
-        Return a dictionary indicating which relations are semi satisfied by the given object.
-
-        The relations are organized by related item.
-
-        Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
-
-        Returns:
-            relation_semi_satisfaction (dict[T, dict[RelationTypeId, bool]]): Dictionary
-                indicating which relations are semi satisfied by the given object.
-        """
-        relation_semi_satisfaction = {
-            related_item_id: {
-                relation.type_id: relation.is_semi_satisfied(obj_metadata)
-                for relation in self.organized_relations[related_item_id].values()
-            }
-            for related_item_id in self.organized_relations.keys()
-        }
-        return relation_semi_satisfaction
 
     def _get_relations_semi_satisfying_objects(
         self, obj_metadata: dict[ObjMetadataId, Any]
@@ -307,95 +247,6 @@ class TaskItem[T: Hashable]:
 
         return results
 
-    # TODO? Delete?
-    def _compute_all_obj_results_old(
-        self, scene_objects_dict: dict[ObjId, Any]
-    ) -> dict[
-        ObjId,
-        dict[
-            Literal["properties", "relations"],
-            dict[ObjPropId, bool]
-            | dict[
-                T,
-                dict[RelationTypeId, set[ObjId]],
-            ],
-        ],
-    ]:
-        """
-        Return the results dictionnary of each object for the item.
-
-        Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
-                the objects in the scene. The keys are the object ids.
-
-        Returns:
-            results (dict[ObjId, dict]): Results of each object for the item.
-        """
-        results = {
-            obj_id: self._compute_obj_results(scene_objects_dict[obj_id])
-            for obj_id in self.candidate_ids
-        }
-        return results
-
-    # TODO? Delete? May bot be correct
-    def _compute_all_obj_results_slow(
-        self, scene_objects_dict: dict[ObjId, Any]
-    ) -> dict[
-        Literal["properties", "relations"],
-        dict[ObjPropId, dict[ObjId, bool]]
-        | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
-    ]:
-        """
-        Return the results dictionnary with the results of each object for the item.
-
-        Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
-                the objects in the scene. The keys are the object ids.
-
-        Returns:
-            results (dict[ObjId, dict]): Results of each object for the item.
-        """
-        results_by_obj_id: dict[
-            ObjId,
-            dict[
-                Literal["properties", "relations"],
-                dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
-            ],
-        ] = {
-            obj_id: self._compute_obj_results(scene_objects_dict[obj_id])
-            for obj_id in self.candidate_ids
-        }
-
-        # Reorganize the results with the object_ids at the deepest level
-        results: dict[
-            Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
-        ] = {
-            "properties": {
-                prop_id: {
-                    obj_id: obj_results["properties"][prop_id.target_ai2thor_property]
-                    for obj_id, obj_results in results_by_obj_id.items()
-                }
-                for prop_id in self.properties.keys()
-            },
-            "relations": {
-                related_item_id: {
-                    relation_type_id: {
-                        obj_id: obj_results["relations"][related_item_id][
-                            relation_type_id
-                        ]
-                        for obj_id, obj_results in results_by_obj_id.items()
-                    }
-                    for relation_type_id in self.organized_relations[
-                        related_item_id
-                    ].keys()
-                }
-                for related_item_id in self.organized_relations.keys()
-            },
-        }
-
-    # TODO: Check if we keep this one
     def _compute_all_obj_results(
         self, scene_objects_dict: dict[ObjId, Any]
     ) -> dict[
@@ -444,45 +295,6 @@ class TaskItem[T: Hashable]:
 
         return results
 
-    # TODO? Delete?
-    def _compute_all_obj_scores_old(
-        self,
-        objects_results: dict[ObjId, dict[Literal["properties", "relations"], dict]],
-    ) -> dict[
-        ObjId,
-        dict[Literal["sum_property_scores", "sum_relation_scores"], float],
-    ]:
-        """
-        Return the property and relation scores of each object for the item.
-
-        Args:
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]):
-                Results of each object for the item.
-
-        Returns:
-            scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
-                Scores of each object for the item.
-        """
-        scores: dict[
-            ObjId,
-            dict[Literal["sum_property_scores", "sum_relation_scores"], float],
-        ] = {
-            obj_id: {
-                "sum_property_scores": sum(
-                    1
-                    for prop_satisfaction in obj_results["properties"].values()
-                    if prop_satisfaction
-                ),
-                "sum_relation_scores": sum(
-                    1
-                    for satisfying_object_ids in obj_results["relations"].values()
-                    if len(satisfying_object_ids) > 0  # type: ignore  # TODO: Delete type ignore after simplyfing the type
-                ),
-            }
-            for obj_id, obj_results in objects_results.items()
-        }
-        return scores
-
     def _compute_all_obj_scores(
         self,
         objects_results: dict[
@@ -525,80 +337,7 @@ class TaskItem[T: Hashable]:
         }
         return scores
 
-    def filter_interesting_candidates_old(
-        self, scene_objects_dict: dict[ObjId, Any]
-    ) -> set[ObjId]:
-        """
-        Return the set of interesting candidates for the item.
-
-        The interesting candidates are those that can lead to a maximum of task advancement
-        depending on the assignment of objects to the other items.
-
-        A candidate is *strong* if it has no stricly *stronger* candidate among the other
-        candidates, where the stronger relation is defined in the get_stronger_candidate
-        method.
-
-        The set of interesting candidates is the set of strong candidates where we keep
-        only one candidate of same strength and we add the candidate with the higher
-        property score (not counting the semi satisfied relations score) if none of those
-        are already added (because we don't know which relation will effectively be
-        satisfied in the assignment).
-
-        Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
-                the objects in the scene. The keys are the object ids.
-
-        Returns:
-            interesting_candidates (set[ObjId]): Set of interesting candidates for the item.
-        """
-
-        # Compute the results of each object for the item
-        objects_results = self._compute_all_obj_results_old(scene_objects_dict)
-
-        # Compute the scores of each object for the item
-        objects_scores = self._compute_all_obj_scores_old(objects_results)
-
-        # Remove the candidates that have a stronger alternative
-        interesting_candidates = list(self.candidate_ids)
-        for i, candidate_id in enumerate(interesting_candidates):
-            for j, other_candidate_id in enumerate(interesting_candidates[i + 1 :]):
-                stronger_candidate = self.get_stronger_candidate_old(
-                    candidate_id, other_candidate_id, objects_results, objects_scores
-                )
-                if stronger_candidate == candidate_id or stronger_candidate == "equal":
-                    # In the equal case, we can keep any of the two candidates
-                    # Remove the other candidate
-                    interesting_candidates.pop(i + j + 1)
-                elif stronger_candidate == other_candidate_id:
-                    # Remove the candidate
-                    interesting_candidates.pop(i)
-                    break
-
-        # Add a candidate with the highest property score if none of those are already added
-        max_prop_score = max(
-            objects_scores[candidate_id]["sum_property_scores"]
-            for candidate_id in interesting_candidates
-        )
-        # Check if there is a candidate with the highest property score
-        if max_prop_score not in [
-            objects_scores[candidate_id]["sum_property_scores"]
-            for candidate_id in interesting_candidates
-        ]:
-            # Add the candidate with the highest property score
-
-            for candidate_id in self.candidate_ids:
-                if (
-                    objects_scores[candidate_id]["sum_property_scores"]
-                    == max_prop_score
-                ):
-                    interesting_candidates.append(candidate_id)
-                    break
-
-        return set(interesting_candidates)
-
-        return interesting_candidates
-
-    def filter_interesting_candidates(
+    def compute_interesting_candidates(
         self, scene_objects_dict: dict[ObjId, Any]
     ) -> set[ObjId]:
         """
@@ -635,7 +374,7 @@ class TaskItem[T: Hashable]:
         interesting_candidates = list(self.candidate_ids)
         for i, candidate_id in enumerate(interesting_candidates):
             for j, other_candidate_id in enumerate(interesting_candidates[i + 1 :]):
-                stronger_candidate = self.get_stronger_candidate(
+                stronger_candidate = self._get_stronger_candidate(
                     candidate_id, other_candidate_id, objects_results, objects_scores
                 )
                 if stronger_candidate == candidate_id or stronger_candidate == "equal":
@@ -669,97 +408,7 @@ class TaskItem[T: Hashable]:
 
         return set(interesting_candidates)
 
-        return interesting_candidates
-
-    def __str__(self) -> str:
-        return f"{self.id}"
-
-    def __repr__(self) -> str:
-        return f"TaskItem({self.id})"
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def get_stronger_candidate_old(
-        self,
-        obj_1_id: ObjId,
-        obj_2_id: ObjId,
-        objects_results: dict[ObjId, dict[Literal["properties", "relations"], dict]],
-        objects_scores: dict[
-            ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]
-        ],
-    ) -> ObjId | Literal["equal", "incomparable"]:
-        """
-        Return the stronger candidate between the two given candidates.
-
-        A candidate x is stronger than a candidate y if some relations, the sets
-        of satisfying objects of y are included in the set of satisfying objects of x
-        and the difference Sp(x) - (Sp(y) +Sr(y)) + d[x,y] > 0 where Sp(z) is the sum
-        of the property scores of z, Sr(z) is the sum of the relation scores of z and
-        d[x,y] is the number of relations such that the set of satisfying objects of
-        y is included in the set of satisfying objects of x. This represent the worst
-        case for x compared to y.
-
-        In particular, if Sp(y) + Sr(y) > Sp(x) + Sr(x), x cannot be stronger than y.
-
-        Two candidates x and y have the same strength if x is stronger than y and y is
-        stronger than x, otherwise they are either incomparable if none of them is
-        stronger than the other or one is stronger than the other.
-        The equal case can only happen if all relations have the same set of satisfying
-        objects for both candidates.
-
-        Args:
-            obj_1_id (ObjId): First candidate object id.
-            obj_2_id (ObjId): Second candidate object id.
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]): Results of
-                each object for the item.
-            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
-                Scores of each object for the item.
-
-        Returns:
-            stronger_candidate (ObjId|Literal["equal", "incomparable"]): The stronger candidate
-                between the two given candidates or "equal" if they have same strength or
-                "incomparable" if they cannot be compared.
-
-        """
-        obj1_stronger = True
-        obj2_stronger = True
-        # Pre check: Sp(obj_1_id) + Sr(obj_1_id) < Sp(obj_2_id) + Sr(obj_2_id)
-        if (
-            objects_scores[obj_1_id]["sum_property_scores"]
-            + objects_scores[obj_1_id]["sum_relation_scores"]
-            < objects_scores[obj_2_id]["sum_property_scores"]
-            + objects_scores[obj_2_id]["sum_relation_scores"]
-        ):
-            obj1_stronger = False
-        else:
-            obj1_stronger = self._is_stronger_candidate_than_old(
-                obj_1_id, obj_2_id, objects_results, objects_scores
-            )
-
-        # Pre check: Sp(obj_1_id) + Sr(obj_1_id) > Sp(obj_2_id) + Sr(obj_2_id)
-        if (
-            objects_scores[obj_1_id]["sum_property_scores"]
-            + objects_scores[obj_1_id]["sum_relation_scores"]
-            > objects_scores[obj_2_id]["sum_property_scores"]
-            + objects_scores[obj_2_id]["sum_relation_scores"]
-        ):
-            obj2_stronger = False
-        else:
-            obj2_stronger = self._is_stronger_candidate_than_old(
-                obj_2_id, obj_1_id, objects_results, objects_scores
-            )
-
-        if obj1_stronger and obj2_stronger:
-            return "equal"
-        elif obj1_stronger:
-            return obj_1_id
-        elif obj2_stronger:
-            return obj_2_id
-        else:
-            return "incomparable"
-
-    def get_stronger_candidate(
+    def _get_stronger_candidate(
         self,
         obj_1_id: ObjId,
         obj_2_id: ObjId,
@@ -842,75 +491,6 @@ class TaskItem[T: Hashable]:
         else:
             return "incomparable"
 
-    def _is_stronger_candidate_than_old(
-        self,
-        obj_1_id: ObjId,
-        obj_2_id: ObjId,
-        objects_results: dict[
-            ObjId,
-            dict[
-                Literal["properties", "relations"],
-                dict[ObjPropId, bool]
-                | dict[
-                    T,
-                    dict[RelationTypeId, set[ObjId]],
-                ],
-            ],
-        ],
-        objects_scores: dict[
-            ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]
-        ],
-    ) -> bool:
-        """
-        Return True if the first candidate is stronger than the second candidate.
-
-        A candidate x is stronger than a candidate y if some relations, the sets
-        of satisfying objects of y are included in the set of satisfying objects of x
-        and the difference Sp(x) - (Sp(y) +Sr(y)) + d[x,y] > 0 where Sp(z) is the sum
-        of the property scores of z, Sr(z) is the sum of the relation scores of z and
-        d[x,y] is the number of relations such that the set of satisfying objects of
-        y is included in the set of satisfying objects of x. This represent the worst
-        case for x compared to y.
-
-        See the get_stronger_candidate method for more details about the "is stronger than" relation.
-
-        Args:
-            obj_1_id (ObjId): First candidate object id.
-            obj_2_id (ObjId): Second candidate object id.
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]): Results of
-                each object for the item.
-            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
-                Scores of each object for the item.
-
-        Returns:
-            is_stronger (bool): True if the first candidate is stronger than the second candidate.
-        """
-        sp_x = objects_scores[obj_1_id]["sum_property_scores"]
-        sp_y = objects_scores[obj_2_id]["sum_property_scores"]
-        sr_x = objects_scores[obj_1_id]["sum_relation_scores"]
-        sr_y = objects_scores[obj_2_id]["sum_relation_scores"]
-
-        # Calculate d[x,y]
-        d_xy = 0
-        x_rel_results: dict[T, dict[RelationTypeId, set[ObjId]]] = objects_results[
-            obj_1_id
-        ][
-            "relations"
-        ]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
-        y__rel_results: dict[T, dict[RelationTypeId, set[ObjId]]] = objects_results[
-            obj_2_id
-        ][
-            "relations"
-        ]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
-        for related_item_id in x_rel_results.keys():
-            for relation_type_id in x_rel_results[related_item_id].keys():
-                x_sat_obj_ids = x_rel_results[related_item_id][relation_type_id]
-                y_sat_obj_ids = y__rel_results[related_item_id][relation_type_id]
-                if y_sat_obj_ids.issubset(x_sat_obj_ids):
-                    d_xy += 1
-
-        return sp_x - (sp_y + sr_y) + d_xy > 0
-
     def _is_stronger_candidate_than(
         self,
         obj_1_id: ObjId,
@@ -970,9 +550,16 @@ class TaskItem[T: Hashable]:
 
         return sp_x - (sp_y + sr_y) + d_xy > 0
 
+    def __str__(self) -> str:
+        return f"{self.id}"
 
-# TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
-# TODO: Implement ItemOverlapClass
+    def __repr__(self) -> str:
+        return f"TaskItem({self.id})"
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
 class ItemOverlapClass[T: Hashable]:
     """
     A group of items whose candidates can overlap.
@@ -987,7 +574,7 @@ class ItemOverlapClass[T: Hashable]:
         self.candidate_ids = candidate_ids
 
         # Compute all vald assignments of objects to the items in the overlap class
-        # One permuation is represented by a dictionary mapping the item ids to the assigned object ids
+        # One permuation is represented by a dictionary mapping the item to the assigned object id
         candidate_permutations = [
             dict(zip(self.items, permutation))
             for permutation in itertools.permutations(
@@ -995,6 +582,7 @@ class ItemOverlapClass[T: Hashable]:
             )
             # TODO?: Replace candidate ids by their index in the list to make it more efficient? Probably need this kind of optimizations
         ]
+        # Filter the permutations where the assigned objects are not candidates of the items
         valid_assignments = []
         for permutation in candidate_permutations:
             if all(
@@ -1004,50 +592,42 @@ class ItemOverlapClass[T: Hashable]:
 
         self.valid_assignments: list[dict[TaskItem, ObjId]] = valid_assignments
 
-        # Compute interesting properties of the overlap class
-        self.intesting_ai2thor_properties: set[ObjPropId] = {
-            prop.target_ai2thor_property
-            for item in self.items
-            for prop in item.properties
-        }
-
-    # TODO: Implement
-    def compute_optimal_assignments(
+    def compute_interesting_assignments(
         self, scene_objects_dict: dict[ObjId, Any]
-    ) -> tuple[list[dict[TaskItem[T], ObjId]], float]:
+    ) -> list[dict[TaskItem[T], ObjId]]:
         """
-        Return the optimal assignments of objects to the items in the
-        overlap class and the optimal score.
+        Return the interesting assignments of objects to the items in the overlap class.
 
-        Currently, the optimal assignments are the ones that maximize the
-        number of satisfied properties and semi satisfied relations.
+        The interesting assignments are the ones that can lead to a maximum of task advancement
+        depending on the assignment of objects in the other overlap classes.
+        Interesting assignments are the ones where each all assigned objects are interesting
+        candidates for their item.
+
+        For more details about the definition of interesting candidates, see the
+        compute_interesting_candidates method of the TaskItem class.
 
         Args:
             scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
                 the objects in the scene. The keys are the object ids.
 
         Returns:
-            optimal_assignments (list[dict[TaskItem, ObjId]]): List of the optimal
-                assignments of objects to the items in the overlap class.
-            best_score (float): Score of the optimal assignments.
+            interesting_assignments (list[dict[TaskItem[T], ObjId]]):
+                List of the interesting assignments of objects to the items in the overlap class.
         """
+        interesting_candidates = {
+            item: item.compute_interesting_candidates(scene_objects_dict)
+            for item in self.items
+        }
 
-        # TODO: Update this function
-        # Compute the scores of each assignment
-        assignment_scores = [
-            sum(item_scores[item][obj_id] for item, obj_id in assignment.items())
-            for assignment in self.valid_assignments
-        ]
+        # Filter the valid assignments to keep only the ones with interesting candidates
+        interesting_assignments = []
+        for assignment in self.valid_assignments:
+            if all(
+                assignment[item] in interesting_candidates[item] for item in self.items
+            ):
+                interesting_assignments.append(assignment)
 
-        # Compute the optimal assignments
-        best_score = max(assignment_scores)
-        optimal_assignments = [
-            assignment
-            for assignment, score in zip(self.valid_assignments, assignment_scores)
-            if score == best_score
-        ]
-
-        return optimal_assignments, best_score
+        return interesting_assignments
 
 
 # === Properties and Relations ===
@@ -1246,6 +826,7 @@ class GraphTask[T: Hashable]:
 
         self.overlap_classes: list[ItemOverlapClass] = []
 
+    # TODO: Finish this method
     def reset(self, event: EventLike) -> None:
         """
         Reset the task with the information of the event.
@@ -1305,6 +886,44 @@ class GraphTask[T: Hashable]:
             for overlap_class in overlap_classes.values()
         ]
 
+        # TODO: Finish this method
+        # Add the first computation of the graph with interesting candidates
+
+    # TODO: Add trying only the top k interesting assignements according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
+    # TODO: Implement this method
+    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict]:
+        """
+        Return the task advancement and whether the task is completed.
+
+        To compute the task advancement, we consider every interesting global assignment
+        of objects to the items. A global assignment is a dictionary mapping each item of
+        the task to an object in the scene (as opposed to a a overlap class assignment).
+        To construct the set of global assignments, we take the cartesian product of the
+        assignments of the overlap classes. Interesting global assignments are the ones
+        constructed with only interesting overlap class assignments.
+
+
+        Args:
+            event (EventLike): Event corresponding to the state of the scene.
+
+        Returns:
+            task_advancement (float): Task advancement.
+            is_completed (bool): True if the task is completed.
+            info (dict): Additional information about the task advancement.
+        """
+        # Compute the intersting assignemnts for each overlap class
+        interesting_assignments = [
+            overlap_class.compute_interesting_assignments(event.metadata["objects"])
+            for overlap_class in self.overlap_classes
+        ]
+        # Construct a generator of the cartesian product of the interesting assignments
+        global_assignments = itertools.product(*interesting_assignments)
+
+        max_task_advancement = 0
+        is_terminated = False
+        
+        # 
+        
     # TODO: Improve this
     def __repr__(self) -> str:
         return f"GraphTask({self.task_graph})"
