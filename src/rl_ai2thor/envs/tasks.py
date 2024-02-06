@@ -13,7 +13,7 @@ from typing import Any, Hashable, Literal, Optional, Type, NewType
 
 import networkx as nx
 
-from ai2thor_types import EventLike
+from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 # %% === Enums ===
@@ -77,10 +77,31 @@ class ObjVariablePropId(StrEnum):
     # DISTANCE = "distance"
 
 
+class TemperatureValue(StrEnum):
+    """
+    Temperature values.
+    """
+
+    HOT = "Hot"
+    COLD = "Cold"
+    ROOM_TEMP = "RoomTemp"
+
+
+class FillableLiquid(StrEnum):
+    """
+    Liquid types.
+    """
+
+    WATER = "water"
+    # COFFEE = "coffee"
+    # WINE = "wine"
+    # coffee and wine are not supported yet
+
+
 # TODO: Change this to a union of enums instead of type alias.
 type ObjPropId = ObjFixedPropId | ObjVariablePropId
 type ObjMetadataId = ObjPropId | str
-type PropValue = float | bool | Literal["Hot", "Cold", "RoomTemp", "water"]
+type PropValue = float | bool | TemperatureValue
 
 ObjId = NewType("ObjId", str)
 
@@ -221,9 +242,7 @@ class TaskItem[T: Hashable]:
         }
         return relation_semi_satisfying_objects
 
-    def _compute_obj_results(
-        self, obj_metadata: dict[ObjMetadataId, Any]
-    ) -> dict[
+    def _compute_obj_results(self, obj_metadata: dict[ObjMetadataId, Any]) -> dict[
         Literal["properties", "relations"],
         dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
     ]:  # TODO: Simplify this big type after finish the implementation
@@ -249,9 +268,7 @@ class TaskItem[T: Hashable]:
 
         return results
 
-    def _compute_all_obj_results(
-        self, scene_objects_dict: dict[ObjId, Any]
-    ) -> dict[
+    def _compute_all_obj_results(self, scene_objects_dict: dict[ObjId, Any]) -> dict[
         Literal["properties", "relations"],
         dict[ObjPropId, dict[ObjId, bool]]
         | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
@@ -677,7 +694,7 @@ class ItemOverlapClass[T: Hashable]:
 
 
 # === Properties and Relations ===
-# TODO: Add support for automatic scene validity and action validity checking.
+# TODO: Add support for automatic scene validity and action validity checking (action group, etc)
 # TODO: Add support for allowing property checking with other ways than equality.
 # TODO: Check if we need to add a hash
 class ItemProp:
@@ -854,7 +871,7 @@ class GraphTask[T: Hashable]:
             task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
                 Dictionary describing the items and their properties and relations.
         """
-        self.items = full_initialize_items_and_relations_from_dict(
+        self.items = self.full_initialize_items_and_relations_from_dict(
             task_description_dict
         )
 
@@ -869,11 +886,12 @@ class GraphTask[T: Hashable]:
                 self.task_graph[item][relation.related_item][
                     relation.type_id
                 ] = relation
+        # TODO: Check if we keep the graph (unused for now)
 
         self.overlap_classes: list[ItemOverlapClass] = []
 
     # TODO: Finish this method
-    def reset(self, event: EventLike) -> None:
+    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
 
@@ -882,7 +900,12 @@ class GraphTask[T: Hashable]:
 
         Args:
             event (EventLike): Event corresponding to the state of the scene
-            at the beginning of the episode.
+                at the beginning of the episode.
+
+        Returns:
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
         """
         # Initialize the candidates of the items
         for item in self.items:
@@ -938,8 +961,8 @@ class GraphTask[T: Hashable]:
             len(item.properties) + len(item.relations) for item in self.items
         )
 
-        # TODO: Finish this method
-        # Add the first computation of the graph with interesting candidates
+        # Return intial task advancement
+        return self.get_task_advancement(event)
 
     # TODO: Add trying only the top k interesting assignements according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
     # TODO: Implement this method
@@ -1033,9 +1056,84 @@ class GraphTask[T: Hashable]:
         info["best_assignment"] = {
             item.id: obj_id for item, obj_id in best_assignment.items()
         }
+        info["task_advancement"] = max_task_advancement
         # TODO: Add other info
 
         return max_task_advancement, is_terminated, info
+
+    # TODO: Check if we keep the relation set too (might not be necessary)
+    # TODO: Change to only return a plain lsit of items
+    # TODO: Add support for overriding relations and keep the most restrictive one
+    def full_initialize_items_and_relations_from_dict(
+        self,
+        task_description_dict: TaskDict[T],
+    ) -> list[TaskItem[T]]:
+        """
+        Create the list of TaskItem as defined in the task description
+        dictionary representing the items and their properties and relations.
+        The items fully initialized with their relations and the inverse
+        relations are also added.
+
+        Generic type T (Hashable) is the type of the item identifiers.
+
+        Args:
+            task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
+                Dictionary describing the items and their properties and relations.
+
+        Returns:
+            items (list[TaskItem]): List of the items of the task.
+        """
+        items = {
+            item_id: TaskItem(
+                item_id,
+                {
+                    obj_prop_id_to_item_prop[prop]: value
+                    for prop, value in item_dict["properties"].items()
+                },
+            )
+            for item_id, item_dict in task_description_dict.items()
+        }
+        organized_relations = {
+            main_item_id: {
+                related_item_id: {
+                    relation_type_id: relation_type_id_to_relation[relation_type_id](
+                        items[main_item_id], items[related_item_id]
+                    )
+                    for relation_type_id in relation_type_ids
+                }
+                for related_item_id, relation_type_ids in main_item_dict[
+                    "relations"
+                ].items()
+            }
+            for main_item_id, main_item_dict in task_description_dict.items()
+        }
+
+        # Add inverse relations
+        for main_item_id, main_item_relations in organized_relations.items():
+            for related_item_id, relations_dict in main_item_relations.items():
+                for relation_type_id, relation in relations_dict.items():
+                    inverse_relation_type_id = relation.inverse_relation_type_id
+                    if (
+                        inverse_relation_type_id
+                        not in organized_relations[related_item_id][main_item_id]
+                    ):
+                        organized_relations[related_item_id][main_item_id][
+                            inverse_relation_type_id
+                        ] = relation_type_id_to_relation[inverse_relation_type_id](
+                            items[related_item_id], items[main_item_id]
+                        )
+
+        # Set item relations
+        for item_id, item in items.items():
+            item.relations = {
+                relation
+                for relations_dict in organized_relations[item_id].values()
+                for relation in relations_dict.values()
+            }
+
+        items = list(items.values())
+
+        return items
 
     # TODO: Improve this
     def __repr__(self) -> str:
@@ -1058,7 +1156,7 @@ class PlaceObject(GraphTask):
     This is equivalent to the pick_and_place_simple task from Alfred.
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str):
+    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
         """
         Initialize the task.
 
@@ -1089,80 +1187,6 @@ class PlaceObject(GraphTask):
             description (str): Text description of the task.
         """
         return f"Place {self.placed_object_type} in {self.receptacle_type}"
-
-
-# %% == Auxiliary functions ==
-# TODO: Check if we keep the relation set too (might not be necessary)
-# TODO: Change to only return a plain lsit of items
-# TODO: Add support for overriding relations and keep the most restrictive one
-def full_initialize_items_and_relations_from_dict[
-    T: Hashable
-](task_description_dict: TaskDict[T],) -> list[TaskItem[T]]:
-    """
-    Create the list of TaskItem as defined in the task description
-    dictionary representing the items and their properties and relations.
-    The items fully initialized with their relations and the inverse
-    relations are also added.
-
-    Generic type T (Hashable) is the type of the item identifiers.
-
-    Args:
-        task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
-            Dictionary describing the items and their properties and relations.
-
-    Returns:
-        items (list[TaskItem]): List of the items of the task.
-    """
-    items = {
-        item_id: TaskItem(
-            item_id,
-            {
-                obj_prop_id_to_item_prop[prop]: value
-                for prop, value in item_dict["properties"].items()
-            },
-        )
-        for item_id, item_dict in task_description_dict.items()
-    }
-    organized_relations = {
-        main_item_id: {
-            related_item_id: {
-                relation_type_id: relation_type_id_to_relation[relation_type_id](
-                    items[main_item_id], items[related_item_id]
-                )
-                for relation_type_id in relation_type_ids
-            }
-            for related_item_id, relation_type_ids in main_item_dict[
-                "relations"
-            ].items()
-        }
-        for main_item_id, main_item_dict in task_description_dict.items()
-    }
-    # Add inverse relations
-    for main_item_id, main_item_relations in organized_relations.items():
-        for related_item_id, relations_dict in main_item_relations.items():
-            for relation_type_id, relation in relations_dict.items():
-                inverse_relation_type_id = relation.inverse_relation_type_id
-                if (
-                    inverse_relation_type_id
-                    not in relations_dict[related_item_id][main_item_id]
-                ):
-                    relations_dict[related_item_id][main_item_id][
-                        inverse_relation_type_id
-                    ] = relation_type_id_to_relation[inverse_relation_type_id](
-                        items[related_item_id], items[main_item_id]
-                    )
-
-    # Set item relations
-    for item_id, item in items.items():
-        item.relations = {
-            relation
-            for relations_dict in organized_relations[item_id].values()
-            for relation in relations_dict.values()
-        }
-
-    items = list(items.values())
-
-    return items
 
 
 # %% === Item properties ===
@@ -1265,7 +1289,7 @@ is_filled_with_liquid_prop = ItemProp(
 )
 fill_liquid_prop = ItemProp(
     ObjVariablePropId.FILL_LIQUID,
-    value_type=Literal["water"],  # coffee and wine are not supported yet
+    value_type=FillableLiquid,
     candidate_required_property=ObjFixedPropId.CAN_FILL_WITH_LIQUID,
     candidate_required_property_value=True,
 )
@@ -1289,7 +1313,7 @@ is_cooked_prop = ItemProp(
 )
 temperature_prop = ItemProp(
     ObjVariablePropId.TEMPERATURE,
-    value_type=Literal["Hot", "Cold", "RoomTemp"],
+    value_type=TemperatureValue,
 )
 is_sliced_prop = ItemProp(
     ObjVariablePropId.IS_SLICED,

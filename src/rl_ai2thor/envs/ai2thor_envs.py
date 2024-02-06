@@ -5,6 +5,7 @@ TODO: Finish module docstrings.
 """
 
 from typing import Optional
+import pathlib
 
 import ai2thor.controller
 from ai2thor.server import Event
@@ -13,15 +14,17 @@ import numpy as np
 import yaml
 from numpy.typing import ArrayLike
 
-from utils import update_nested_dict
-from tasks import BaseTask, DummyTask, UndefinedTask
-from actions import ACTION_CATEGORIES, ACTIONS_BY_NAME, ALL_ACTIONS
+from rl_ai2thor.utils.ai2thor_types import EventLike
+from rl_ai2thor.utils.config_handling import update_nested_dict, ROOT_DIR
+from tasks import GraphTask, PlaceObject
+from reward import GraphTaskRewardHandler
+from actions import ACTION_CATEGORIES, ACTIONS_BY_NAME, ALL_ACTIONS, ACTIONS_BY_CATEGORY
 
 
 # %% Environment definitions
 class ITHOREnv(gym.Env):
     """
-    Wrapper base class for iTHOR enviroment.
+    Wrapper base class for iTHOR environment.
     """
 
     metadata = {
@@ -41,10 +44,19 @@ class ITHOREnv(gym.Env):
             custom_config (dict): Dictionary whose keys will override the default config.
         """
         # === Get full config ===
-        with open("config/general.yaml", "r", encoding="utf-8") as f:
+        config_dir = pathlib.Path(ROOT_DIR, "config")
+        with open(config_dir / "general.yaml", "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
-        # Merge enviroment mode config with general config
-        with open(f"{self.config['enviroment_mode']}.yaml", "r", encoding="utf-8") as f:
+
+        # Merge environment mode config with general config
+        # with open(f"{self.config['enviroment_mode']}.yaml", "r", encoding="utf-8") as f:
+        with open(
+            config_dir
+            / "environment_modes"
+            / f"{self.config['environment_mode']}.yaml",
+            "r",
+            encoding="utf-8",
+        ) as f:
             enviroment_mode_config = yaml.safe_load(f)
         update_nested_dict(self.config, enviroment_mode_config)
         # Update config with user config
@@ -57,7 +69,9 @@ class ITHOREnv(gym.Env):
         for action_category in self.config["action_categories"]:
             if action_category in ACTION_CATEGORIES:
                 if self.config["action_categories"][action_category]:
-                    self.action_availablities[action_category] = True
+                    # Enable all actions in the category
+                    for action in ACTIONS_BY_CATEGORY[action_category]:
+                        self.action_availablities[action.name] = True
             else:
                 raise ValueError(
                     f"Unknown action category {action_category} in environment mode config."
@@ -71,7 +85,7 @@ class ITHOREnv(gym.Env):
             self.action_availablities["Done"] = True
         if (
             self.config["partial_openness"]
-            and self.config["open_close_actions"]
+            and self.config["action_categories"]["open_close_actions"]
             and not self.config["discrete_actions"]
         ):
             self.action_availablities["OpenObject"] = False
@@ -83,13 +97,14 @@ class ITHOREnv(gym.Env):
             for action_name, available in self.action_availablities.items()
             if available
         ]
+
         self.action_idx_to_name = dict(enumerate(available_actions))
         action_space_dict: dict[str, gym.Space] = {
             "action_index": gym.spaces.Discrete(len(self.action_idx_to_name))
         }
         if not self.config["discrete_actions"]:
             action_space_dict["action_parameter"] = gym.spaces.Box(
-                low=0, high=1, shape=(1,)
+                low=0, high=1, shape=()
             )
         if not self.config["target_closest_object"]:
             action_space_dict["target_object_position"] = gym.spaces.Box(
@@ -112,7 +127,7 @@ class ITHOREnv(gym.Env):
         # === Initialize ai2thor controller ===
         self.config["controller_parameters"]["agentMode"] = "default"
         self.controller = ai2thor.controller.Controller(
-            *self.config["controller_parameters"],
+            **self.config["controller_parameters"],
         )
 
         # === Other attributes ===
@@ -122,7 +137,7 @@ class ITHOREnv(gym.Env):
         }
         self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
-        self.task = UndefinedTask()
+        self.task = None
         self.step_count = 0
 
     def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
@@ -176,7 +191,7 @@ class ITHOREnv(gym.Env):
                     target_object_id = None
             else:
                 query = self.controller.step(
-                    action="GetObjectsInFrame",
+                    action="GetObjectInFrame",
                     x=target_object_coordinates[0],
                     y=target_object_coordinates[1],
                     checkVisible=False,  # TODO: Check if the behavior is correct (object not detected if not visible)
@@ -207,46 +222,68 @@ class ITHOREnv(gym.Env):
         self.step_count += 1
 
         observation = new_event.frame
-        reward, terminated = self.task.get_reward(self.last_event, new_event)
-        # TODO: Implement reward
+        reward, terminated, task_info = self.reward_handler.get_reward(new_event)
+
         truncated = self.step_count >= self.config["max_episode_steps"]
-        info = new_event.metadata
+        info = {"metadata": new_event.metadata, "task_info": task_info}
 
         self.last_event = new_event
 
         return observation, reward, terminated, truncated, info
 
+    # TODO: Adapt this with general task and reward handling
     def reset(self, seed: Optional[int] = None) -> tuple[ArrayLike, dict]:
         """
         Reset the environment.
 
-        TODO: Finish this method
         """
         print("Resetting environment and starting new episode")
         super().reset(seed=seed)
 
+        # Setup the scene
         self.last_event = self.controller.reset()
         observation = self.last_event.frame  # type: ignore
-        info = self.last_event.metadata
 
         # TODO: Add scene id handling
 
-        # Setup the scene
-        # Chose the task
-        self.task = self._sample_task()
+        # Initialize the task and reward handler
+        self.task = self._sample_task(self.last_event)
+        self.reward_handler = GraphTaskRewardHandler(self.task)
+        task_completion, task_info = self.reward_handler.reset(self.last_event)
+
+        # TODO: Check if this is correct
+        if task_completion:
+            self.reset(seed=seed)
 
         self.step_count = 0
+        info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
         return observation, info
 
     def close(self):
         self.controller.stop()
 
-    # TODO: Implement task sampling
-    def _sample_task(self) -> BaseTask:
+    # TODO: Implement approprate task sampling
+    def _sample_task(self, event: EventLike) -> GraphTask:
         """
         Sample a task for the environment.
         # TODO: Make it dependant on the scene..?
         """
-        # Temporarily return a dummy task
-        return DummyTask()
+        # Temporarily return only a PlaceObject task
+        # Sample a receptacle and an object to place
+        scene_pickupable_objects = [
+            obj["objectType"] for obj in event.metadata["objects"] if obj["pickupable"]
+        ]
+        scene_receptacles = [
+            obj["objectType"] for obj in event.metadata["objects"] if obj["receptacle"]
+        ]
+        object_to_place = np.random.choice(scene_pickupable_objects)
+        receptacle = np.random.choice(scene_receptacles)
+
+        return PlaceObject(
+            placed_object_type=object_to_place,
+            receptacle_type=receptacle,
+        )
+
+
+# %%

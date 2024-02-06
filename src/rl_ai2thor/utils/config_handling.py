@@ -1,7 +1,13 @@
 """
-Utility functions.
+Utility functions and variables for handling configuration files.
 """
-from typing import Any, TypeVar, Callable
+
+# %%
+
+from typing import Any
+import pathlib
+
+ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
 
 
 def update_nested_dict(original_dict: dict, new_dict: dict) -> None:
@@ -37,19 +43,4 @@ def nested_dict_get(d: dict, keys: list, default: Any = None) -> Any:
     return d
 
 
-T = TypeVar("T")
-
-
-def nb_occurences_in_list(lst: list[V], value: V) -> int:
-    """
-    Returns the number of occurences of value in a list.
-    """
-    return sum(1 for x in lst if x == value)
-
-
-def count_elements_with_property(
-    data_list: list[T], property_checker: Callable[[T], bool]
-) -> int:
-    return sum(1 for x in data_list if property_checker(x))
-
-filter()
+# %%

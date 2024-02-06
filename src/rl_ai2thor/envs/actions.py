@@ -55,15 +55,18 @@ Constants:
 - ACTIONS_BY_NAME: Dictionary mapping action names to their corresponding definitions.
 """
 
+from __future__ import annotations
+
 import dataclasses
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
-from ai2thor_envs import ITHOREnv
+if TYPE_CHECKING:
+    from ai2thor_envs import ITHOREnv
 
-from utils import nested_dict_get
-from ai2thor_types import EventLike
+from rl_ai2thor.utils.config_handling import nested_dict_get
+from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 # === Action Classes ===
@@ -307,7 +310,7 @@ class VisibleWaterCondition(BaseActionCondition):
         for obj in env.last_event.metadata["objects"]:
             if (
                 obj["visible"]
-                and obj["isToggledOn"]
+                and obj["isToggled"]
                 and obj["objectType"] in ["Faucet", "ShowerHead"]
             ):
                 return True
@@ -341,7 +344,8 @@ class HoldingObjectTypeCondition(BaseActionCondition):
             bool: Whether the agent is holding an object of the required type.
         """
         return (
-            env.last_event.metadata["inventoryObjects"][0]["objectType"]
+            len(env.last_event.metadata["inventoryObjects"]) > 0
+            and env.last_event.metadata["inventoryObjects"][0]["objectType"]
             == self.object_type
         )
 
@@ -508,7 +512,7 @@ pickup_object_action = EnvironmentAction(
     action_category="pickup_put_actions",
     has_target_object=True,
     object_required_property="pickupable",
-    config_dependent_parameters={"forceAction"},
+    config_dependent_parameters={"forceAction", "manualInteract"},
 )
 put_object_action = EnvironmentAction(
     name="PutObject",
@@ -516,13 +520,13 @@ put_object_action = EnvironmentAction(
     action_category="pickup_put_actions",
     has_target_object=True,
     object_required_property="receptacle",
-    config_dependent_parameters={"forceAction, manualInteract"},
+    config_dependent_parameters={"forceAction", "placeStationary"},
 )
 drop_hand_object_action = EnvironmentAction(
     name="DropHandObject",
     ai2thor_action="DropHandObject",
     action_category="drop_actions",
-    config_dependent_parameters={"forceAction, placeStationary"},
+    config_dependent_parameters={"forceAction"},
 )  # Like throwing but with 0 force, meant to be used in tandem with the Move/Rotate hand movement actions
 throw_object_action = EnvironmentAction(
     name="ThrowObject",
