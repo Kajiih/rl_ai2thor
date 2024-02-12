@@ -4,7 +4,7 @@ action_categories:
   # === Navigation actions ===
   movement_actions: True
   body_rotation_actions: True
-  head_rotation_actions: False
+  camera_rotation_actions: False
   crouch_actions: False
 
   # === Object manipulation actions ===
@@ -18,8 +18,8 @@ action_categories:
   open_close_actions: True
   toggle_actions: False
   slice_actions: False
-  useUp_actions: False
-  liquid_interaction_actions: False
+  use_up_actions: False
+  liquid_manipulation_actions: False
   break_actions: False
   clean_dirty_actions: False
 
