@@ -30,6 +30,7 @@ from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
+    from rl_ai2thor.envs.tasks import ObjFixedPropId
     from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
@@ -183,7 +184,7 @@ class EnvironmentAction:
     action_category: ActionCategory
     _: dataclasses.KW_ONLY  # Following arguments are keyword-only
     has_target_object: bool = False
-    object_required_property: str | None = None
+    object_required_property: ObjFixedPropId | None = None
     parameter_name: str | None = None
     parameter_range: tuple[float, float] | None = None
     parameter_discrete_value: float | None = None
@@ -575,7 +576,7 @@ pickup_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.PICKUP_OBJECT,
     action_category=ActionCategory.PICKUP_PUT_ACTIONS,
     has_target_object=True,
-    object_required_property="pickupable",
+    object_required_property=ObjFixedPropId.PICKUPABLE,
     config_dependent_parameters={"forceAction", "manualInteract"},
 )
 put_object_action = EnvironmentAction(
@@ -583,7 +584,7 @@ put_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.PUT_OBJECT,
     action_category=ActionCategory.PICKUP_PUT_ACTIONS,
     has_target_object=True,
-    object_required_property="receptacle",
+    object_required_property=ObjFixedPropId.RECEPTACLE,
     config_dependent_parameters={"forceAction", "placeStationary"},
 )
 drop_hand_object_action = EnvironmentAction(
@@ -609,7 +610,7 @@ push_object_action = EnvironmentAction(
     parameter_range=(0, 200),
     parameter_discrete_value=100,
     has_target_object=True,
-    object_required_property="moveable",
+    object_required_property=ObjFixedPropId.MOVEABLE,
     config_dependent_parameters={"forceAction"},
 )
 pull_object_action = EnvironmentAction(
@@ -620,7 +621,7 @@ pull_object_action = EnvironmentAction(
     parameter_range=(0, 200),
     parameter_discrete_value=100,
     has_target_object=True,
-    object_required_property="moveable",
+    object_required_property=ObjFixedPropId.MOVEABLE,
     config_dependent_parameters={"forceAction"},
 )
 # Note: "DirectionalPush", "TouchThenApplyForce" are not available because we keep only actions with a single parameter
@@ -630,7 +631,7 @@ open_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.OPEN_OBJECT,
     action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
     has_target_object=True,
-    object_required_property="openable",
+    object_required_property=ObjFixedPropId.OPENABLE,
     config_dependent_parameters={"forceAction"},
 )
 close_object_action = EnvironmentAction(
@@ -638,7 +639,7 @@ close_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.CLOSE_OBJECT,
     action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
     has_target_object=True,
-    object_required_property="openable",
+    object_required_property=ObjFixedPropId.OPENABLE,
     config_dependent_parameters={"forceAction"},
 )
 partial_open_object_action = EnvironmentAction(
@@ -648,7 +649,7 @@ partial_open_object_action = EnvironmentAction(
     parameter_name="openness",
     parameter_range=(0, 1),
     has_target_object=True,
-    object_required_property="openable",
+    object_required_property=ObjFixedPropId.OPENABLE,
     config_dependent_parameters={"forceAction"},
 )
 toggle_object_on_action = EnvironmentAction(
@@ -656,7 +657,7 @@ toggle_object_on_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_ON,
     action_category=ActionCategory.TOGGLE_ACTIONS,
     has_target_object=True,
-    object_required_property="toggleable",
+    object_required_property=ObjFixedPropId.TOGGLEABLE,
     config_dependent_parameters={"forceAction"},
 )
 toggle_object_off_action = EnvironmentAction(
@@ -664,7 +665,7 @@ toggle_object_off_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_OFF,
     action_category=ActionCategory.TOGGLE_ACTIONS,
     has_target_object=True,
-    object_required_property="toggleable",
+    object_required_property=ObjFixedPropId.TOGGLEABLE,
     config_dependent_parameters={"forceAction"},
 )
 fill_object_with_liquid_action = ConditionalExecutionAction(
@@ -672,7 +673,7 @@ fill_object_with_liquid_action = ConditionalExecutionAction(
     ai2thor_action=Ai2thorAction.FILL_OBJECT_WITH_LIQUID,
     action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
-    object_required_property="canFillWithLiquid",
+    object_required_property=ObjFixedPropId.CAN_FILL_WITH_LIQUID,
     other_ai2thor_parameters={"fillLiquid": "water"},
     config_dependent_parameters={"forceAction"},
     action_condition=fill_object_with_liquid_condition,
@@ -682,7 +683,7 @@ empty_liquid_from_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.EMPTY_LIQUID_FROM_OBJECT,
     action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
-    object_required_property="canFillWithLiquid",
+    object_required_property=ObjFixedPropId.CAN_FILL_WITH_LIQUID,
     config_dependent_parameters={"forceAction"},
 )
 break_object_action = EnvironmentAction(
@@ -690,7 +691,7 @@ break_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.BREAK_OBJECT,
     action_category=ActionCategory.BREAK_ACTIONS,
     has_target_object=True,
-    object_required_property="breakable",
+    object_required_property=ObjFixedPropId.BREAKABLE,
     config_dependent_parameters={"forceAction"},
 )
 slice_object_action = ConditionalExecutionAction(
@@ -698,7 +699,7 @@ slice_object_action = ConditionalExecutionAction(
     ai2thor_action=Ai2thorAction.SLICE_OBJECT,
     action_category=ActionCategory.SLICE_ACTIONS,
     has_target_object=True,
-    object_required_property="sliceable",
+    object_required_property=ObjFixedPropId.SLICEABLE,
     config_dependent_parameters={"forceAction"},
     action_condition=slice_object_condition,
 )
@@ -707,7 +708,7 @@ use_up_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.USE_UP_OBJECT,
     action_category=ActionCategory.USE_UP_ACTIONS,
     has_target_object=True,
-    object_required_property="canBeUsedUp",
+    object_required_property=ObjFixedPropId.SLICEABLE,
     config_dependent_parameters={"forceAction"},
 )
 dirty_object_action = EnvironmentAction(
@@ -715,7 +716,7 @@ dirty_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.DIRTY_OBJECT,
     action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
-    object_required_property="dirtyable",
+    object_required_property=ObjFixedPropId.DIRTYABLE,
     config_dependent_parameters={"forceAction"},
 )
 clean_object_action = ConditionalExecutionAction(
@@ -723,7 +724,7 @@ clean_object_action = ConditionalExecutionAction(
     ai2thor_action=Ai2thorAction.CLEAN_OBJECT,
     action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
-    object_required_property="dirtyable",
+    object_required_property=ObjFixedPropId.DIRTYABLE,
     config_dependent_parameters={"forceAction"},
     action_condition=clean_object_condition,
 )
