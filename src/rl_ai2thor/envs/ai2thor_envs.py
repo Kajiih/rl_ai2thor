@@ -27,19 +27,6 @@ from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 
-# %% Exceptions
-class UnknownActionCategoryError(ValueError):
-    """Exception raised for unknown action categories in environment mode config."""
-
-    def __init__(self, action_category: str) -> None:
-        self.action_category = action_category
-        super().__init__(
-            f"Unknown action category {action_category} in environment mode config. "
-            f"Available action categories are ACTION_CATEGORIES."
-        )
-
-
-# TODO: Check the covariance problems in the type hints
 # %% Environment definitions
 class ITHOREnv(gym.Env):
     """Wrapper base class for iTHOR environment."""
@@ -316,4 +303,13 @@ class ITHOREnv(gym.Env):
         )
 
 
-# %%
+# %% Exceptions
+class UnknownActionCategoryError(ValueError):
+    """Exception raised for unknown action categories in environment mode config."""
+
+    def __init__(self, action_category: str) -> None:
+        self.action_category = action_category
+        super().__init__(
+            f"Unknown action category {action_category} in environment mode config. "
+            f"Available action categories are ACTION_CATEGORIES."
+        )
