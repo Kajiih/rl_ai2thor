@@ -1,11 +1,11 @@
 # General config file for ai2thor RL benchmark.
 
-seed: 0
+seed: 1
 max_episode_steps: 1000
 environment_mode: default # navigation_only, cups_like, alfred_like, default, full_with_hand_movement
 
-discrete_actions: False # If True, all actions requiring a parameter will be discretized
-target_closest_object: False # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
+discrete_actions: True # If True, all actions requiring a parameter will be discretized
+target_closest_object: True # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
 
 use_done_action: False # If True, the agent has to explicitly end the episode with the done action after completing the task  # !! Not implemented yet !!
 
