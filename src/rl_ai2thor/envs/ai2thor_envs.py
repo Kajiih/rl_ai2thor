@@ -15,14 +15,15 @@ from ai2thor.server import Event
 from numpy.typing import ArrayLike
 
 from rl_ai2thor.envs.actions import (
-    ACTION_CATEGORIES,
     ACTIONS_BY_CATEGORY,
     ACTIONS_BY_NAME,
     ALL_ACTIONS,
+    ActionCategory,
+    EnvActionName,
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, PlaceObject
+from rl_ai2thor.envs.tasks import GraphTask, PlaceObject, ObjFixedPropId
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -79,7 +80,7 @@ class ITHOREnv(gym.Env):
 
         # Get the available actions from the environment mode config
         for action_category in self.config["action_categories"]:
-            if action_category in ACTION_CATEGORIES:
+            if action_category in ActionCategory:
                 if self.config["action_categories"][action_category]:
                     # Enable all actions in the category
                     for action in ACTIONS_BY_CATEGORY[action_category]:
@@ -90,20 +91,20 @@ class ITHOREnv(gym.Env):
         # Handle specific cases
         # Simple movement actions
         if self.config["simple_movement_actions"]:
-            self.action_availablities["MoveBack"] = False
-            self.action_availablities["MoveLeft"] = False
-            self.action_availablities["MoveRight"] = False
+            self.action_availablities[EnvActionName.MOVE_BACK] = False
+            self.action_availablities[EnvActionName.MOVE_LEFT] = False
+            self.action_availablities[EnvActionName.MOVE_RIGHT] = False
         # Done actions
         if self.config["use_done_action"]:
-            self.action_availablities["Done"] = True
+            self.action_availablities[EnvActionName.DONE] = True
         # Partial openness
         if (
             self.config["partial_openness"]
             and self.config["action_categories"]["open_close_actions"]
             and not self.config["discrete_actions"]
         ):
-            self.action_availablities["OpenObject"] = False
-            self.action_availablities["CloseObject"] = False
+            self.action_availablities[EnvActionName.OPEN_OBJECT] = False
+            self.action_availablities[EnvActionName.CLOSE_OBJECT] = False
 
         available_actions = [action_name for action_name, available in self.action_availablities.items() if available]
         self.action_idx_to_name = dict(enumerate(available_actions))
@@ -290,8 +291,12 @@ class ITHOREnv(gym.Env):
         """
         # Temporarily return only a PlaceObject task
         # Sample a receptacle and an object to place
-        scene_pickupable_objects = [obj["objectType"] for obj in event.metadata["objects"] if obj["pickupable"]]
-        scene_receptacles = [obj["objectType"] for obj in event.metadata["objects"] if obj["receptacle"]]
+        scene_pickupable_objects = [
+            obj[ObjFixedPropId.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[ObjFixedPropId.PICKUPABLE]
+        ]
+        scene_receptacles = [
+            obj[ObjFixedPropId.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[ObjFixedPropId.RECEPTACLE]
+        ]
 
         np_rng: np.random.Generator = self._np_random  # type: ignore
         object_to_place = np_rng.choice(scene_pickupable_objects)

@@ -26,11 +26,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from rl_ai2thor.envs.tasks import ObjFixedPropId, ObjVariablePropId
 from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
-    from rl_ai2thor.envs.tasks import ObjFixedPropId
     from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
@@ -135,6 +135,7 @@ class ActionCategory(StrEnum):
 
 # === Action Classes ===
 # TODO: Change perform to not need the environment
+# TODO: Add target value to object required property
 @dataclass
 class EnvironmentAction:
     """
@@ -368,7 +369,11 @@ class VisibleWaterCondition(BaseActionCondition):
             bool: Whether the agent has visible running water in its field of view.
         """
         for obj in env.last_event.metadata["objects"]:
-            if obj["visible"] and obj["isToggled"] and obj["objectType"] in {"Faucet", "ShowerHead"}:
+            if (
+                obj[ObjVariablePropId.VISIBLE]
+                and obj[ObjVariablePropId.IS_TOGGLED]
+                and obj[ObjFixedPropId.OBJECT_TYPE] in {"Faucet", "ShowerHead"}
+            ):
                 return True
         return False
 
@@ -403,7 +408,7 @@ class HoldingObjectTypeCondition(BaseActionCondition):
         """
         return (
             len(env.last_event.metadata["inventoryObjects"]) > 0
-            and env.last_event.metadata["inventoryObjects"][0]["objectType"] == self.object_type
+            and env.last_event.metadata["inventoryObjects"][0][ObjFixedPropId.OBJECT_TYPE] == self.object_type
         )
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
@@ -770,8 +775,7 @@ ALL_ACTIONS: list[EnvironmentAction] = [
     clean_object_action,
 ]
 
-ACTION_CATEGORIES = {action.action_category for action in ALL_ACTIONS}
-ACTIONS_BY_CATEGORY = {category: [] for category in ACTION_CATEGORIES}
+ACTIONS_BY_CATEGORY = {category: [] for category in ActionCategory}
 for action in ALL_ACTIONS:
     category = action.action_category
     ACTIONS_BY_CATEGORY[category].append(action)
