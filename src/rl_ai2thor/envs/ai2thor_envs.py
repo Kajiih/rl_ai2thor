@@ -218,7 +218,7 @@ class ITHOREnv(gym.Env):
         target_object_id = None
         failed_action_event = None
         if env_action.has_target_object:
-            if self.config["target_closest_obejct"]:
+            if self.config["target_closest_object"]:
                 # Look for the closest operable object for the action
                 visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
                 object_required_property = env_action.object_required_property
@@ -261,6 +261,9 @@ class ITHOREnv(gym.Env):
         New scene is sampled and new task and reward handlers are initialized.
         """
         print("Resetting environment and starting new episode")
+        # TODO: Check that the seed is used correctly
+        if seed is None:
+            seed = self.config["seed"]
         super().reset(seed=seed)
 
         # Setup the scene
