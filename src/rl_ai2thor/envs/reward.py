@@ -6,7 +6,7 @@ TODO: Finish module docstrings.
 
 from typing import Any
 
-from tasks import GraphTask
+from rl_ai2thor.envs.tasks import GraphTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
@@ -14,7 +14,8 @@ from rl_ai2thor.utils.ai2thor_types import EventLike
 # TODO: Add more options
 class GraphTaskRewardHandler:
     """
-    Reward hand;er for AI2-THOR environments.
+    Reward handler for AI2-THOR environments.
+
     TODO: Finish docstring
     """
 

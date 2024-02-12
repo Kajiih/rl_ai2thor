@@ -7,21 +7,21 @@ TODO: Finish module docstrings.
 from __future__ import annotations
 
 import itertools
-from enum import StrEnum
 from abc import ABC, abstractmethod
-from typing import Any, Hashable, Literal, Optional, Type, NewType
+from collections.abc import Hashable
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, Literal, NewType
 
 import networkx as nx
 
-from rl_ai2thor.utils.ai2thor_types import EventLike
+if TYPE_CHECKING:
+    from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 # %% === Enums ===
 # TODO: Add more relations
 class RelationTypeId(StrEnum):
-    """
-    Relations between items.
-    """
+    """Relations between items."""
 
     RECEPTACLE_OF = "receptacle_of"
     CONTAINED_IN = "contained_in"
@@ -30,9 +30,7 @@ class RelationTypeId(StrEnum):
 
 # TODO: Add support for more mass and salient materials.
 class ObjFixedPropId(StrEnum):
-    """
-    Fixed properties of objects in AI2THOR.
-    """
+    """Fixed properties of objects in AI2THOR."""
 
     OBJECT_TYPE = "objectType"
     IS_INTERACTABLE = "isInteractable"
@@ -55,9 +53,7 @@ class ObjFixedPropId(StrEnum):
 
 # TODO: Add support for position, rotation and distance.
 class ObjVariablePropId(StrEnum):
-    """
-    Variable properties of objects in AI2THOR.
-    """
+    """Variable properties of objects in AI2THOR."""
 
     VISIBLE = "visible"
     IS_TOGGLED = "isToggled"
@@ -77,10 +73,14 @@ class ObjVariablePropId(StrEnum):
     # DISTANCE = "distance"
 
 
+# TODO: Change this to a union of enums instead of type alias.
+type ObjPropId = ObjFixedPropId | ObjVariablePropId
+type ObjMetadataId = ObjPropId | str
+type PropValue = float | bool | TemperatureValue
+
+
 class TemperatureValue(StrEnum):
-    """
-    Temperature values.
-    """
+    """Temperature values."""
 
     HOT = "Hot"
     COLD = "Cold"
@@ -88,20 +88,13 @@ class TemperatureValue(StrEnum):
 
 
 class FillableLiquid(StrEnum):
-    """
-    Liquid types.
-    """
+    """Liquid types."""
 
     WATER = "water"
     # COFFEE = "coffee"
     # WINE = "wine"
     # coffee and wine are not supported yet
 
-
-# TODO: Change this to a union of enums instead of type alias.
-type ObjPropId = ObjFixedPropId | ObjVariablePropId
-type ObjMetadataId = ObjPropId | str
-type PropValue = float | bool | TemperatureValue
 
 ObjId = NewType("ObjId", str)
 
@@ -119,17 +112,22 @@ class TaskItem[T: Hashable]:
 
     def __init__(
         self,
-        id: T,
+        t_id: T,
         properties: dict[ItemProp, PropValue],
     ) -> None:
-        self.id = id
+        """
+        Initialize the TaskItem object.
+
+        Args:
+            t_id (T): The ID of the item as defined in the task description.
+            properties (dict[ItemProp, PropValue]): The properties of the item.
+        """
+        self.id = t_id
         self.properties = properties
 
         # Infer the candidate required properties from the item properties
         self._candidate_required_properties_prop = {
-            prop.candidate_required_property: (
-                value if prop.is_fixed else prop.candidate_required_property_value
-            )
+            prop.candidate_required_property: (value if prop.is_fixed else prop.candidate_required_property_value)
             for prop, value in self.properties.items()
             if prop.candidate_required_property is not None
         }
@@ -141,41 +139,47 @@ class TaskItem[T: Hashable]:
 
     @property
     def relations(self) -> set[Relation]:
+        """
+        Get the set of relations of the item.
+
+        Returns:
+            set[Relation]: The set of relations.
+        """
         return self._relations
 
     @relations.setter
     def relations(self, relations: set[Relation]) -> None:
         """
-        Set the relations of the item.
+        Setter for the relations of the item.
 
         Automatically update the organized_relations and candidate_required_properties
         attributes.
         """
-        self.organized_relations.update(
-            {
-                relation.related_item.id: {
-                    relation.type_id: relation,
-                }
-                for relation in relations
+        self.organized_relations.update({
+            relation.related_item.id: {
+                relation.type_id: relation,
             }
-        )
-        self._candidate_required_properties_rel.update(
-            {
-                relation.candidate_required_prop: relation.candidate_required_prop_value
-                for relation in relations
-                if relation.candidate_required_prop is not None
-            }
-        )
+            for relation in relations
+        })
+        self._candidate_required_properties_rel.update({
+            relation.candidate_required_prop: relation.candidate_required_prop_value
+            for relation in relations
+            if relation.candidate_required_prop is not None
+        })
 
         # Delete duplicate relations if any
         self._relations = {
-            relation
-            for relation_set in self.organized_relations.values()
-            for relation in relation_set.values()
+            relation for relation_set in self.organized_relations.values() for relation in relation_set.values()
         }
 
     @property
     def candidate_required_properties(self) -> dict[ObjPropId, Any]:
+        """
+        Return a dictionary containing the properties required for an object to be a candidate for the item.
+
+        Returns:
+            candidate_properties (dict[ObjPropId, Any]): Dictionary containing the candidate required properties.
+        """
         return {
             **self._candidate_required_properties_prop,
             **self._candidate_required_properties_rel,
@@ -196,9 +200,7 @@ class TaskItem[T: Hashable]:
                 return False
         return True
 
-    def _get_properties_satisfaction(
-        self, obj_metadata: dict[ObjMetadataId, Any]
-    ) -> dict[ObjPropId, bool]:
+    def _get_properties_satisfaction(self, obj_metadata: dict[ObjMetadataId, Any]) -> dict[ObjPropId, bool]:
         """
         Return a dictionary indicating which properties are satisfied by the given object.
 
@@ -208,41 +210,36 @@ class TaskItem[T: Hashable]:
         Returns:
             prop_satisfaction (dict[ObjPropId, bool]): Dictionary indicating which properties are satisfied by the given object.
         """
-
-        prop_satisfaction = {
-            prop.target_ai2thor_property: obj_metadata[prop.target_ai2thor_property]
-            == prop_value
+        return {
+            prop.target_ai2thor_property: obj_metadata[prop.target_ai2thor_property] == prop_value
             for prop, prop_value in self.properties.items()
         }
-        return prop_satisfaction
 
     def _get_relations_semi_satisfying_objects(
-        self, obj_metadata: dict[ObjMetadataId, Any]
+        self, candidate_metadata: dict[ObjMetadataId, Any]
     ) -> dict[T, dict[RelationTypeId, set[ObjId]]]:
         """
-        Return a dictionary indicating which objects are semi-satisfying the relations
-        with the given object.
+        Return the dictionary of satisfying objects with the given candidate for each relations.
 
-        The relations are organized by related item.
+        The relations are organized by related item id.
 
         Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
+            candidate_metadata (dict[ObjMetadataPropId, Any]): Metadata of the candidate.
 
         Returns:
-
+            semi_satisfying_objects (dict[T, dict[RelationTypeId, set[ObjId]]]): Dictionary indicating which objects are semi-satisfying the relations with the given object.
         """
-        relation_semi_satisfying_objects = {
+        return {
             related_item_id: {
-                relation.type_id: relation.get_satisfying_related_object_ids(
-                    obj_metadata
-                )
+                relation.type_id: relation.get_satisfying_related_object_ids(candidate_metadata)
                 for relation in self.organized_relations[related_item_id].values()
             }
-            for related_item_id in self.organized_relations.keys()
+            for related_item_id in self.organized_relations
         }
-        return relation_semi_satisfying_objects
 
-    def _compute_obj_results(self, obj_metadata: dict[ObjMetadataId, Any]) -> dict[
+    def _compute_obj_results(
+        self, obj_metadata: dict[ObjMetadataId, Any]
+    ) -> dict[
         Literal["properties", "relations"],
         dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
     ]:  # TODO: Simplify this big type after finish the implementation
@@ -265,16 +262,16 @@ class TaskItem[T: Hashable]:
             "properties": self._get_properties_satisfaction(obj_metadata),
             "relations": self._get_relations_semi_satisfying_objects(obj_metadata),
         }
-
         return results
 
-    def _compute_all_obj_results(self, scene_objects_dict: dict[ObjId, Any]) -> dict[
+    def _compute_all_obj_results(
+        self, scene_objects_dict: dict[ObjId, Any]
+    ) -> dict[
         Literal["properties", "relations"],
-        dict[ObjPropId, dict[ObjId, bool]]
-        | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+        dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
     ]:
         """
-        Return the results dictionnary with the results of each object for the item.
+        Return the results dictionnary with the results of each candidate of the item.
 
         Args:
             scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
@@ -285,13 +282,11 @@ class TaskItem[T: Hashable]:
         """
         results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
         ] = {
             "properties": {
                 prop.target_ai2thor_property: {
-                    obj_id: scene_objects_dict[obj_id][prop.target_ai2thor_property]
-                    == prop_value
+                    obj_id: scene_objects_dict[obj_id][prop.target_ai2thor_property] == prop_value
                     for obj_id in self.candidate_ids
                 }
                 for prop, prop_value in self.properties.items()
@@ -300,15 +295,12 @@ class TaskItem[T: Hashable]:
                 # use get_satisfying_related_object_ids instead of is_semi_satisfied
                 related_item_id: {
                     relation.type_id: {
-                        obj_id: obj_id
-                        in relation.get_satisfying_related_object_ids(
-                            scene_objects_dict[obj_id]
-                        )
+                        obj_id: obj_id in relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id])
                         for obj_id in self.candidate_ids
                     }
                     for relation in self.organized_relations[related_item_id].values()
                 }
-                for related_item_id in self.organized_relations.keys()
+                for related_item_id in self.organized_relations
             },  # type: ignore  # TODO: Delete type ignore after simplyfing the type
         }
 
@@ -318,15 +310,14 @@ class TaskItem[T: Hashable]:
         self,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
         ],
     ) -> dict[
         ObjId,
         dict[Literal["sum_property_scores", "sum_relation_scores"], float],
     ]:
         """
-        Return the property and relation scores of each object for the item.
+        Return the property and relation scores of each candidate of the item.
 
         Args:
             objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]):
@@ -362,14 +353,12 @@ class TaskItem[T: Hashable]:
         set[ObjId],
         dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
         ],
         dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
     ]:
         """
-        Return the set of interesting candidates for the item and the results and scores
-        of each object for the item.
+        Return the set of interesting candidates and the results and scores of each candidate of the item.
 
         The interesting candidates are those that can lead to a maximum of task advancement
         depending on the assignment of objects to the other items.
@@ -395,7 +384,6 @@ class TaskItem[T: Hashable]:
             objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
                 Scores of each object for the item.
         """
-
         # Compute the results of each object for the item
         objects_results = self._compute_all_obj_results(scene_objects_dict)
 
@@ -409,7 +397,7 @@ class TaskItem[T: Hashable]:
                 stronger_candidate = self._get_stronger_candidate(
                     candidate_id, other_candidate_id, objects_results, objects_scores
                 )
-                if stronger_candidate == candidate_id or stronger_candidate == "equal":
+                if stronger_candidate in {candidate_id, "equal"}:
                     # In the equal case, we can keep any of the two candidates
                     # Remove the other candidate
                     interesting_candidates.pop(i + j + 1)
@@ -420,21 +408,16 @@ class TaskItem[T: Hashable]:
 
         # Add a candidate with the highest property score if none of those are already added
         max_prop_score = max(
-            objects_scores[candidate_id]["sum_property_scores"]
-            for candidate_id in interesting_candidates
+            objects_scores[candidate_id]["sum_property_scores"] for candidate_id in interesting_candidates
         )
         # Check if there is a candidate with the highest property score
         if max_prop_score not in [
-            objects_scores[candidate_id]["sum_property_scores"]
-            for candidate_id in interesting_candidates
+            objects_scores[candidate_id]["sum_property_scores"] for candidate_id in interesting_candidates
         ]:
             # Add the candidate with the highest property score
 
             for candidate_id in self.candidate_ids:
-                if (
-                    objects_scores[candidate_id]["sum_property_scores"]
-                    == max_prop_score
-                ):
+                if objects_scores[candidate_id]["sum_property_scores"] == max_prop_score:
                     interesting_candidates.append(candidate_id)
                     break
 
@@ -446,12 +429,9 @@ class TaskItem[T: Hashable]:
         obj_2_id: ObjId,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
         ],
-        objects_scores: dict[
-            ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]
-        ],
+        objects_scores: dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
     ) -> ObjId | Literal["equal", "incomparable"]:
         """
         Return the stronger candidate between the two given candidates.
@@ -490,47 +470,37 @@ class TaskItem[T: Hashable]:
         obj2_stronger = True
         # Pre check: Sp(obj_1_id) + Sr(obj_1_id) < Sp(obj_2_id) + Sr(obj_2_id)
         if (
-            objects_scores[obj_1_id]["sum_property_scores"]
-            + objects_scores[obj_1_id]["sum_relation_scores"]
-            < objects_scores[obj_2_id]["sum_property_scores"]
-            + objects_scores[obj_2_id]["sum_relation_scores"]
+            objects_scores[obj_1_id]["sum_property_scores"] + objects_scores[obj_1_id]["sum_relation_scores"]
+            < objects_scores[obj_2_id]["sum_property_scores"] + objects_scores[obj_2_id]["sum_relation_scores"]
         ):
             obj1_stronger = False
         else:
-            obj1_stronger = self._is_stronger_candidate_than(
-                obj_1_id, obj_2_id, objects_results, objects_scores
-            )
+            obj1_stronger = self._is_stronger_candidate_than(obj_1_id, obj_2_id, objects_results, objects_scores)
 
         # Pre check: Sp(obj_1_id) + Sr(obj_1_id) > Sp(obj_2_id) + Sr(obj_2_id)
         if (
-            objects_scores[obj_1_id]["sum_property_scores"]
-            + objects_scores[obj_1_id]["sum_relation_scores"]
-            > objects_scores[obj_2_id]["sum_property_scores"]
-            + objects_scores[obj_2_id]["sum_relation_scores"]
+            objects_scores[obj_1_id]["sum_property_scores"] + objects_scores[obj_1_id]["sum_relation_scores"]
+            > objects_scores[obj_2_id]["sum_property_scores"] + objects_scores[obj_2_id]["sum_relation_scores"]
         ):
             obj2_stronger = False
         else:
-            obj2_stronger = self._is_stronger_candidate_than(
-                obj_2_id, obj_1_id, objects_results, objects_scores
-            )
+            obj2_stronger = self._is_stronger_candidate_than(obj_2_id, obj_1_id, objects_results, objects_scores)
 
         if obj1_stronger and obj2_stronger:
             return "equal"
-        elif obj1_stronger:
+        if obj1_stronger:
             return obj_1_id
-        elif obj2_stronger:
+        if obj2_stronger:
             return obj_2_id
-        else:
-            return "incomparable"
+        return "incomparable"
 
+    @staticmethod
     def _is_stronger_candidate_than(
-        self,
         obj_1_id: ObjId,
         obj_2_id: ObjId,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]]
-            | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
         ],
         objects_scores: dict[
             ObjId,
@@ -563,20 +533,15 @@ class TaskItem[T: Hashable]:
         """
         sp_x = objects_scores[obj_1_id]["sum_property_scores"]
         sp_y = objects_scores[obj_2_id]["sum_property_scores"]
-        sr_x = objects_scores[obj_1_id]["sum_relation_scores"]
         sr_y = objects_scores[obj_2_id]["sum_relation_scores"]
 
         # Calculate d[x,y]
         d_xy = 0
         relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = objects_results["relations"]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
-        for related_item_id in relations_results.keys():
-            for relation_type_id in relations_results[related_item_id].keys():
-                x_sat_obj_ids = relations_results[related_item_id][relation_type_id][
-                    obj_1_id
-                ]
-                y_sat_obj_ids = relations_results[related_item_id][relation_type_id][
-                    obj_2_id
-                ]
+        for related_item_id in relations_results:
+            for relation_type_id in relations_results[related_item_id]:
+                x_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_1_id]
+                y_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_2_id]
                 if y_sat_obj_ids.issubset(x_sat_obj_ids):
                     d_xy += 1
 
@@ -593,36 +558,36 @@ class TaskItem[T: Hashable]:
 
 
 class ItemOverlapClass[T: Hashable]:
-    """
-    A group of items whose candidates can overlap.
-    """
+    """A group of items whose sets of candidates overlap."""
 
     def __init__(
         self,
         items: list[TaskItem[T]],
         candidate_ids: list[ObjId],
     ) -> None:
+        """
+        Initialize the overlap class with the given items and candidate ids.
+
+        Args:
+            items (list[TaskItem[T]]): The items in the overlap class.
+            candidate_ids (list[ObjId]): The candidate ids of candidates in the overlap class.
+        """
         self.items = items
         self.candidate_ids = candidate_ids
 
         # Compute all vald assignments of objects to the items in the overlap class
         # One permuation is represented by a dictionary mapping the item to the assigned object id
         candidate_permutations = [
-            dict(zip(self.items, permutation))
-            for permutation in itertools.permutations(
-                self.candidate_ids, len(self.items)
-            )
+            dict(zip(self.items, permutation, strict=False))
+            for permutation in itertools.permutations(self.candidate_ids, len(self.items))
             # TODO?: Replace candidate ids by their index in the list to make it more efficient? Probably need this kind of optimizations
         ]
         # Filter the permutations where the assigned objects are not candidates of the items
-        valid_assignments = []
-        for permutation in candidate_permutations:
-            if all(
-                obj_id in item.candidate_ids for item, obj_id in permutation.items()
-            ):
-                valid_assignments.append(permutation)
-
-        self.valid_assignments: list[dict[TaskItem, ObjId]] = valid_assignments
+        self.valid_assignments = [
+            permutation
+            for permutation in candidate_permutations
+            if all(obj_id in item.candidate_ids for item, obj_id in permutation.items())
+        ]
 
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[ObjId, Any]
@@ -632,8 +597,7 @@ class ItemOverlapClass[T: Hashable]:
             TaskItem[T],
             dict[
                 Literal["properties", "relations"],
-                dict[ObjPropId, dict[ObjId, bool]]
-                | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+                dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
             ],
         ],
         dict[
@@ -664,16 +628,11 @@ class ItemOverlapClass[T: Hashable]:
                 List of the interesting assignments of objects to the items in the overlap class.
         """
         interesting_candidates_data = {
-            item: item.compute_interesting_candidates(scene_objects_dict)
-            for item in self.items
+            item: item.compute_interesting_candidates(scene_objects_dict) for item in self.items
         }
         # Extract the interesting candidates, results and scores
-        interesting_candidates = {
-            item: data[0] for item, data in interesting_candidates_data.items()
-        }
-        items_results = {
-            item: data[1] for item, data in interesting_candidates_data.items()
-        }
+        interesting_candidates = {item: data[0] for item, data in interesting_candidates_data.items()}
+        items_results = {item: data[1] for item, data in interesting_candidates_data.items()}
         items_scores: dict[
             TaskItem[T],
             dict[
@@ -683,12 +642,11 @@ class ItemOverlapClass[T: Hashable]:
         ] = {item: data[2] for item, data in interesting_candidates_data.items()}
 
         # Filter the valid assignments to keep only the ones with interesting candidates
-        interesting_assignments = []
-        for assignment in self.valid_assignments:
-            if all(
-                assignment[item] in interesting_candidates[item] for item in self.items
-            ):
-                interesting_assignments.append(assignment)
+        interesting_assignments = [
+            assignment
+            for assignment in self.valid_assignments
+            if all(assignment[item] in interesting_candidates[item] for item in self.items)
+        ]
 
         return interesting_assignments, items_results, items_scores
 
@@ -698,43 +656,43 @@ class ItemOverlapClass[T: Hashable]:
 # TODO: Add support for allowing property checking with other ways than equality.
 # TODO: Check if we need to add a hash
 class ItemProp:
-    """
-    Property of an item in the definition of a task.
-
-    TODO: Finish docstring.
-    """
+    """Property of an item in the definition of a task."""
 
     def __init__(
         self,
         target_ai2thor_property: ObjPropId,
-        value_type: Type,
+        value_type: type,
         is_fixed: bool = False,
-        candidate_required_property: Optional[ObjFixedPropId] = None,
-        candidate_required_property_value: Optional[Any] = None,
+        candidate_required_property: ObjFixedPropId | None = None,
+        candidate_required_property_value: Any | None = None,
     ) -> None:
+        """Initialize the Property object."""
         self.target_ai2thor_property = target_ai2thor_property
         self.value_type = value_type
         self.is_fixed = is_fixed
-        self.candidate_required_property = (
-            target_ai2thor_property if is_fixed else candidate_required_property
-        )
+        self.candidate_required_property = target_ai2thor_property if is_fixed else candidate_required_property
         self.candidate_required_property_value = candidate_required_property_value
 
 
 # TODO: Add support to parameterize the relations (e.g. distance in CLOSE_TO)
 class Relation(ABC):
-    """
-    A relation between two items in the definition of a task.
-    """
+    """A relation between two items in the definition of a task."""
 
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
+    candidate_required_prop: ObjFixedPropId | None = None
+    candidate_required_prop_value: Any | None = None
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
+        """
+        Initialize the main and related objects of the relation.
+
+        Args:
+            main_item (TaskItem): The main item in the relation.
+            related_item (TaskItem): The related item to which the main item is related.
+        """
         self.main_item = main_item
         self.related_item = related_item
-        self.candidate_required_prop: Optional[ObjFixedPropId] = None
-        self.candidate_required_prop_value: Optional[Any] = None
 
     def __str__(self) -> str:
         return f"{self.main_item} is {self.type_id} {self.related_item}"
@@ -746,13 +704,8 @@ class Relation(ABC):
         return hash((self.type_id, self.main_item.id, self.related_item.id))
 
     @abstractmethod
-    def extract_related_object_ids(
-        self, main_obj_metadata: dict[ObjMetadataId, Any]
-    ) -> list[ObjId]:
-        """
-        Return the list of the ids of the main object's related objects according to
-        the relation.
-        """
+    def _extract_related_object_ids(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+        """Return the list of the ids of the main object's related objects according to the relation."""
 
     def is_semi_satisfied(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> bool:
         """
@@ -762,21 +715,16 @@ class Relation(ABC):
         related to a candidate of the related item (but no related
         object might be assigned to the related item).
         """
-        for related_object_id in self.extract_related_object_ids(main_obj_metadata):
+        for related_object_id in self._extract_related_object_ids(main_obj_metadata):
             if related_object_id in self.related_item.candidate_ids:
                 return True
         return False
 
-    def get_satisfying_related_object_ids(
-        self, main_obj_metadata: dict[ObjMetadataId, Any]
-    ) -> set[ObjId]:
-        """
-        Return the set of the ids of the candidates of the related item that satisfy
-        the relation with the main object.
-        """
+    def get_satisfying_related_object_ids(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> set[ObjId]:
+        """Return related item's candidate's ids that satisfy the relation with the given main object."""
         return {
             related_object_id
-            for related_object_id in self.extract_related_object_ids(main_obj_metadata)
+            for related_object_id in self._extract_related_object_ids(main_obj_metadata)
             if related_object_id in self.related_item.candidate_ids
         }
 
@@ -786,22 +734,30 @@ class ReceptacleOfRelation(Relation):
     A relation of the form "main_item is a receptacle of related_item".
 
     The inverse relation is ContainedInRelation.
+
+    Args:
+        main_item (TaskItem): The main item in the relation.
+        related_item (TaskItem): The related item that is contained in the main item.
     """
 
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
+    candidate_required_prop = ObjFixedPropId.RECEPTACLE
+    candidate_required_prop_value = True
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
-        super().__init__(main_item, related_item)
-        self.candidate_required_prop = ObjFixedPropId.RECEPTACLE
-        self.candidate_required_prop_value = True
+        """
+        Initialize the main and related objects of the relation.
 
-    def extract_related_object_ids(
-        self, main_obj_metadata: dict[ObjMetadataId, Any]
-    ) -> list[ObjId]:
+        Args:
+            main_item (TaskItem): The main item in the relation.
+            related_item (TaskItem): The related item to which the main item is related.
         """
-        Return the ids of the objects contained in the main object.
-        """
+        super().__init__(main_item, related_item)
+
+    @staticmethod
+    def _extract_related_object_ids(main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+        """Return the ids of the objects contained in the main object."""
         return main_obj_metadata["receptacleObjectIds"]
 
 
@@ -814,18 +770,22 @@ class ContainedInRelation(Relation):
 
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
+    candidate_required_prop = ObjFixedPropId.PICKUPABLE
+    candidate_required_prop_value = True
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
-        super().__init__(main_item, related_item)
-        self.candidate_required_prop = ObjFixedPropId.PICKUPABLE
-        self.candidate_required_prop_value = True
+        """
+        Initialize the main and related objects of the relation.
 
-    def extract_related_object_ids(
-        self, main_obj_metadata: dict[ObjMetadataId, Any]
-    ) -> list[ObjId]:
+        Args:
+            main_item (TaskItem): The main item in the relation.
+            related_item (TaskItem): The related item to which the main item is related.
         """
-        Return the ids of the objects containing the main object.
-        """
+        super().__init__(main_item, related_item)
+
+    @staticmethod
+    def _extract_related_object_ids(main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+        """Return the ids of the objects containing the main object."""
         return main_obj_metadata["parentReceptacles"]
 
 
@@ -835,28 +795,57 @@ type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], di
 
 # TODO: Add support for weighted properties and relations
 # TODO: Add support for agent properties
+# TODO: Remove networkx dependency
 class GraphTask[T: Hashable]:
     """
-    Base class for tasks that can be represented as a state graph representing the
-    relations between objects in the scene (and the agent).
-    For clarity purpose, we call the objects of the task "items", to avoid confusion
-    with the real scene's objects.
+    Base class for graph tasks.
 
-    The vertices of the graph are the "items", corresponding to objects in the scene
+    Graph tasks are tasks that can be represented as a graph representing the
+    relations between objects in the scene in the terminal states.
+
+    The vertices of the graph are the "items", corresponding to unique objects in the scene
     and the edges are the relations between them (e.g. "receptacle_of" if the item is
     supposed to contain another item).
-    The items are represented by the properties required for the task (e.g.
+    The items are represented by the properties required for satisfying the task (e.g.
     "objectType", "visible", "isSliced", "temperature",...).
 
-    Note: Inverse relations are automatically added to the graph, so it is not necessary to add them manually when creating the task.
 
-    We use networkx DiGraphs to represent the task graph.
+    Graph tasks are defined using a task description dictionary representing each task
+    item, its properties and relations.
 
-    # TODO: Update docstring
+    Example of task desctiption dictionnary for the task of placing an apple in a plate:
+    target_objects = {
+            "receptacle_plate": {
+                "properties": {"objectType": "Plate"},
+            },
+            "placed_apple": {
+                "properties": {"objectType": "Apple"},
+                "relations": {"receptacle_plate": ["contained_in"]},
+            },
+        }
+
+    This task contains 2 items defined by their unique identifiers (of generic type "T")
+    in the description dictionary; "receptacle_plate" and "placed_apple". Both items have
+    a required type (others available properties are available in ObjFixedPropId and
+    ObjVariablePropId enums) and placed_apple is related to receptacle_plate one relation
+    by the "contained_in relation (other relations available in RelationTypeId enum).
+    Note: Inverse relations are automatically added to the graph, so it is not necessary
+    to add them manually when creating the task.
 
     Attributes:
-        TODO: Add attributes
-        TODO: Add methods
+        items (List[T]): List of items representing unique objects in the scene.
+        task_graph (nx.DiGraph): Directed graph representing the relations between items.
+        overlap_classes (List[ItemOverlapClass]): List of overlap classes containing items
+            with overlapping candidates.
+
+    Methods:
+        reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+            Reset the task with the information of the event.
+        get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+            Return the task advancement and whether the task is completed.
+        full_initialize_items_and_relations_from_dict(task_description_dict: TaskDict) -> list[TaskItem[T]]
+            Create and initialize TaskItems for the graph task.
+
     """
 
     def __init__(
@@ -864,16 +853,13 @@ class GraphTask[T: Hashable]:
         task_description_dict: TaskDict[T],
     ) -> None:
         """
-        Initialize the task graph with the items and their relations as
-        defined in the task description dictionary.
+        Initialize the task graph as defined in the task description dictionary.
 
         Args:
             task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
                 Dictionary describing the items and their properties and relations.
         """
-        self.items = self.full_initialize_items_and_relations_from_dict(
-            task_description_dict
-        )
+        self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
 
         # Initialize the task graph
         self.task_graph = nx.DiGraph()
@@ -883,9 +869,7 @@ class GraphTask[T: Hashable]:
             self.task_graph.add_node(item)
             for relation in item.relations:
                 self.task_graph.add_edge(item, relation.related_item)
-                self.task_graph[item][relation.related_item][
-                    relation.type_id
-                ] = relation
+                self.task_graph[item][relation.related_item][relation.type_id] = relation
         # TODO: Check if we keep the graph (unused for now)
 
         self.overlap_classes: list[ItemOverlapClass] = []
@@ -919,9 +903,7 @@ class GraphTask[T: Hashable]:
             item_class_idx = None
             remaining_candidates_ids = item.candidate_ids.copy()
             for class_idx, overlap_class in overlap_classes.items():
-                if not remaining_candidates_ids.isdisjoint(
-                    overlap_class["candidate_ids"]
-                ):
+                if not remaining_candidates_ids.isdisjoint(overlap_class["candidate_ids"]):
                     # Item belongs to the overlap class
                     # Keep only new candidates
                     remaining_candidates_ids -= overlap_class["candidate_ids"]
@@ -932,12 +914,8 @@ class GraphTask[T: Hashable]:
                         overlap_class["candidate_ids"] |= item.candidate_ids
                     else:
                         # Merge the overlap classes
-                        overlap_classes[item_class_idx]["items"].extend(
-                            overlap_class["items"]
-                        )
-                        overlap_classes[item_class_idx][
-                            "candidate_ids"
-                        ] |= overlap_class["candidate_ids"]
+                        overlap_classes[item_class_idx]["items"].extend(overlap_class["items"])
+                        overlap_classes[item_class_idx]["candidate_ids"] |= overlap_class["candidate_ids"]
                         del overlap_classes[class_idx]
 
             if item_class_idx is None:
@@ -957,18 +935,14 @@ class GraphTask[T: Hashable]:
 
         # Compute max task advancement
         # Total number of properties and relations of the items
-        self.max_task_advancement = sum(
-            len(item.properties) + len(item.relations) for item in self.items
-        )
+        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
         # Return intial task advancement
         return self.get_task_advancement(event)
 
     # TODO: Add trying only the top k interesting assignements according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
     # TODO: Implement this method
-    def get_task_advancement(
-        self, event: EventLike
-    ) -> tuple[float, bool, dict[str, Any]]:
+    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -1032,14 +1006,12 @@ class GraphTask[T: Hashable]:
                 task_advancement += items_scores[item][obj_id]["sum_property_scores"]
             # Add the strictly satisfied relation scores
             for item, obj_id in global_assignment.items():
-                item_relations_results: dict[
-                    T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]
-                ] = items_results[item][
+                item_relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = items_results[item][
                     "relations"
                 ]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
                 for related_item, relations in item_relations_results.items():
                     related_item_assigned_obj_id = global_assignment[related_item]
-                    for relation_type_id, relations_by_obj_id in relations.items():
+                    for relations_by_obj_id in relations.values():
                         satisfying_obj_ids = relations_by_obj_id[obj_id]
                         if related_item_assigned_obj_id in satisfying_obj_ids:
                             task_advancement += 1
@@ -1053,9 +1025,7 @@ class GraphTask[T: Hashable]:
         # Add info about the task advancement
         info = {}
         # Add best assignement, mapping between item ids and the assigned object ids
-        info["best_assignment"] = {
-            item.id: obj_id for item, obj_id in best_assignment.items()
-        }
+        info["best_assignment"] = {item.id: obj_id for item, obj_id in best_assignment.items()}
         info["task_advancement"] = max_task_advancement
         # TODO: Add other info
 
@@ -1064,17 +1034,17 @@ class GraphTask[T: Hashable]:
     # TODO: Check if we keep the relation set too (might not be necessary)
     # TODO: Change to only return a plain lsit of items
     # TODO: Add support for overriding relations and keep the most restrictive one
+    @staticmethod
     def full_initialize_items_and_relations_from_dict(
-        self,
         task_description_dict: TaskDict[T],
     ) -> list[TaskItem[T]]:
         """
-        Create the list of TaskItem as defined in the task description
+        Create and initialize TaskItems for the graph task.
+
+        TaskItems are created as defined in the task description
         dictionary representing the items and their properties and relations.
         The items fully initialized with their relations and the inverse
         relations are also added.
-
-        Generic type T (Hashable) is the type of the item identifiers.
 
         Args:
             task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
@@ -1086,10 +1056,7 @@ class GraphTask[T: Hashable]:
         items = {
             item_id: TaskItem(
                 item_id,
-                {
-                    obj_prop_id_to_item_prop[prop]: value
-                    for prop, value in item_dict["properties"].items()
-                },
+                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_dict["properties"].items()},
             )
             for item_id, item_dict in task_description_dict.items()
         }
@@ -1101,9 +1068,7 @@ class GraphTask[T: Hashable]:
                     )
                     for relation_type_id in relation_type_ids
                 }
-                for related_item_id, relation_type_ids in main_item_dict[
-                    "relations"
-                ].items()
+                for related_item_id, relation_type_ids in main_item_dict["relations"].items()
             }
             for main_item_id, main_item_dict in task_description_dict.items()
         }
@@ -1111,16 +1076,13 @@ class GraphTask[T: Hashable]:
         # Add inverse relations
         for main_item_id, main_item_relations in organized_relations.items():
             for related_item_id, relations_dict in main_item_relations.items():
-                for relation_type_id, relation in relations_dict.items():
+                for relation in relations_dict.values():
                     inverse_relation_type_id = relation.inverse_relation_type_id
-                    if (
-                        inverse_relation_type_id
-                        not in organized_relations[related_item_id][main_item_id]
-                    ):
-                        organized_relations[related_item_id][main_item_id][
-                            inverse_relation_type_id
-                        ] = relation_type_id_to_relation[inverse_relation_type_id](
-                            items[related_item_id], items[main_item_id]
+                    if inverse_relation_type_id not in organized_relations[related_item_id][main_item_id]:
+                        organized_relations[related_item_id][main_item_id][inverse_relation_type_id] = (
+                            relation_type_id_to_relation[
+                                inverse_relation_type_id
+                            ](items[related_item_id], items[main_item_id])
                         )
 
         # Set item relations
@@ -1131,22 +1093,11 @@ class GraphTask[T: Hashable]:
                 for relation in relations_dict.values()
             }
 
-        items = list(items.values())
-
-        return items
+        return list(items.values())
 
     # TODO: Improve this
     def __repr__(self) -> str:
         return f"GraphTask({self.task_graph})"
-
-    def text_description(self) -> str:
-        """
-        Return a text description of the task.
-
-        Returns:
-            description (str): Text description of the task.
-        """
-        return self.__repr__()
 
 
 class PlaceObject(GraphTask):

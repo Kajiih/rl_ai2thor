@@ -75,6 +75,8 @@ Virutal env: `rl_thor_benchmark`
 - [] Test the framework with clean install
 - [] Double docstrings and comments
 - [] Add documentation
+- [] Add Pre-commit hooks
+  - [] Ruff
 
 ## Interesting Github Issues
 

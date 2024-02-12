@@ -1,3 +1,5 @@
+"""RL package for AI2-THOR environment."""
+
 from gymnasium.envs.registration import register
 
 register(
@@ -5,5 +7,3 @@ register(
     entry_point="rl_ai2thor.envs.ai2thor_envs:iTHOREnv",
     max_episode_steps=300,  # TODO: Check if we keep this
 )
-
-# %%

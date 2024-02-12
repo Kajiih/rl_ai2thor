@@ -29,7 +29,7 @@ Actions:
 - RotateHeldObjectPitch
 - RotateHeldObjectYaw
 - PickupObject
-- PutObject 
+- PutObject
 - DropHandObject
 - ThrowObject
 - PushObject
@@ -60,16 +60,32 @@ from __future__ import annotations
 import dataclasses
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, NewType, TypeVar
+
+from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:
     from ai2thor_envs import ITHOREnv
 
-from rl_ai2thor.utils.config_handling import nested_dict_get
-from rl_ai2thor.utils.ai2thor_types import EventLike
+    from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
+# %% Exceptions
+class MissingParameteRangeError(ValueError):
+    """
+    Exception raised when an action requires a parameter but parameter range has been defined for the action.
+
+    Either the action should not require a parameter, or the action has been badly defined in the environment.
+    """
+
+    def __init__(self, ai2thor_action: str) -> None:
+        self.ai2thor_action = ai2thor_action
+        super().__init__(f"Action {self.ai2thor_action} requires a parameter but no parameter range is defined.")
+
+
+# TODO: Define enums for ai2thor actions and other literals.
 # === Action Classes ===
+# TODO: Change perform to not need the environment
 @dataclass
 class EnvironmentAction:
     """
@@ -119,18 +135,18 @@ class EnvironmentAction:
     action_category: str
     _: dataclasses.KW_ONLY  # Following arguments are keyword-only
     has_target_object: bool = False
-    object_required_property: Optional[str] = None
-    parameter_name: Optional[str] = None
-    parameter_range: Optional[tuple[float, float]] = None
-    parameter_discrete_value: Optional[float] = None
+    object_required_property: str | None = None
+    parameter_name: str | None = None
+    parameter_range: tuple[float, float] | None = None
+    parameter_discrete_value: float | None = None
     other_ai2thor_parameters: dict[str, Any] = field(default_factory=dict)
     config_dependent_parameters: set[str] = field(default_factory=set)
 
     def perform(
         self,
         env: ITHOREnv,
-        action_parameter: Optional[float] = None,
-        target_object_id: Optional[str] = None,
+        action_parameter: float | None = None,
+        target_object_id: str | None = None,
     ) -> EventLike:
         """
         Perform the action in the environment.
@@ -143,7 +159,6 @@ class EnvironmentAction:
         Returns:
             event (EventLike): Event returned by the controller.
         """
-
         action_parameters = self.other_ai2thor_parameters.copy()
         if self.parameter_name is not None:
             # Deal with the discrete/continuous environment mode
@@ -156,34 +171,27 @@ class EnvironmentAction:
                     keys=["action_parameter_data", self.name, "discrete_value"],
                     default=self.parameter_discrete_value,
                 )
+            elif self.parameter_range is not None:
+                # Override the range with the value from the config
+                parameter_range = nested_dict_get(
+                    d=env.config,
+                    keys=["action_parameter_data", self.name, "range"],
+                    default=self.parameter_range,
+                )
+                action_parameter = parameter_range[0] + action_parameter * (parameter_range[1] - parameter_range[0])
             else:
-                # Rescale the action parameter
-                if self.parameter_range is not None:
-                    # Override the range with the value from the config
-                    parameter_range = nested_dict_get(
-                        d=env.config,
-                        keys=["action_parameter_data", self.name, "range"],
-                        default=self.parameter_range,
-                    )
-                    action_parameter = parameter_range[0] + action_parameter * (
-                        parameter_range[1] - parameter_range[0]
-                    )
-                else:
-                    raise ValueError(
-                        f"Action {self.ai2thor_action} requires a parameter but no parameter range is defined."
-                    )
+                raise MissingParameteRangeError(self.ai2thor_action)
+
             action_parameters[self.parameter_name] = action_parameter
         if self.has_target_object:
             action_parameters["objectId"] = target_object_id
         for parameter_name in self.config_dependent_parameters:
-            action_parameters[parameter_name] = env.config["action_parameters"][
-                parameter_name
-            ]
-        event = env.controller.step(
+            action_parameters[parameter_name] = env.config["action_parameters"][parameter_name]
+
+        return env.controller.step(
             action=self.ai2thor_action,
             **action_parameters,
         )
-        return event
 
     def fail_perform(
         self,
@@ -210,8 +218,10 @@ class EnvironmentAction:
 @dataclass
 class BaseActionCondition:
     """
-    Base class for conditions that can be used to determine whether an action
-    can be performed in the environment.
+    Base class for action conditions.
+
+    Action conditions can be used to determine whether an action can
+    be performed according to the current state of the environment.
 
     Attributes:
         overriding_message (str, optional): Message to display when the condition
@@ -219,7 +229,7 @@ class BaseActionCondition:
             _base_error_message method.
     """
 
-    overriding_message: Optional[str] = field(default=None, kw_only=True)
+    overriding_message: str | None = field(default=None, kw_only=True)
 
     @abstractmethod
     def __call__(self, env: ITHOREnv) -> bool:
@@ -252,8 +262,10 @@ class BaseActionCondition:
 @dataclass
 class ConditionalExecutionAction(EnvironmentAction):
     """
-    Class for actions that can only be performed under certain conditions that
-    are not natively handled by ai2thor (e.g. SliceObject can only be performed
+    Base class for actions that can only be performed under certain conditions.
+
+    Actions that inherit from this class add conditions that are not natively
+    handled by ai2thor (e.g. SliceObject can only be performed
     if the agent is holding a knife).
 
     Attributes:
@@ -266,8 +278,8 @@ class ConditionalExecutionAction(EnvironmentAction):
     def perform(
         self,
         env: ITHOREnv,
-        action_parameter: Optional[float] = None,
-        target_object_id: Optional[str] = None,
+        action_parameter: float | None = None,
+        target_object_id: str | None = None,
     ) -> EventLike:
         """
         Perform the action in the environment.
@@ -283,9 +295,7 @@ class ConditionalExecutionAction(EnvironmentAction):
         if self.action_condition(env):
             event = super().perform(env, action_parameter, target_object_id)
         else:
-            event = self.fail_perform(
-                env, error_message=self.action_condition.error_message(self)
-            )
+            event = self.fail_perform(env, error_message=self.action_condition.error_message(self))
 
         return event
 
@@ -293,8 +303,9 @@ class ConditionalExecutionAction(EnvironmentAction):
 @dataclass
 class VisibleWaterCondition(BaseActionCondition):
     """
-    Condition for actions that require the agent to have running water in its
-    field of view (e.g. FillObjectWithLiquid).
+    Check whether the agent has visible running water in its field of view.
+
+    Used for FillObjectWithLiquid and CleanObject.
     """
 
     def __call__(self, env: ITHOREnv) -> bool:
@@ -308,24 +319,22 @@ class VisibleWaterCondition(BaseActionCondition):
             bool: Whether the agent has visible running water in its field of view.
         """
         for obj in env.last_event.metadata["objects"]:
-            if (
-                obj["visible"]
-                and obj["isToggled"]
-                and obj["objectType"] in ["Faucet", "ShowerHead"]
-            ):
+            if obj["visible"] and obj["isToggled"] and obj["objectType"] in {"Faucet", "ShowerHead"}:
                 return True
         return False
 
-    def _base_error_message(self, action: EnvironmentAction) -> str:
-        """Default error message for the condition."""
+    @staticmethod
+    def _base_error_message(action: EnvironmentAction) -> str:
+        """Return the default error message for the condition."""
         return f"Agent needs to have visible running water to perform action {action.ai2thor_action}!"
 
 
 @dataclass
 class HoldingObjectTypeCondition(BaseActionCondition):
     """
-    Condition for actions that require the agent to be holding an object of a
-    specific type (e.g. SliceObject requires the agent to hold a knife).
+    Check whether the agent is holding an object of a specific type.
+
+    Used for SliceObject.
 
     Attributes:
         object_type (str): Type of object that the agent needs to hold.
@@ -345,12 +354,11 @@ class HoldingObjectTypeCondition(BaseActionCondition):
         """
         return (
             len(env.last_event.metadata["inventoryObjects"]) > 0
-            and env.last_event.metadata["inventoryObjects"][0]["objectType"]
-            == self.object_type
+            and env.last_event.metadata["inventoryObjects"][0]["objectType"] == self.object_type
         )
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
-        """Default error message for the condition."""
+        """Return the default error message for the condition."""
         return f"Agent needs to hold an object of type {self.object_type} to perform action {action.name} ({action.ai2thor_action} in ai2thor)!"
 
 
@@ -668,7 +676,7 @@ clean_object_action = ConditionalExecutionAction(
 
 
 # === Constants ===
-ALL_ACTIONS = [
+ALL_ACTIONS: list[EnvironmentAction] = [
     move_ahead_action,
     move_back_action,
     move_left_action,
@@ -706,7 +714,7 @@ ALL_ACTIONS = [
     clean_object_action,
 ]
 
-ACTION_CATEGORIES = set(action.action_category for action in ALL_ACTIONS)
+ACTION_CATEGORIES = {action.action_category for action in ALL_ACTIONS}
 ACTIONS_BY_CATEGORY = {category: [] for category in ACTION_CATEGORIES}
 for action in ALL_ACTIONS:
     category = action.action_category

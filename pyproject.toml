@@ -46,3 +46,73 @@ Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rl-ai2thor"]
+
+# == Ruff == # https://docs.astral.sh/ruff/settings
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src"]
+# In addition to the standard set, include `.ipynb` files.
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+preview = true
+fixable = ["ALL"]
+select = [
+    "RUF",  # Ruff specific rules
+    "PL",   # Pylint
+    "B",    # Bugbear
+    "D",    # Docstring
+    "D213", # Multi-line docstring summary should start at the second line
+    "D401", # First line should be in imperative mood
+    "D404", # First line should not start with this
+    "I",    # Isort
+    "C90",  # Mccabe complexity
+    "UP",   # PyUpgrade 
+    "ANN",  # Type annotations
+    "S",    # Bandit
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "FA",   # flake8-future-annotations
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "G",    # flake8-logging-format
+    "LOG",  # flake8-logging
+    "PIE",  # flake8-pie
+    "PT",   # flake8-pytest-style
+    "RET",  # flake8-return
+    "SLF",  # flake8-self
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "TD",   # flake8-todos
+    "ERA",  # flake8-eradicate
+    "TRY",  # tryceratops
+    "NPY",  # numpy specefic rules
+    "PERF", # Perflint
+    "FURB", # refurb
+
+]
+ignore = [
+  "D105",  # Missing docstring in magic method
+  "D107",  # Missing docstring in `__init__`
+  "D212",  # Multi-line docstring summary should start at the first line
+  "TD002", # Missing author in TODO; try: `TODO(<author_name>): ...` or `TODO @<author_name>: ...`
+  "TD003", # Missing issue link on the line following this TODO
+  "TD004", # Missing colon after TODO
+  "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in
+
+  # TODO: Comment out for produciton release
+  "ERA001", # Found commented-out code
+  "S101" # Use of `assert` detected
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+[tool.ruff.lint.pylint]
+max-args = 6
+[tool.ruff.format]
+preview = true
+docstring-code-format = true

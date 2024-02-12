@@ -1,6 +1,4 @@
-"""
-Utility functions specific to AI2-THOR.
-"""
+"""Utility functions specific to AI2-THOR."""
 
 from typing import Any
 
