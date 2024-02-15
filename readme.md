@@ -2,13 +2,13 @@
 
 ## How to use
 
-### Create custom emvironment mode
+### Create custom environment mode
 
-- Create a new mode config in `config/enviroment_modes/` folder and change `environment_mode` in `config/general.yaml` to the new mode name.
+- Create a new mode config in `config/environment_modes/` folder and change `environment_mode` in `config/general.yaml` to the new mode name.
 
 ## Dev info
 
-Virutal env: `rl_thor_benchmark`
+Virtual env: `rl_thor_benchmark`
 
 ## Possible features
 
@@ -16,7 +16,7 @@ Virutal env: `rl_thor_benchmark`
 - Add falling back on closest object in the agent's field of view if no object at the target coordinates
 - If no object is at the target object coordinates, add range around the coordinates to search for the object
 - Add continuous/discrete dichotomy for some action groups only
-- Add 3rd pary/external camera
+- Add 3rd party/external camera
 - Add enabling or disabling object properties from config (`openable`, `pickupable`, `receptacle`, ...)
 - Add switching from on and off toggle actions to single toggle action from config
 
@@ -36,7 +36,7 @@ Virutal env: `rl_thor_benchmark`
       - [] Handle render modes
     - [`ToTest`] Implement target object through position
     - [] Add scene id handling at reset
-    - [] Implement grayscale image mode
+    - [] Implement gray scale image mode
     - [`ToTest`] Implement variable openness
     - [`ToTest`] Handle default parameter value for actions
       - [`ToTest`] Handle changing default parameter value from config
@@ -49,11 +49,12 @@ Virutal env: `rl_thor_benchmark`
     - [] Handle step info better
     - [] Check seed, randomization and reproducibility
     - [] Handle reset at the end of the episode
-    - [] Update docstrings and documentation
-    - [] Make gridsize and moveMagnitude paramters coherent (for `MoveAhead`-type actions)
+    - [] Update docstring and documentation
+    - [] Make `gridsize` and `moveMagnitude` parameters coherent (for `MoveAhead`-type actions)
     - [] Make the whole framework split-aware ('train', 'test' splits, ...)
     - [] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
     - [] Add parameters to relations and properties
+    - [] Improve config (and environment mode config) handling
 
   - [] ManipulaTHOR env
   - [] RoboTHOR env
@@ -73,7 +74,7 @@ Virutal env: `rl_thor_benchmark`
 - [] Check and remove unused dependencies
 - [] Check and remove unused files
 - [] Test the framework with clean install
-- [] Double docstrings and comments
+- [] Double check docstrings and comments
 - [] Add documentation
 - [] Add Pre-commit hooks
   - [] Ruff

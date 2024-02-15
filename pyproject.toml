@@ -36,6 +36,9 @@ graph = [
   "matplotlib",
   # pygraphviz, # https://pygraphviz.github.io/documentation/stable/install.html
   ]
+dev = [
+  "pytest",
+]
 
 [project.urls]  # TODO: Add these
 Homepage = "https://example.com"
@@ -108,6 +111,9 @@ ignore = [
   "ERA001", # Found commented-out code
   "S101" # Use of `assert` detected
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = []
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

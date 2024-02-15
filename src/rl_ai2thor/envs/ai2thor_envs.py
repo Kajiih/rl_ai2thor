@@ -1,7 +1,7 @@
 """
 Gymnasium interface for AI2THOR RL environment.
 
-TODO: Finish module docstrings.
+TODO: Finish module docstring.
 """
 
 import pathlib
@@ -23,7 +23,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, PlaceObject, ObjFixedPropId
+from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceObject
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -68,45 +68,44 @@ class ITHOREnv(gym.Env):
             self.config = yaml.safe_load(f)
 
         with (config_dir / "environment_modes" / f"{self.config['environment_mode']}.yaml").open(encoding="utf-8") as f:
-            enviroment_mode_config = yaml.safe_load(f)
-        update_nested_dict(self.config, enviroment_mode_config)
+            environment_mode_config = yaml.safe_load(f)
+        update_nested_dict(self.config, environment_mode_config)
 
         if override_config is not None:
             update_nested_dict(self.config, override_config)
 
     def _create_action_space(self) -> None:
-        """Create the action space accoding to the available action groups in the environment mode config."""
-        self.action_availablities = {action.name: False for action in ALL_ACTIONS}
+        """Create the action space according to the available action groups in the environment mode config."""
+        self.action_availabilities = {action.name: False for action in ALL_ACTIONS}
 
         # Get the available actions from the environment mode config
         for action_category in self.config["action_categories"]:
-            if action_category in ActionCategory:
-                if self.config["action_categories"][action_category]:
-                    # Enable all actions in the category
-                    for action in ACTIONS_BY_CATEGORY[action_category]:
-                        self.action_availablities[action.name] = True
-            else:
+            if action_category not in ActionCategory:
                 raise UnknownActionCategoryError(action_category)
 
+            if self.config["action_categories"][action_category]:
+                # Enable all actions in the category
+                for action in ACTIONS_BY_CATEGORY[action_category]:
+                    self.action_availabilities[action.name] = True
         # Handle specific cases
         # Simple movement actions
         if self.config["simple_movement_actions"]:
-            self.action_availablities[EnvActionName.MOVE_BACK] = False
-            self.action_availablities[EnvActionName.MOVE_LEFT] = False
-            self.action_availablities[EnvActionName.MOVE_RIGHT] = False
+            self.action_availabilities[EnvActionName.MOVE_BACK] = False
+            self.action_availabilities[EnvActionName.MOVE_LEFT] = False
+            self.action_availabilities[EnvActionName.MOVE_RIGHT] = False
         # Done actions
         if self.config["use_done_action"]:
-            self.action_availablities[EnvActionName.DONE] = True
+            self.action_availabilities[EnvActionName.DONE] = True
         # Partial openness
         if (
             self.config["partial_openness"]
             and self.config["action_categories"]["open_close_actions"]
             and not self.config["discrete_actions"]
         ):
-            self.action_availablities[EnvActionName.OPEN_OBJECT] = False
-            self.action_availablities[EnvActionName.CLOSE_OBJECT] = False
+            self.action_availabilities[EnvActionName.OPEN_OBJECT] = False
+            self.action_availabilities[EnvActionName.CLOSE_OBJECT] = False
 
-        available_actions = [action_name for action_name, available in self.action_availablities.items() if available]
+        available_actions = [action_name for action_name, available in self.action_availabilities.items() if available]
         self.action_idx_to_name = dict(enumerate(available_actions))
         # Create the action space dictionary
         action_space_dict: dict[str, gym.Space] = {"action_index": gym.spaces.Discrete(len(self.action_idx_to_name))}
@@ -282,7 +281,7 @@ class ITHOREnv(gym.Env):
         """
         self.controller.stop()
 
-    # TODO: Implement approprate task sampling
+    # TODO: Implement appropriate task sampling
     def _sample_task(self, event: EventLike) -> GraphTask:
         """
         Sample a task for the environment.

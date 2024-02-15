@@ -1,7 +1,7 @@
 """
 Module for defining reward functions for AI2-THOR environments.
 
-TODO: Finish module docstrings.
+TODO: Finish module docstring.
 """
 
 from typing import Any

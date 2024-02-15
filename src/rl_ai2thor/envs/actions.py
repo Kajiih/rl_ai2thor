@@ -154,10 +154,10 @@ class EnvironmentAction:
         parameter_name (str, optional): Name of the quantitative parameter of
             the action.
         parameter_range (tuple[float, float], optional): Range of the quantitative
-            parameter of the action. Can be overriden by the config.
+            parameter of the action. Can be overridden by the config.
         parameter_discrete_value (float, optional): Value of the quantitative
             parameter of the action in discrete environment mode. Can be
-            overriden by the config.
+            overridden by the config.
         other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor
             parameters of the action that take a fixed value (e.g. "up" and
             "right" for MoveHeldObject) and their value.
@@ -230,7 +230,7 @@ class EnvironmentAction:
                 )
                 action_parameter = parameter_range[0] + action_parameter * (parameter_range[1] - parameter_range[0])
             else:
-                raise MissingParameteRangeError(self.ai2thor_action)
+                raise MissingParameterRangeError(self.ai2thor_action)
 
             action_parameters[self.parameter_name] = action_parameter
         if self.has_target_object:
@@ -342,12 +342,11 @@ class ConditionalExecutionAction(EnvironmentAction):
         Returns:
             event (EventLike): Event returned by the controller.
         """
-        if self.action_condition(env):
-            event = super().perform(env, action_parameter, target_object_id)
-        else:
-            event = self.fail_perform(env, error_message=self.action_condition.error_message(self))
-
-        return event
+        return (
+            super().perform(env, action_parameter, target_object_id)
+            if self.action_condition(env)
+            else self.fail_perform(env, error_message=self.action_condition.error_message(self))
+        )
 
 
 @dataclass
@@ -368,14 +367,14 @@ class VisibleWaterCondition(BaseActionCondition):
         Returns:
             bool: Whether the agent has visible running water in its field of view.
         """
-        for obj in env.last_event.metadata["objects"]:
-            if (
+        return any(
+            (
                 obj[ObjVariablePropId.VISIBLE]
                 and obj[ObjVariablePropId.IS_TOGGLED]
                 and obj[ObjFixedPropId.OBJECT_TYPE] in {"Faucet", "ShowerHead"}
-            ):
-                return True
-        return False
+            )
+            for obj in env.last_event.metadata["objects"]
+        )
 
     @staticmethod
     def _base_error_message(action: EnvironmentAction) -> str:
@@ -429,7 +428,7 @@ slice_object_condition = HoldingObjectTypeCondition(
 
 
 # %% Exceptions
-class MissingParameteRangeError(ValueError):
+class MissingParameterRangeError(ValueError):
     """
     Exception raised when an action requires a parameter but parameter range has been defined for the action.
 
@@ -442,7 +441,7 @@ class MissingParameteRangeError(ValueError):
 
 
 # %% == Actions definitions ==
-# TODO: Use task enums to define obejct required properties
+# TODO: Use task enums to define object required properties
 # Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
 move_ahead_action = EnvironmentAction(
     name=EnvActionName.MOVE_AHEAD,

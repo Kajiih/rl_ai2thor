@@ -1,7 +1,7 @@
 """
 Module for defining tasks for the AI2THOR RL environment.
 
-TODO: Finish module docstrings.
+TODO: Finish module docstring.
 """
 
 from __future__ import annotations
@@ -195,10 +195,9 @@ class TaskItem[T: Hashable]:
         Returns:
             is_candidate (bool): True if the given object is a valid candidate for the item.
         """
-        for prop_id, prop_value in self.candidate_required_properties.items():
-            if obj_metadata[prop_id] != prop_value:
-                return False
-        return True
+        return all(
+            obj_metadata[prop_id] == prop_value for prop_id, prop_value in self.candidate_required_properties.items()
+        )
 
     def _get_properties_satisfaction(self, obj_metadata: dict[ObjMetadataId, Any]) -> dict[ObjPropId, bool]:
         """
@@ -244,7 +243,7 @@ class TaskItem[T: Hashable]:
         dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
     ]:  # TODO: Simplify this big type after finish the implementation
         """
-        Return the results dictionnary of the object for the item.
+        Return the results dictionary of the object for the item.
 
         The results are the satisfaction of each property and the satisfying
         objects of each relation of the item.
@@ -271,7 +270,7 @@ class TaskItem[T: Hashable]:
         dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
     ]:
         """
-        Return the results dictionnary with the results of each candidate of the item.
+        Return the results dictionary with the results of each candidate of the item.
 
         Args:
             scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
@@ -301,7 +300,7 @@ class TaskItem[T: Hashable]:
                     for relation in self.organized_relations[related_item_id].values()
                 }
                 for related_item_id in self.organized_relations
-            },  # type: ignore  # TODO: Delete type ignore after simplyfing the type
+            },  # type: ignore  # TODO: Delete type ignore after simplifying the type
         }
 
         return results
@@ -333,14 +332,12 @@ class TaskItem[T: Hashable]:
         ] = {
             obj_id: {
                 "sum_property_scores": sum(
-                    1
+                    bool(objects_results["properties"][prop_id][obj_id])  # type: ignore  # TODO: Delete type ignore after simplifying the type
                     for prop_id in objects_results["properties"]
-                    if objects_results["properties"][prop_id][obj_id]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
                 ),
                 "sum_relation_scores": sum(
-                    1
+                    bool(len(objects_results["relations"][relation_type_id][obj_id]) > 0)  # type: ignore  # TODO: Delete type ignore after simplifying the type
                     for relation_type_id in objects_results["relations"]
-                    if len(objects_results["relations"][relation_type_id][obj_id]) > 0  # type: ignore  # TODO: Delete type ignore after simplyfing the type
                 ),
             }
             for obj_id in self.candidate_ids
@@ -363,7 +360,7 @@ class TaskItem[T: Hashable]:
         The interesting candidates are those that can lead to a maximum of task advancement
         depending on the assignment of objects to the other items.
 
-        A candidate is *strong* if it has no stricly *stronger* candidate among the other
+        A candidate is *strong* if it has no strictly *stronger* candidate among the other
         candidates, where the stronger relation is defined in the get_stronger_candidate
         method.
 
@@ -486,13 +483,9 @@ class TaskItem[T: Hashable]:
         else:
             obj2_stronger = self._is_stronger_candidate_than(obj_2_id, obj_1_id, objects_results, objects_scores)
 
-        if obj1_stronger and obj2_stronger:
-            return "equal"
         if obj1_stronger:
-            return obj_1_id
-        if obj2_stronger:
-            return obj_2_id
-        return "incomparable"
+            return "equal" if obj2_stronger else obj_1_id
+        return obj_2_id if obj2_stronger else "incomparable"
 
     @staticmethod
     def _is_stronger_candidate_than(
@@ -537,7 +530,7 @@ class TaskItem[T: Hashable]:
 
         # Calculate d[x,y]
         d_xy = 0
-        relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = objects_results["relations"]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
+        relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = objects_results["relations"]  # type: ignore  # TODO: Delete type ignore after simplifying the type
         for related_item_id in relations_results:
             for relation_type_id in relations_results[related_item_id]:
                 x_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_1_id]
@@ -575,8 +568,8 @@ class ItemOverlapClass[T: Hashable]:
         self.items = items
         self.candidate_ids = candidate_ids
 
-        # Compute all vald assignments of objects to the items in the overlap class
-        # One permuation is represented by a dictionary mapping the item to the assigned object id
+        # Compute all valid assignments of objects to the items in the overlap class
+        # One permutation is represented by a dictionary mapping the item to the assigned object id
         candidate_permutations = [
             dict(zip(self.items, permutation, strict=False))
             for permutation in itertools.permutations(self.candidate_ids, len(self.items))
@@ -715,10 +708,10 @@ class Relation(ABC):
         related to a candidate of the related item (but no related
         object might be assigned to the related item).
         """
-        for related_object_id in self._extract_related_object_ids(main_obj_metadata):
-            if related_object_id in self.related_item.candidate_ids:
-                return True
-        return False
+        return any(
+            related_object_id in self.related_item.candidate_ids
+            for related_object_id in self._extract_related_object_ids(main_obj_metadata)
+        )
 
     def get_satisfying_related_object_ids(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> set[ObjId]:
         """Return related item's candidate's ids that satisfy the relation with the given main object."""
@@ -813,7 +806,7 @@ class GraphTask[T: Hashable]:
     Graph tasks are defined using a task description dictionary representing each task
     item, its properties and relations.
 
-    Example of task desctiption dictionnary for the task of placing an apple in a plate:
+    Example of task description dictionary for the task of placing an apple in a plate:
     target_objects = {
             "receptacle_plate": {
                 "properties": {"objectType": "Plate"},
@@ -937,10 +930,10 @@ class GraphTask[T: Hashable]:
         # Total number of properties and relations of the items
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
-        # Return intial task advancement
+        # Return initial task advancement
         return self.get_task_advancement(event)
 
-    # TODO: Add trying only the top k interesting assignements according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
+    # TODO: Add trying only the top k interesting assignments according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
     # TODO: Implement this method
     def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
@@ -966,7 +959,7 @@ class GraphTask[T: Hashable]:
             is_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
-        # Compute the intersting assignemnts for each overlap class and the results and scores of each candidate for each item
+        # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
         overlap_classes_assignment_data = [
             overlap_class.compute_interesting_assignments(event.metadata["objects"])
             for overlap_class in self.overlap_classes
@@ -1000,15 +993,15 @@ class GraphTask[T: Hashable]:
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
-            task_advancement = 0
-            # Add the property scores
-            for item, obj_id in global_assignment.items():
-                task_advancement += items_scores[item][obj_id]["sum_property_scores"]
-            # Add the strictly satisfied relation scores
+            # Property scores
+            task_advancement = sum(
+                items_scores[item][obj_id]["sum_property_scores"] for item, obj_id in global_assignment.items()
+            )
+            # Strictly satisfied relation scores
             for item, obj_id in global_assignment.items():
                 item_relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = items_results[item][
                     "relations"
-                ]  # type: ignore  # TODO: Delete type ignore after simplyfing the type
+                ]  # type: ignore  # TODO: Delete type ignore after simplifying the type
                 for related_item, relations in item_relations_results.items():
                     related_item_assigned_obj_id = global_assignment[related_item]
                     for relations_by_obj_id in relations.values():
@@ -1018,21 +1011,22 @@ class GraphTask[T: Hashable]:
             if task_advancement > max_task_advancement:
                 max_task_advancement = task_advancement
                 best_assignment = global_assignment
-                if task_advancement == self.max_task_advancement:
+                if max_task_advancement == self.max_task_advancement:
                     is_terminated = True
                     break
 
         # Add info about the task advancement
-        info = {}
-        # Add best assignement, mapping between item ids and the assigned object ids
-        info["best_assignment"] = {item.id: obj_id for item, obj_id in best_assignment.items()}
-        info["task_advancement"] = max_task_advancement
+        info = {
+            # Add best assignment, mapping between item ids and the assigned object ids
+            "best_assignment": {item.id: obj_id for item, obj_id in best_assignment.items()},
+            "task_advancement": max_task_advancement,
+        }
         # TODO: Add other info
 
         return max_task_advancement, is_terminated, info
 
     # TODO: Check if we keep the relation set too (might not be necessary)
-    # TODO: Change to only return a plain lsit of items
+    # TODO: Change to only return a plain list of items
     # TODO: Add support for overriding relations and keep the most restrictive one
     @staticmethod
     def full_initialize_items_and_relations_from_dict(
@@ -1292,7 +1286,7 @@ is_picked_up_prop = ItemProp(
 )
 
 
-# %% === Propertiy and relation ids mapping ===
+# %% === Property and relation ids mapping ===
 obj_prop_id_to_item_prop = {
     ObjFixedPropId.OBJECT_TYPE: object_type_prop,
     ObjFixedPropId.IS_INTERACTABLE: is_interactable_prop,
