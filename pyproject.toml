@@ -113,7 +113,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = []
+"tests/*" = [
+  "SLF001", # Private member accessed: `self._foo`
+  "D100",   # Missing docstring in public module
+  "D101",   # Missing docstring in public class
+  "D102",   # Missing docstring in public method
+  "D103",   # Missing docstring in public function
+  "ANN",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

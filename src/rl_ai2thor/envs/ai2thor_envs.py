@@ -5,7 +5,7 @@ TODO: Finish module docstring.
 """
 
 import pathlib
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import ai2thor.controller
 import gymnasium as gym
@@ -48,13 +48,14 @@ class ITHOREnv(gym.Env):
         Args:
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
-        self._load_full_config(override_config)
+        self.config = self._load_and_override_config(override_config)
         self._create_action_space()
         self._create_observation_space()
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
 
-    def _load_full_config(self, override_config: dict | None = None) -> None:
+    @staticmethod
+    def _load_and_override_config(override_config: dict | None = None) -> dict[str, Any]:
         """
         Load and update the config of the environment according to the override config.
 
@@ -64,16 +65,18 @@ class ITHOREnv(gym.Env):
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
         config_dir = pathlib.Path(ROOT_DIR, "config")
-        base_config_path = config_dir / "base.yaml"
-        self.config = yaml.safe_load(base_config_path.read_text(encoding="utf-8"))
+        general_config_path = config_dir / "general.yaml"
+        config = yaml.safe_load(general_config_path.read_text(encoding="utf-8"))
 
-        env_mode_config_path = config_dir / "environment_modes" / f"{self.config['environment_mode']}.yaml"
+        env_mode_config_path = config_dir / "environment_modes" / f"{config['environment_mode']}.yaml"
         env_mode_config = yaml.safe_load(env_mode_config_path.read_text(encoding="utf-8"))
 
-        update_nested_dict(self.config, env_mode_config)
+        update_nested_dict(config, env_mode_config)
 
         if override_config is not None:
-            update_nested_dict(self.config, override_config)
+            update_nested_dict(config, override_config)
+
+        return config
 
     def _compute_action_availabilities(self) -> dict[EnvActionName, bool]:
         """
@@ -108,6 +111,7 @@ class ITHOREnv(gym.Env):
         ):
             for action_name in [EnvActionName.OPEN_OBJECT, EnvActionName.CLOSE_OBJECT]:
                 action_availabilities[action_name] = False
+            action_availabilities[EnvActionName.PARTIAL_OPEN_OBJECT] = True
 
         return action_availabilities
 
@@ -153,6 +157,7 @@ class ITHOREnv(gym.Env):
         # TODO: Check if this is correct ^
         self.task = None
         self.step_count = 0
+        self.np_random = np.random.default_rng(self.config["seed"])
 
     def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
         """
@@ -259,15 +264,17 @@ class ITHOREnv(gym.Env):
         """
         print("Resetting environment and starting new episode")
         # TODO: Check that the seed is used correctly
-        if seed is None:
-            seed = self.config["seed"]
         super().reset(seed=seed)
 
-        # Setup the scene
-        self.last_event = self.controller.reset("FloorPlan301")
-        observation = self.last_event.frame  # type: ignore
-
         # TODO: Add scene id handling
+        scenes_list = self.controller.ithor_scenes(
+            include_kitchens=True, include_living_rooms=True, include_bedrooms=True, include_bathrooms=True
+        )
+        sampled_scene = self.np_random.choice(scenes_list)
+
+        # Setup the scene
+        self.last_event = self.controller.reset(sampled_scene)
+        observation = self.last_event.frame  # type: ignore
 
         # Initialize the task and reward handler
         self.task = self._sample_task(self.last_event)
@@ -307,9 +314,8 @@ class ITHOREnv(gym.Env):
             obj[ObjFixedPropId.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[ObjFixedPropId.RECEPTACLE]
         ]
 
-        np_rng: np.random.Generator = self._np_random  # type: ignore
-        object_to_place = np_rng.choice(scene_pickupable_objects)
-        receptacle = np_rng.choice(scene_receptacles)
+        object_to_place = self.np_random.choice(scene_pickupable_objects)
+        receptacle = self.np_random.choice(scene_receptacles)
 
         return PlaceObject(
             placed_object_type=object_to_place,
@@ -325,5 +331,5 @@ class UnknownActionCategoryError(ValueError):
         self.action_category = action_category
         super().__init__(
             f"Unknown action category {action_category} in environment mode config. "
-            f"Available action categories are ACTION_CATEGORIES."
+            "Available action categories are ACTION_CATEGORIES."
         )

@@ -55,14 +55,13 @@ Virtual env: `rl_thor_benchmark`
     - [] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
     - [] Add parameters to relations and properties
     - [] Improve config (and environment mode config) handling
-
   - [] ManipulaTHOR env
   - [] RoboTHOR env
-
 - [] Add RL algorithms
+
   - [] Support Stable Baselines3
   - [] Support RLlib..?
-  - [] Support CleanRL
+  - [] Supwert CleanRL
 
 ### Final TODOs
 
@@ -70,6 +69,7 @@ Virtual env: `rl_thor_benchmark`
 - [] Check and remove ipdb traces
 - [] Check and remove asserts
 - [] Check remaining TODOs in code
+- [] Check and remove noqa
 - [] Check and remove unused code
 - [] Check and remove unused dependencies
 - [] Check and remove unused files
