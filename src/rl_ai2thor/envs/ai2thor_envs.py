@@ -64,21 +64,26 @@ class ITHOREnv(gym.Env):
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
         config_dir = pathlib.Path(ROOT_DIR, "config")
-        with (config_dir / "general.yaml").open(encoding="utf-8") as f:
-            self.config = yaml.safe_load(f)
+        base_config_path = config_dir / "base.yaml"
+        self.config = yaml.safe_load(base_config_path.read_text(encoding="utf-8"))
 
-        with (config_dir / "environment_modes" / f"{self.config['environment_mode']}.yaml").open(encoding="utf-8") as f:
-            environment_mode_config = yaml.safe_load(f)
-        update_nested_dict(self.config, environment_mode_config)
+        env_mode_config_path = config_dir / "environment_modes" / f"{self.config['environment_mode']}.yaml"
+        env_mode_config = yaml.safe_load(env_mode_config_path.read_text(encoding="utf-8"))
+
+        update_nested_dict(self.config, env_mode_config)
 
         if override_config is not None:
             update_nested_dict(self.config, override_config)
 
-    def _create_action_space(self) -> None:
-        """Create the action space according to the available action groups in the environment mode config."""
-        self.action_availabilities = {action.name: False for action in ALL_ACTIONS}
+    def _compute_action_availabilities(self) -> dict[EnvActionName, bool]:
+        """
+        Compute the action availabilities based on the environment mode config.
 
-        # Get the available actions from the environment mode config
+        Returns:
+            dict[EnvActionName, bool]: Dictionary indicating which actions are available.
+        """
+        action_availabilities = {action.name: False for action in ALL_ACTIONS}
+
         for action_category in self.config["action_categories"]:
             if action_category not in ActionCategory:
                 raise UnknownActionCategoryError(action_category)
@@ -86,31 +91,39 @@ class ITHOREnv(gym.Env):
             if self.config["action_categories"][action_category]:
                 # Enable all actions in the category
                 for action in ACTIONS_BY_CATEGORY[action_category]:
-                    self.action_availabilities[action.name] = True
+                    action_availabilities[action.name] = True
+
         # Handle specific cases
-        # Simple movement actions
         if self.config["simple_movement_actions"]:
-            self.action_availabilities[EnvActionName.MOVE_BACK] = False
-            self.action_availabilities[EnvActionName.MOVE_LEFT] = False
-            self.action_availabilities[EnvActionName.MOVE_RIGHT] = False
-        # Done actions
+            for action_name in [EnvActionName.MOVE_BACK, EnvActionName.MOVE_LEFT, EnvActionName.MOVE_RIGHT]:
+                action_availabilities[action_name] = False
+
         if self.config["use_done_action"]:
-            self.action_availabilities[EnvActionName.DONE] = True
-        # Partial openness
+            action_availabilities[EnvActionName.DONE] = True
+
         if (
             self.config["partial_openness"]
             and self.config["action_categories"]["open_close_actions"]
             and not self.config["discrete_actions"]
         ):
-            self.action_availabilities[EnvActionName.OPEN_OBJECT] = False
-            self.action_availabilities[EnvActionName.CLOSE_OBJECT] = False
+            for action_name in [EnvActionName.OPEN_OBJECT, EnvActionName.CLOSE_OBJECT]:
+                action_availabilities[action_name] = False
+
+        return action_availabilities
+
+    def _create_action_space(self) -> None:
+        """Create the action space according to the available action groups in the environment mode config."""
+        self.action_availabilities = self._compute_action_availabilities()
 
         available_actions = [action_name for action_name, available in self.action_availabilities.items() if available]
         self.action_idx_to_name = dict(enumerate(available_actions))
+
         # Create the action space dictionary
         action_space_dict: dict[str, gym.Space] = {"action_index": gym.spaces.Discrete(len(self.action_idx_to_name))}
+
         if not self.config["discrete_actions"]:
             action_space_dict["action_parameter"] = gym.spaces.Box(low=0, high=1, shape=())
+
         if not self.config["target_closest_object"]:
             action_space_dict["target_object_position"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
@@ -202,43 +215,40 @@ class ITHOREnv(gym.Env):
             target_object_id (str | None): Id of the target object.
             failed_action_event (EventLike | None): Event corresponding to the failed action.
         """
-        target_object_id = None
-        failed_action_event = None
-        if env_action.has_target_object:
-            if self.config["target_closest_object"]:
-                # Look for the closest operable object for the action
-                visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
-                object_required_property = env_action.object_required_property
-                closest_operable_object, search_distance = None, np.inf
-                for obj in visible_objects:
-                    if obj[object_required_property] and obj["distance"] < search_distance:
-                        closest_operable_object = obj
-                        search_distance = obj["distance"]
-                if closest_operable_object is not None:
-                    target_object_id = closest_operable_object["objectId"]
-                else:
-                    failed_action_event = env_action.fail_perform(
-                        env=self,
-                        error_message=f"No operable object found to perform action {env_action.name} in the agent's field of view.",
-                    )
-            else:
-                assert target_object_coordinates is not None
-                query = self.controller.step(
-                    action="GetObjectInFrame",
-                    x=target_object_coordinates[0],
-                    y=target_object_coordinates[1],
-                    checkVisible=False,  # TODO: Check if the behavior is correct (object not detected if not visible)
-                )
-                if bool(query):
-                    target_object_id = query.metadata["actionReturn"]
-                else:
-                    failed_action_event = env_action.fail_perform(
-                        env=self,
-                        error_message=f"No object found at position {target_object_coordinates} to perform action {env_action.name}.",
-                    )
-                    # TODO: Implement a range of tolerance
+        # No target object case
+        if not env_action.has_target_object:
+            return None, None
 
-        return target_object_id, failed_action_event
+        # Closest object case
+        if self.config["target_closest_object"]:
+            # Look for the closest operable object for the action
+            visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
+            closest_operable_object = min(
+                (obj for obj in visible_objects if obj[env_action.object_required_property]),
+                key=lambda obj: obj["distance"],
+                default=None,
+            )
+            if closest_operable_object is not None:
+                return closest_operable_object["objectId"], None
+            return None, env_action.fail_perform(
+                env=self,
+                error_message=f"No operable object found to perform action {env_action.name} in the agent's field of view.",
+            )
+
+        # Target coordinate case
+        assert target_object_coordinates is not None
+        query = self.controller.step(
+            action="GetObjectInFrame",
+            x=target_object_coordinates[0],
+            y=target_object_coordinates[1],
+            checkVisible=False,  # TODO: Check if the behavior is correct (object not detected if not visible)
+        )
+        if bool(query):
+            return query.metadata["actionReturn"], None
+        return None, env_action.fail_perform(
+            env=self,
+            error_message=f"No object found at position {target_object_coordinates} to perform action {env_action.name}.",
+        )
 
     # TODO: Adapt this with general task and reward handling
     def reset(self, seed: int | None = None) -> tuple[ArrayLike, dict]:

@@ -336,7 +336,7 @@ class TaskItem[T: Hashable]:
                     for prop_id in objects_results["properties"]
                 ),
                 "sum_relation_scores": sum(
-                    bool(len(objects_results["relations"][relation_type_id][obj_id]) > 0)  # type: ignore  # TODO: Delete type ignore after simplifying the type
+                    len(objects_results["relations"][relation_type_id][obj_id]) > 0  # type: ignore  # TODO: Delete type ignore after simplifying the type
                     for relation_type_id in objects_results["relations"]
                 ),
             }

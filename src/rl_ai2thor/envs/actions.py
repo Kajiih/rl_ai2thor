@@ -130,7 +130,7 @@ class ActionCategory(StrEnum):
     SLICE_ACTIONS = "slice_actions"
     USE_UP_ACTIONS = "use_up_actions"
     CLEAN_DIRTY_ACTIONS = "clean_dirty_actions"
-    SPECIAL = "_special"
+    SPECIAL = "_special"  # For categories that shouldn't be directly enabled from config
 
 
 # === Action Classes ===
