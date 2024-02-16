@@ -73,10 +73,8 @@ jobs:
 
       - name: Generate Coverage Report 📊
         run: |
-          pip install .
-          python -m coverage run -m pytest -v # -s
-          coverage report -m
-        continue-on-error: true
+          pip install coverage
+          coverage xml
 
       # !! Broken !!
       # - name: Reviewdog 🐶
