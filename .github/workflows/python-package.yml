@@ -67,13 +67,13 @@ jobs:
       - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
-          pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
         continue-on-error: true
 
       - name: Generate Coverage Report 📊
         run: |
-          coverage run -m pytest -v -s 
-          coverage report -m
+          python -m coverage run -m pytest -v -s 
+          python -m coverage report -m
         continue-on-error: true
 
       # !! Broken !!
