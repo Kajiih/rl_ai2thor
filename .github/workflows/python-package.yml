@@ -69,7 +69,7 @@ jobs:
       - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
-          python -m pytest -r -v # --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest -rA -v # --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
         continue-on-error: true
 
       # TODO: Add coverage report
