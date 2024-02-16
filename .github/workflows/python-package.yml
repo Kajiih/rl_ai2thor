@@ -41,11 +41,12 @@ jobs:
           pip install flake8 
           flake8 . --count --max-line-length=127 --show-source --statistics -v
         continue-on-error: true
-      - name: Lint with wemake-python-styleguide 🧹
-        run: |
-          pip install wemake-python-styleguide
-          flake8 . --count --max-line-length=127 --show-source --statistics
-        continue-on-error: true
+      # !! Broken !!
+      # - name: Lint with wemake-python-styleguide 🧹
+      #   run: |
+      #     pip install wemake-python-styleguide
+      #     flake8 . --count --max-line-length=127 --show-source --statistics
+      #   continue-on-error: true
       - name: Lint with ruff 🧹
         run: |
           pip install ruff
@@ -72,7 +73,8 @@ jobs:
 
       - name: Generate Coverage Report 📊
         run: |
-          coverage run -m pytest -v -s 
+          pip install coverage
+          python -m coverage run -m pytest -v # -s
           coverage report -m
         continue-on-error: true
 
