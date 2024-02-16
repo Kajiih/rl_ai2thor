@@ -23,7 +23,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceObject
+from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceObject, UndefinableTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -155,7 +155,7 @@ class ITHOREnv(gym.Env):
         }
         self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
-        self.task = None
+        self.task = UndefinableTask()
         self.step_count = 0
         self.np_random = np.random.default_rng(self.config["seed"])
 

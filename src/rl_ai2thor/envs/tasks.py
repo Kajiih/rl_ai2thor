@@ -73,12 +73,6 @@ class ObjVariablePropId(StrEnum):
     # DISTANCE = "distance"
 
 
-# TODO: Change this to a union of enums instead of type alias.
-type ObjPropId = ObjFixedPropId | ObjVariablePropId
-type ObjMetadataId = ObjPropId | str
-type PropValue = float | bool | TemperatureValue
-
-
 class TemperatureValue(StrEnum):
     """Temperature values."""
 
@@ -94,6 +88,12 @@ class FillableLiquid(StrEnum):
     # COFFEE = "coffee"
     # WINE = "wine"
     # coffee and wine are not supported yet
+
+
+# TODO: Change this to a union of enums instead of type alias.
+type ObjPropId = ObjFixedPropId | ObjVariablePropId
+type ObjMetadataId = ObjPropId | str
+type PropValue = float | bool | TemperatureValue
 
 
 ObjId = NewType("ObjId", str)
@@ -133,7 +133,7 @@ class TaskItem[T: Hashable]:
         }
 
         # Other attributes
-        self._candidate_required_properties_rel = {}
+        self._candidate_required_properties_rel: dict[ObjPropId, PropValue] = {}
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
         self.candidate_ids: set[ObjId] = set()
 
@@ -783,13 +783,39 @@ class ContainedInRelation(Relation):
 
 
 # === Tasks ===
+class BaseTask(ABC):
+    """Base class for tasks."""
+
+    @abstractmethod
+    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """Reset the task with the information of the event."""
+
+    @abstractmethod
+    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """Return the task advancement and whether the task is completed."""
+
+
+class UndefinableTask(BaseTask):
+    """Undefined task that is never completed and has no advancement."""
+
+    @staticmethod
+    def reset(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """Reset the task with the information of the event."""
+        return 0.0, False, {}
+
+    @staticmethod
+    def get_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """Return the task advancement and whether the task is completed."""
+        return 0.0, False, {}
+
+
 type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], dict]]
 
 
 # TODO: Add support for weighted properties and relations
 # TODO: Add support for agent properties
 # TODO: Remove networkx dependency
-class GraphTask[T: Hashable]:
+class GraphTask[T: Hashable](BaseTask):
     """
     Base class for graph tasks.
 
@@ -891,7 +917,7 @@ class GraphTask[T: Hashable]:
                     item.candidate_ids.add(obj_metadata["objectId"])
 
         # Compute the overlap classes
-        overlap_classes = {}
+        overlap_classes: dict[int, dict[str, Any]] = {}
         for item in self.items:
             item_class_idx = None
             remaining_candidates_ids = item.candidate_ids.copy()

@@ -27,7 +27,7 @@ class GraphTaskRewardHandler:
             task (GraphTask): Task to calculate rewards for.
         """
         self.task = task
-        self.last_step_advancement = 0
+        self.last_step_advancement: float | int = 0
 
     # TODO: Add shortcut when the action failed or similar special cases
     def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:

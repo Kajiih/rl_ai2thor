@@ -774,8 +774,9 @@ ALL_ACTIONS: list[EnvironmentAction] = [
     clean_object_action,
 ]
 
-ACTIONS_BY_CATEGORY = {category: [] for category in ActionCategory}
+ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]] = {category: [] for category in ActionCategory}
 for action in ALL_ACTIONS:
     category = action.action_category
     ACTIONS_BY_CATEGORY[category].append(action)
+
 ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
