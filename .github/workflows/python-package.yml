@@ -104,10 +104,13 @@ jobs:
       - name: Reviewdog with pytest
         run: |
           reviewdog -f=pytest -name=pytest -reporter=github-pr-check -level=error -fail-on-error=true
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
+        uses: codecov/codecov-action@v4
+        env:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Kajiih/rl_ai2thor
+        with:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella

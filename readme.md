@@ -2,6 +2,18 @@
 
 ## How to use
 
+## Install requirement
+
+```
+pip install -r requirements/base.txt
+```
+
+or
+
+```
+pip install -r requirements/base.txt
+```
+
 ### Create custom environment mode
 
 - Create a new mode config in `config/environment_modes/` folder and change `environment_mode` in `config/general.yaml` to the new mode name.
@@ -55,8 +67,10 @@ Virtual env: `rl_thor_benchmark`
     - [] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
     - [] Add parameters to relations and properties
     - [] Improve config (and environment mode config) handling
+
   - [] ManipulaTHOR env
   - [] RoboTHOR env
+
 - [] Add RL algorithms
 
   - [] Support Stable Baselines3
