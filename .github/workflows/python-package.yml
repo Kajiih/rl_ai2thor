@@ -73,7 +73,7 @@ jobs:
 
       - name: Generate Coverage Report 📊
         run: |
-          pip install coverage
+          pip install .
           python -m coverage run -m pytest -v # -s
           coverage report -m
         continue-on-error: true
