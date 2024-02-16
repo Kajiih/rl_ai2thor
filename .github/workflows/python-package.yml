@@ -38,7 +38,12 @@ jobs:
         continue-on-error: true
       - name: Lint with flake8 🧹
         run: |
-          pip install flake8 -v
+          pip install flake8 
+          flake8 . --count --max-line-length=127 --show-source --statistics -v
+        continue-on-error: true
+      - name: Lint with wemake-python-styleguide 🧹
+        run: |
+          pip install wemake-python-styleguide
           flake8 . --count --max-line-length=127 --show-source --statistics
         continue-on-error: true
       - name: Lint with ruff 🧹
@@ -47,7 +52,7 @@ jobs:
           ruff . --output-format=github -v
         continue-on-error: true
 
-      - name: Pyright type checking 🐍 @jakebailey
+      - name: Pylance type checking 🐍 @jakebailey
         uses: jakebailey/pyright-action@v2
         with:
           pylance-version: latest-release
@@ -56,28 +61,13 @@ jobs:
       - name: Mypy type checking 🐍
         run: |
           pip install mypy
-          mypy . -v
-        continue-on-error: true
-
-      - name: Mypy type checking with reviewdog 🐍 @tsuyoshicho
-        uses: tsuyoshicho/action-mypy@v4
-        with:
-          github_token: ${{ secrets.github_token }}
-          # Change reviewdog reporter if you need [github-pr-check,github-check,github-pr-review].
-          reporter: github-pr-review
-          # Change reporter level if you need.
-          # GitHub Status Check won't become failure with warning.
-          level: warning
-          # Change the current directory to run mypy command.
-          # mypy command reads setup.cfg or other settings file in this path.
-          workdir: src
+          mypy . # -v
         continue-on-error: true
 
       - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
-          pytest --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
-          # tests/
+          pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
         continue-on-error: true
 
       - name: Generate Coverage Report 📊
@@ -86,33 +76,27 @@ jobs:
           coverage report -m
         continue-on-error: true
 
-      - name: Reviewdog 🐶
-        uses: reviewdog/action-setup@v1
-        with:
-          reviewdog_version: latest
-      - name: Reviewdog with pylint
-        run: |
-          reviewdog -f=pylint -name=pylint -reporter=github-pr-check -level=error -fail-on-error=true
-      - name: Reviewdog with flake8
-        run: |
-          reviewdog -f=flake8 -name=flake8 -reporter=github-pr-check -level=error -fail-on-error=true
-      - name: Reviewdog with ruff
-        run: |
-          reviewdog -f=ruff -name=ruff -reporter=github-pr-check -level=error -fail-on-error=true
-      - name: Reviewdog with pyright
-        run: |
-          reviewdog -f=pyright -name=pyright -reporter=github-pr-check -level=error -fail-on-error=true
-      - name: Reviewdog with pytest
-        run: |
-          reviewdog -f=pytest -name=pytest -reporter=github-pr-check -level=error -fail-on-error=true
+      # !! Broken !!
+      # - name: Reviewdog 🐶
+      #   uses: reviewdog/action-setup@v1
+      #   with:
+      #     reviewdog_version: latest
+      # - name: Mypy type checking with reviewdog 🐍 @tsuyoshicho
+      #   uses: tsuyoshicho/action-mypy@v4
+      #   with:
+      #     github_token: ${{ secrets.github_token }}
+      #     # Change reviewdog reporter if you need [github-pr-check,github-check,github-pr-review].
+      #     reporter: github-pr-review
+      #     # Change reporter level if you need.
+      #     # GitHub Status Check won't become failure with warning.
+      #     level: warning
+      #     # Change the current directory to run mypy command.
+      #     # mypy command reads setup.cfg or other settings file in this path.
+      #     workdir: src
+      #   continue-on-error: true
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        env:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: Kajiih/rl_ai2thor
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: true
+      # - name: Upload coverage to Codecov 📊
+      #   uses: codecov/codecov-action@v4
+      #   env:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     slug: Kajiih/rl_ai2thor # TODO: Check if we keep this

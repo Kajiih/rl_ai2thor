@@ -96,6 +96,7 @@ select = [
     "NPY",  # numpy specefic rules
     "PERF", # Perflint
     "FURB", # refurb
+    # "WPS",  # wemake-python-styleguide -> Not yet supported
 
 ]
 ignore = [
