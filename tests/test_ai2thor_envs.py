@@ -37,7 +37,7 @@ def test_load_and_override_config(ithor_env: ITHOREnv):
                 yaml.dump(env_mode_config),
             ],
         ) as mock_read_text,
-        patch("pathlib.Path.is_file", return_value=True) as mock_is_file,
+        patch("pathlib.Path.is_file", return_value=True),
     ):
         # Call the _load_and_override_config method with the override config
         config = ithor_env._load_and_override_config(override_config)
