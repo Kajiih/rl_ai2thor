@@ -133,3 +133,4 @@ docstring-code-format = true
 
 [tool.pytest]
 testpaths = ["tests"]
+pythonpath = ["src"]
