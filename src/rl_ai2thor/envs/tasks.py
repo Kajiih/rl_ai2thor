@@ -1120,9 +1120,10 @@ class GraphTask[T: Hashable](BaseTask):
         return f"GraphTask({self.task_graph})"
 
 
-class PlaceObject(GraphTask):
+# == Alfred tasks ==
+class PlaceIn(GraphTask):
     """
-    Task for placing a target object in a given receptacle.
+    Task for placing a given object in a given receptacle.
 
     This is equivalent to the pick_and_place_simple task from Alfred.
     """
@@ -1141,7 +1142,6 @@ class PlaceObject(GraphTask):
         target_objects: TaskDict[str] = {
             "receptacle": {
                 "properties": {"objectType": self.receptacle_type},
-                "relations": {"placed_object": ["receptacle_of"]},
             },
             "placed_object": {
                 "properties": {"objectType": self.placed_object_type},
@@ -1158,6 +1158,329 @@ class PlaceObject(GraphTask):
             description (str): Text description of the task.
         """
         return f"Place {self.placed_object_type} in {self.receptacle_type}"
+
+
+class PlaceSame2In(GraphTask):
+    """
+    Task for placing two objects of the same given type in a given receptacle.
+
+    This is equivalent to the pick_two_obj_and_place task from Alfred.
+    """
+
+    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+        """
+        self.placed_object_type = placed_object_type
+        self.receptacle_type = receptacle_type
+
+        target_objects: TaskDict[str] = {
+            "receptacle": {
+                "properties": {"objectType": self.receptacle_type},
+            },
+            "placed_object_1": {
+                "properties": {"objectType": self.placed_object_type},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+            "placed_object_2": {
+                "properties": {"objectType": self.placed_object_type},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+        }
+        super().__init__(target_objects)
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place 2 {self.placed_object_type} in {self.receptacle_type}"
+
+
+class PlaceWithMoveableRecepIn(GraphTask):
+    """
+    Task for placing an given object with a given moveable receptacle in a given receptacle.
+
+    This is equivalent to the pick_and_place_with_movable_recep task from Alfred.
+    """
+
+    def __init__(self, placed_object_type: str, moveable_receptacle_type: str, receptacle_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            moveable_receptacle_type (str): The type of moveable receptacle to place the object in.
+            receptacle_type (str): The type of receptacle to place the object in.
+        """
+        self.placed_object_type = placed_object_type
+        self.moveable_receptacle_type = moveable_receptacle_type
+        self.receptacle_type = receptacle_type
+
+        target_objects: TaskDict[str] = {
+            "receptacle": {
+                "properties": {"objectType": self.receptacle_type, "moveable": True},
+            },
+            "moveable_receptacle": {
+                "properties": {"objectType": self.moveable_receptacle_type},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+            "placed_object": {
+                "properties": {"objectType": self.placed_object_type},
+                "relations": {"moveable_receptacle": ["contained_in"]},
+            },
+        }
+        super().__init__(target_objects)
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place {self.placed_object_type} in {self.moveable_receptacle_type} in {self.receptacle_type}"
+
+
+# TODO: Implement task reset
+class PlaceCleanedIn(GraphTask):
+    """
+    Task for placing a given cleaned object in a given receptacle.
+
+    This is equivalent to the pick_clean_then_place_in_recep task from Alfred.
+
+    All instance of placed_object_type are made dirty during the reset of the task.
+    # TODO: Implement this
+    """
+
+    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+        """
+        self.placed_object_type = placed_object_type
+        self.receptacle_type = receptacle_type
+
+        target_objects: TaskDict[str] = {
+            "receptacle": {
+                "properties": {"objectType": self.receptacle_type},
+            },
+            "cleaned_object": {
+                "properties": {"objectType": self.placed_object_type, "isDirty": False},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+        }
+        super().__init__(target_objects)
+
+    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """
+        Reset the task with the information of the event.
+
+        All instance of placed_object_type are made dirty during the reset of the task.
+
+        Args:
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
+        """
+        # Make all instances of placed_object_type dirty
+        raise NotImplementedError
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place cleaned {self.placed_object_type} in {self.receptacle_type}"
+
+
+# TODO: Implement task reset
+class PlaceHeatedIn(GraphTask):
+    """
+    Task for placing a given heated object in a given receptacle.
+
+    This is equivalent to the pick_heat_then_place_in_recep task from Alfred.
+
+    All instance of placed_object_type are made at room temperature during the reset of the task.
+    # TODO: Implement this
+
+    Args:
+        placed_object_type (str): The type of object to place.
+        receptacle_type (str): The type of receptacle to place the object in.
+    """
+
+    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+        """
+        self.placed_object_type = placed_object_type
+        self.receptacle_type = receptacle_type
+
+        target_objects: TaskDict[str] = {
+            "receptacle": {
+                "properties": {"objectType": self.receptacle_type},
+            },
+            "heated_object": {
+                "properties": {"objectType": self.placed_object_type, "temperature": TemperatureValue.HOT},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+        }
+        super().__init__(target_objects)
+
+    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """
+        Reset the task with the information of the event.
+
+        All instance of placed_object_type are made at room temperature during the reset of the task.
+
+        Args:
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
+        """
+        # Make all instances of placed_object_type at room temperature
+        raise NotImplementedError
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place heated {self.placed_object_type} in {self.receptacle_type}"
+
+
+# TODO: Implement task reset
+class PlaceCooledIn(GraphTask):
+    """
+    Task for placing a given cooled object in a given receptacle.
+
+    This is equivalent to the pick_cool_then_place_in_recep task from Alfred.
+
+    All instance of placed_object_type are made at room temperature during the reset of the task.
+    # TODO: Implement this
+
+    Args:
+        placed_object_type (str): The type of object to place.
+        receptacle_type (str): The type of receptacle to place the object in.
+    """
+
+    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+        """
+        self.placed_object_type = placed_object_type
+        self.receptacle_type = receptacle_type
+
+        target_objects: TaskDict[str] = {
+            "receptacle": {
+                "properties": {"objectType": self.receptacle_type},
+            },
+            "cooled_object": {
+                "properties": {"objectType": self.placed_object_type, "temperature": TemperatureValue.COLD},
+                "relations": {"receptacle": ["contained_in"]},
+            },
+        }
+        super().__init__(target_objects)
+
+    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """
+        Reset the task with the information of the event.
+
+        All instance of placed_object_type are made at room temperature during the reset of the task.
+
+        Args:
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
+        """
+        # Make all instances of placed_object_type at room temperature
+        raise NotImplementedError
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place cooled {self.placed_object_type} in {self.receptacle_type}"
+
+
+# TODO: Implement the fact that any light source can be used instead of only desk lamps
+# TODO: Implement with close_t0 relation instead of visible for the light source
+class LookInLight(GraphTask):
+    """
+    Task for looking at a given object in light.
+
+    This is equivalent to the look_at_obj_in_light task from Alfred.
+
+    The light sources are listed in the LightSourcesType enum.
+    """
+
+    def __init__(self, looked_at_object_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            looked_at_object_type (str): The type of object to look at.
+        """
+        self.looked_at_object_type = looked_at_object_type
+
+        target_objects: TaskDict[str] = {
+            "light_source": {
+                "properties": {
+                    "objectType": LightSourcesType.DESK_LAMP,  # TODO: Add support for other light sources
+                    "isToggled": True,
+                    "visible": True,
+                },
+            },
+            "looked_at_object": {
+                "properties": {"objectType": self.looked_at_object_type, "visible": True},
+            },
+        }
+        super().__init__(target_objects)
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Look st {self.looked_at_object_type} in light"
 
 
 # %% === Item properties ===
@@ -1313,6 +1636,7 @@ is_picked_up_prop = ItemProp(
 
 
 # %% === Property and relation ids mapping ===
+
 obj_prop_id_to_item_prop = {
     ObjFixedPropId.OBJECT_TYPE: object_type_prop,
     ObjFixedPropId.IS_INTERACTABLE: is_interactable_prop,
@@ -1348,3 +1672,13 @@ relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
 }
+
+
+# %%  === Task object types ===
+class LightSourcesType(StrEnum):
+    """Types of light sources."""
+
+    CANDLE = "Candle"
+    DESK_LAMP = "DeskLamp"
+    FLOOR_LAMP = "FloorLamp"
+    # LIGHT_SWITCH = "LightSwitch"

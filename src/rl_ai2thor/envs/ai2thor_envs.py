@@ -23,7 +23,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceObject, UndefinableTask
+from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceIn, UndefinableTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -317,7 +317,7 @@ class ITHOREnv(gym.Env):
         object_to_place = self.np_random.choice(scene_pickupable_objects)
         receptacle = self.np_random.choice(scene_receptacles)
 
-        return PlaceObject(
+        return PlaceIn(
             placed_object_type=object_to_place,
             receptacle_type=receptacle,
         )
