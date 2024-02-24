@@ -47,10 +47,13 @@ jobs:
       - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
-          python -m pytest -rA -v --doctest-modules # --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest -rA -v --cov=.
         continue-on-error: true
 
-      # TODO: Add coverage report
-      # - name: Generate Coverage Report 📊
-      #   run: |
-      #     pip install coverage
+      - name: Upload coverage to Codecov 📊
+        uses: codecov/codecov-action@v4
+        with:
+          # file: .coverage
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
