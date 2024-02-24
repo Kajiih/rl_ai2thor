@@ -50,6 +50,12 @@ jobs:
           python -m pytest -rA -v --cov=.
         continue-on-error: true
 
+      - name: Test with pytest with doctest 🧪
+        run: |
+          pip install pytest pytest-cov
+          python -m pytest -rA -v --doctest-modules --cov=.
+        continue-on-error: true
+
       - name: Upload coverage to Codecov 📊
         uses: codecov/codecov-action@v4
         with:
