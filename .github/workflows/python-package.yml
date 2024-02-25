@@ -43,17 +43,18 @@ jobs:
           pylance-version: latest-release
         continue-on-error: true
 
-      # TODO: Add doctest
-      - name: Test with pytest 🧪
+      # TODO: Make the output more readable
+      - name: Test with pytest + doctest 🧪
         run: |
           pip install pytest pytest-cov
-          python -m pytest -rA -v --cov=.
+          python -m pytest -rA --doctest-modules --cov=.
         continue-on-error: true
 
-      - name: Test with pytest with doctest 🧪
+      # TODO: Keep only 1 pytest
+      - name: Test with pytest + doctest 🧪 - verbose
         run: |
           pip install pytest pytest-cov
-          python -m pytest -rA -v --doctest-modules --cov=.
+          python -m pytest -v -rA --doctest-modules --cov=.
         continue-on-error: true
 
       - name: Upload coverage to Codecov 📊

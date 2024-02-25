@@ -1076,11 +1076,11 @@ class GraphTask[T: Hashable](BaseTask):
         items = {
             item_id: TaskItem(
                 item_id,
-                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_dict["properties"].items()},
+                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_dict.get("properties", {}).items()},
             )
             for item_id, item_dict in task_description_dict.items()
         }
-        organized_relations = {
+        organized_relations: dict[T, dict[T, dict[RelationTypeId, Relation]]] = {
             main_item_id: {
                 related_item_id: {
                     relation_type_id: relation_type_id_to_relation[relation_type_id](
@@ -1088,22 +1088,27 @@ class GraphTask[T: Hashable](BaseTask):
                     )
                     for relation_type_id in relation_type_ids
                 }
-                for related_item_id, relation_type_ids in main_item_dict["relations"].items()
+                for related_item_id, relation_type_ids in main_item_dict.get("relations", {}).items()
             }
             for main_item_id, main_item_dict in task_description_dict.items()
         }
 
         # Add inverse relations
-        for main_item_id, main_item_relations in organized_relations.items():
-            for related_item_id, relations_dict in main_item_relations.items():
-                for relation in relations_dict.values():
-                    inverse_relation_type_id = relation.inverse_relation_type_id
-                    if inverse_relation_type_id not in organized_relations[related_item_id][main_item_id]:
-                        organized_relations[related_item_id][main_item_id][inverse_relation_type_id] = (
-                            relation_type_id_to_relation[
-                                inverse_relation_type_id
-                            ](items[related_item_id], items[main_item_id])
-                        )
+        inverse_relations_type_ids = {
+            related_item_id: {main_item_id: relation.inverse_relation_type_id}
+            for main_item_id, relations_dict in organized_relations.items()
+            for related_item_id, relations in relations_dict.items()
+            for relation in relations.values()
+        }
+
+        for main_item_id in inverse_relations_type_ids:
+            for related_item_id, relation_type_id in inverse_relations_type_ids[main_item_id].items():
+                if main_item_id not in organized_relations[related_item_id]:
+                    organized_relations[related_item_id][main_item_id] = {}
+                if relation_type_id not in organized_relations[related_item_id][main_item_id]:
+                    organized_relations[related_item_id][main_item_id][relation_type_id] = relation_type_id_to_relation[
+                        relation_type_id
+                    ](items[related_item_id], items[main_item_id])
 
         # Set item relations
         for item_id, item in items.items():
@@ -1160,7 +1165,7 @@ class PlaceIn(GraphTask):
         return f"Place {self.placed_object_type} in {self.receptacle_type}"
 
 
-class PlaceSame2In(GraphTask):
+class PlaceSameTwoIn(GraphTask):
     """
     Task for placing two objects of the same given type in a given receptacle.
 
