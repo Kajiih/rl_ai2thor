@@ -6,7 +6,7 @@ TODO: Finish module docstring.
 
 from typing import Any
 
-from rl_ai2thor.envs.tasks import GraphTask
+from rl_ai2thor.envs.tasks.tasks import GraphTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 
 

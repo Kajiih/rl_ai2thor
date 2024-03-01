@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from rl_ai2thor.envs.tasks import SimObjFixedProp, SimObjVariableProp
+from rl_ai2thor.envs.tasks.items import SimObjFixedProp, SimObjVariableProp
 from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:

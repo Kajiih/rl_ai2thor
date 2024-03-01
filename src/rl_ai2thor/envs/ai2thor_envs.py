@@ -23,7 +23,8 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, PlaceIn, SimObjFixedProp, UndefinableTask
+from rl_ai2thor.envs.sim_objects import SimObjFixedProp
+from rl_ai2thor.envs.tasks.tasks import GraphTask, PlaceIn, UndefinableTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
