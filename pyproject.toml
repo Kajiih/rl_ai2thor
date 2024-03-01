@@ -7,24 +7,15 @@ name = "rl_ai2thor"
 version = "0.2.2"
 description = "RL environment for AI2-THOR"
 readme = "README.md"
-license = "MIT"  # TODO: Check this
+license = "MIT" # TODO: Check this
 requires-python = ">=3.12"
-keywords = [
-  "reinforcement learning",
-  "ai2thor",
-  "gymnasium",
-]
-authors = [
-  { name = "Julian Paquerot", email = "julian_p@snu.ac.kr" },
-]
-dependencies = [
-  "ai2thor>=5.0.0",
-  "gymnasium",
-]
+keywords = ["reinforcement learning", "ai2thor", "gymnasium"]
+authors = [{ name = "Julian Paquerot", email = "julian_p@snu.ac.kr" }]
+dependencies = ["ai2thor>=5.0.0", "gymnasium"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",  # TODO: Check this
+  "License :: OSI Approved :: MIT License",                     # TODO: Check this
   "Natural Language :: English",
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -35,12 +26,10 @@ graph = [
   "networkx",
   "matplotlib",
   # pygraphviz, # https://pygraphviz.github.io/documentation/stable/install.html
-  ]
-dev = [
-  "pytest",
 ]
+dev = ["pytest", "beautifsoup4"]
 
-[project.urls]  # TODO: Add these
+[project.urls] # TODO: Add these
 Homepage = "https://example.com"
 Documentation = "https://readthedocs.org"
 Repository = "https://github.com/me/spam.git"
@@ -62,55 +51,55 @@ extend-include = ["*.ipynb"]
 preview = true
 fixable = ["ALL"]
 select = [
-    "RUF",  # Ruff specific rules
-    "PL",   # Pylint
-    "B",    # Bugbear
-    "D",    # Docstring
-    "D213", # Multi-line docstring summary should start at the second line
-    "D401", # First line should be in imperative mood
-    "D404", # First line should not start with this
-    "I",    # Isort
-    "C90",  # Mccabe complexity
-    "UP",   # PyUpgrade 
-    "ANN",  # Type annotations
-    "S",    # Bandit
-    "A",    # flake8-builtins
-    "C4",   # flake8-comprehensions
-    "FA",   # flake8-future-annotations
-    "ISC",  # flake8-implicit-str-concat
-    "ICN",  # flake8-import-conventions
-    "G",    # flake8-logging-format
-    "LOG",  # flake8-logging
-    "PIE",  # flake8-pie
-    "PT",   # flake8-pytest-style
-    "RET",  # flake8-return
-    "SLF",  # flake8-self
-    "SIM",  # flake8-simplify
-    "TID",  # flake8-tidy-imports
-    "TCH",  # flake8-type-checking
-    "ARG",  # flake8-unused-arguments
-    "PTH",  # flake8-use-pathlib
-    "TD",   # flake8-todos
-    "ERA",  # flake8-eradicate
-    "TRY",  # tryceratops
-    "NPY",  # numpy specefic rules
-    "PERF", # Perflint
-    "FURB", # refurb
-    # "WPS",  # wemake-python-styleguide -> Not yet supported
+  "RUF",  # Ruff specific rules
+  "PL",   # Pylint
+  "B",    # Bugbear
+  "D",    # Docstring
+  "D213", # Multi-line docstring summary should start at the second line
+  "D401", # First line should be in imperative mood
+  "D404", # First line should not start with this
+  "I",    # Isort
+  "C90",  # Mccabe complexity
+  "UP",   # PyUpgrade 
+  "ANN",  # Type annotations
+  "S",    # Bandit
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "FA",   # flake8-future-annotations
+  "ISC",  # flake8-implicit-str-concat
+  "ICN",  # flake8-import-conventions
+  "G",    # flake8-logging-format
+  "LOG",  # flake8-logging
+  "PIE",  # flake8-pie
+  "PT",   # flake8-pytest-style
+  "RET",  # flake8-return
+  "SLF",  # flake8-self
+  "SIM",  # flake8-simplify
+  "TID",  # flake8-tidy-imports
+  "TCH",  # flake8-type-checking
+  "ARG",  # flake8-unused-arguments
+  "PTH",  # flake8-use-pathlib
+  "TD",   # flake8-todos
+  "ERA",  # flake8-eradicate
+  "TRY",  # tryceratops
+  "NPY",  # numpy specefic rules
+  "PERF", # Perflint
+  "FURB", # refurb
+  # "WPS",  # wemake-python-styleguide -> Not yet supported
 
 ]
 ignore = [
-  "D105",  # Missing docstring in magic method
-  "D107",  # Missing docstring in `__init__`
-  "D212",  # Multi-line docstring summary should start at the first line
-  "TD002", # Missing author in TODO; try: `TODO(<author_name>): ...` or `TODO @<author_name>: ...`
-  "TD003", # Missing issue link on the line following this TODO
-  "TD004", # Missing colon after TODO
+  "D105",   # Missing docstring in magic method
+  "D107",   # Missing docstring in `__init__`
+  "D212",   # Multi-line docstring summary should start at the first line
+  "TD002",  # Missing author in TODO; try: `TODO(<author_name>): ...` or `TODO @<author_name>: ...`
+  "TD003",  # Missing issue link on the line following this TODO
+  "TD004",  # Missing colon after TODO
   "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in
 
   # TODO: Comment out for produciton release
   "ERA001", # Found commented-out code
-  "S101" # Use of `assert` detected
+  "S101",   # Use of `assert` detected
 ]
 
 [tool.ruff.lint.per-file-ignores]
