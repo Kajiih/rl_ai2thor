@@ -27,7 +27,7 @@ action_parameters:
   manualInteract: False # Picked up objects don't teleport to hand
   placeStationary: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
 
-partial_openness: True # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled and environment is continous) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
+partial_openness: True # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled and environment is continuous) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
 simple_movement_actions: False # Only keep MoveAhead, should at least be used with body_rotation_actions
 
 action_parameter_data:
@@ -90,3 +90,29 @@ action_parameter_data:
   PartialOpenObject:
     range: [0, 1]
     # discrete_value: 1 # ! Should not be used in discrete environment mode
+
+# === Scenes ===
+include_scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to exclude from the environment (e.g. "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
+exclude_scenes: [] # List of scene names to exclude from the environment (e.g. "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
+
+# === Tasks ===
+# TODO: Verify and improve this
+tasks:
+  PlaceIn:
+    placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
+    receptacle_object_type: [RECEPTACLES]
+    include_scenes: []
+    exclude_scenes: []
+
+  PlaceSameTwoIn:
+    placed_object_type: [PICKUPABLES]
+    receptacle_object_type: [RECEPTACLES]
+    include_scenes: []
+    exclude_scenes: []
+
+  PlaceWithMoveableRecepIn:
+    placed_object_type: [PICKUPABLES]
+    pickupable_receptacle_type: [PICKUPABLE_RECEPTACLES]
+    receptacle_object_type: [RECEPTACLES]
+    include_scenes: []
+    exclude_scenes: []

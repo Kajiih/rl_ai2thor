@@ -1,5 +1,5 @@
 """
-Module for defining tasks for the AI2THOR RL environment.
+Tasks in AI2THOR RL environment.
 
 TODO: Finish module docstring.
 """
@@ -10,11 +10,14 @@ import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal, NewType
+from typing import TYPE_CHECKING, Any, Literal
 
 import networkx as nx
 
+from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
+
 if TYPE_CHECKING:
+    from rl_ai2thor.envs.sim_objects import SimObjectType
     from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
@@ -26,51 +29,6 @@ class RelationTypeId(StrEnum):
     RECEPTACLE_OF = "receptacle_of"
     CONTAINED_IN = "contained_in"
     # CLOSE_TO = "close_to"
-
-
-# TODO: Add support for more mass and salient materials.
-class ObjFixedPropId(StrEnum):
-    """Fixed properties of objects in AI2THOR."""
-
-    OBJECT_TYPE = "objectType"
-    IS_INTERACTABLE = "isInteractable"
-    RECEPTACLE = "receptacle"
-    TOGGLEABLE = "toggleable"
-    BREAKABLE = "breakable"
-    CAN_FILL_WITH_LIQUID = "canFillWithLiquid"
-    DIRTYABLE = "dirtyable"
-    CAN_BE_USED_UP = "canBeUsedUp"
-    COOKABLE = "cookable"
-    IS_HEAT_SOURCE = "isHeatSource"
-    IS_COLD_SOURCE = "isColdSource"
-    SLICEABLE = "sliceable"
-    OPENABLE = "openable"
-    PICKUPABLE = "pickupable"
-    MOVEABLE = "moveable"
-    # MASS = "mass"
-    # SALIENT_MATERIALS = "salientMaterials"
-
-
-# TODO: Add support for position, rotation and distance.
-class ObjVariablePropId(StrEnum):
-    """Variable properties of objects in AI2THOR."""
-
-    VISIBLE = "visible"
-    IS_TOGGLED = "isToggled"
-    IS_BROKEN = "isBroken"
-    IS_FILLED_WITH_LIQUID = "isFilledWithLiquid"
-    FILL_LIQUID = "fillLiquid"
-    IS_DIRTY = "isDirty"
-    IS_USED_UP = "isUsedUp"
-    IS_COOKED = "isCooked"
-    TEMPERATURE = "temperature"
-    IS_SLICED = "isSliced"
-    IS_OPEN = "isOpen"
-    OPENNESS = "openness"
-    IS_PICKED_UP = "isPickedUp"
-    # POSITION = "position"
-    # ROTATION = "rotation"
-    # DISTANCE = "distance"
 
 
 class TemperatureValue(StrEnum):
@@ -90,13 +48,7 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-# TODO: Change this to a union of enums instead of type alias.
-type ObjPropId = ObjFixedPropId | ObjVariablePropId
-type ObjMetadataId = ObjPropId | str
 type PropValue = float | bool | TemperatureValue
-
-
-ObjId = NewType("ObjId", str)
 
 
 # %% === Items ===
@@ -133,9 +85,9 @@ class TaskItem[T: Hashable]:
         }
 
         # Other attributes
-        self._candidate_required_properties_rel: dict[ObjPropId, PropValue] = {}
+        self._candidate_required_properties_rel: dict[SimObjProp, PropValue] = {}
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
-        self.candidate_ids: set[ObjId] = set()
+        self.candidate_ids: set[SimObjectType] = set()
 
     @property
     def relations(self) -> set[Relation]:
@@ -173,7 +125,7 @@ class TaskItem[T: Hashable]:
         }
 
     @property
-    def candidate_required_properties(self) -> dict[ObjPropId, Any]:
+    def candidate_required_properties(self) -> dict[SimObjProp, Any]:
         """
         Return a dictionary containing the properties required for an object to be a candidate for the item.
 
@@ -185,7 +137,7 @@ class TaskItem[T: Hashable]:
             **self._candidate_required_properties_rel,
         }
 
-    def is_obj_candidate(self, obj_metadata: dict[ObjMetadataId, Any]) -> bool:
+    def is_obj_candidate(self, obj_metadata: dict[SimObjMetadata, Any]) -> bool:
         """
         Return True if the given object is a valid candidate for the item.
 
@@ -199,7 +151,7 @@ class TaskItem[T: Hashable]:
             obj_metadata[prop_id] == prop_value for prop_id, prop_value in self.candidate_required_properties.items()
         )
 
-    def _get_properties_satisfaction(self, obj_metadata: dict[ObjMetadataId, Any]) -> dict[ObjPropId, bool]:
+    def _get_properties_satisfaction(self, obj_metadata: dict[SimObjMetadata, Any]) -> dict[SimObjProp, bool]:
         """
         Return a dictionary indicating which properties are satisfied by the given object.
 
@@ -215,8 +167,8 @@ class TaskItem[T: Hashable]:
         }
 
     def _get_relations_semi_satisfying_objects(
-        self, candidate_metadata: dict[ObjMetadataId, Any]
-    ) -> dict[T, dict[RelationTypeId, set[ObjId]]]:
+        self, candidate_metadata: dict[SimObjMetadata, Any]
+    ) -> dict[T, dict[RelationTypeId, set[SimObjectType]]]:
         """
         Return the dictionary of satisfying objects with the given candidate for each relations.
 
@@ -237,10 +189,10 @@ class TaskItem[T: Hashable]:
         }
 
     def _compute_obj_results(
-        self, obj_metadata: dict[ObjMetadataId, Any]
+        self, obj_metadata: dict[SimObjMetadata, Any]
     ) -> dict[
         Literal["properties", "relations"],
-        dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
+        dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjectType]]],
     ]:  # TODO: Simplify this big type after finish the implementation
         """
         Return the results dictionary of the object for the item.
@@ -256,7 +208,7 @@ class TaskItem[T: Hashable]:
         """
         results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, bool] | dict[T, dict[RelationTypeId, set[ObjId]]],
+            dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjectType]]],
         ] = {
             "properties": self._get_properties_satisfaction(obj_metadata),
             "relations": self._get_relations_semi_satisfying_objects(obj_metadata),
@@ -264,10 +216,11 @@ class TaskItem[T: Hashable]:
         return results
 
     def _compute_all_obj_results(
-        self, scene_objects_dict: dict[ObjId, Any]
+        self, scene_objects_dict: dict[SimObjectType, Any]
     ) -> dict[
         Literal["properties", "relations"],
-        dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+        dict[SimObjProp, dict[SimObjectType, bool]]
+        | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
     ]:
         """
         Return the results dictionary with the results of each candidate of the item.
@@ -281,7 +234,8 @@ class TaskItem[T: Hashable]:
         """
         results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[SimObjProp, dict[SimObjectType, bool]]
+            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
         ] = {
             "properties": {
                 prop.target_ai2thor_property: {
@@ -309,10 +263,11 @@ class TaskItem[T: Hashable]:
         self,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[SimObjProp, dict[SimObjectType, bool]]
+            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
         ],
     ) -> dict[
-        ObjId,
+        SimObjectType,
         dict[Literal["sum_property_scores", "sum_relation_scores"], float],
     ]:
         """
@@ -327,7 +282,7 @@ class TaskItem[T: Hashable]:
                 Scores of each object for the item.
         """
         scores: dict[
-            ObjId,
+            SimObjectType,
             dict[Literal["sum_property_scores", "sum_relation_scores"], float],
         ] = {
             obj_id: {
@@ -345,14 +300,15 @@ class TaskItem[T: Hashable]:
         return scores
 
     def compute_interesting_candidates(
-        self, scene_objects_dict: dict[ObjId, Any]
+        self, scene_objects_dict: dict[SimObjectType, Any]
     ) -> tuple[
-        set[ObjId],
+        set[SimObjectType],
         dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[SimObjProp, dict[SimObjectType, bool]]
+            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
         ],
-        dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
+        dict[SimObjectType, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
     ]:
         """
         Return the set of interesting candidates and the results and scores of each candidate of the item.
@@ -422,14 +378,15 @@ class TaskItem[T: Hashable]:
 
     def _get_stronger_candidate(
         self,
-        obj_1_id: ObjId,
-        obj_2_id: ObjId,
+        obj_1_id: SimObjectType,
+        obj_2_id: SimObjectType,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[SimObjProp, dict[SimObjectType, bool]]
+            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
         ],
-        objects_scores: dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
-    ) -> ObjId | Literal["equal", "incomparable"]:
+        objects_scores: dict[SimObjectType, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
+    ) -> SimObjectType | Literal["equal", "incomparable"]:
         """
         Return the stronger candidate between the two given candidates.
 
@@ -489,14 +446,15 @@ class TaskItem[T: Hashable]:
 
     @staticmethod
     def _is_stronger_candidate_than(
-        obj_1_id: ObjId,
-        obj_2_id: ObjId,
+        obj_1_id: SimObjectType,
+        obj_2_id: SimObjectType,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+            dict[SimObjProp, dict[SimObjectType, bool]]
+            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
         ],
         objects_scores: dict[
-            ObjId,
+            SimObjectType,
             dict[Literal["sum_property_scores", "sum_relation_scores"], float],
         ],
     ) -> bool:
@@ -530,7 +488,9 @@ class TaskItem[T: Hashable]:
 
         # Calculate d[x,y]
         d_xy = 0
-        relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = objects_results["relations"]  # type: ignore  # TODO: Delete type ignore after simplifying the type
+        relations_results: dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]] = objects_results[
+            "relations"
+        ]  # type: ignore  # TODO: Delete type ignore after simplifying the type
         for related_item_id in relations_results:
             for relation_type_id in relations_results[related_item_id]:
                 x_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_1_id]
@@ -556,7 +516,7 @@ class ItemOverlapClass[T: Hashable]:
     def __init__(
         self,
         items: list[TaskItem[T]],
-        candidate_ids: list[ObjId],
+        candidate_ids: list[SimObjectType],
     ) -> None:
         """
         Initialize the overlap class with the given items and candidate ids.
@@ -583,20 +543,21 @@ class ItemOverlapClass[T: Hashable]:
         ]
 
     def compute_interesting_assignments(
-        self, scene_objects_dict: dict[ObjId, Any]
+        self, scene_objects_dict: dict[SimObjectType, Any]
     ) -> tuple[
-        list[dict[TaskItem[T], ObjId]],
+        list[dict[TaskItem[T], SimObjectType]],
         dict[
             TaskItem[T],
             dict[
                 Literal["properties", "relations"],
-                dict[ObjPropId, dict[ObjId, bool]] | dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]],
+                dict[SimObjProp, dict[SimObjectType, bool]]
+                | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
             ],
         ],
         dict[
             TaskItem[T],
             dict[
-                ObjId,
+                SimObjectType,
                 dict[Literal["sum_property_scores", "sum_relation_scores"], float],
             ],
         ],
@@ -629,7 +590,7 @@ class ItemOverlapClass[T: Hashable]:
         items_scores: dict[
             TaskItem[T],
             dict[
-                ObjId,
+                SimObjectType,
                 dict[Literal["sum_property_scores", "sum_relation_scores"], float],
             ],
         ] = {item: data[2] for item, data in interesting_candidates_data.items()}
@@ -644,7 +605,7 @@ class ItemOverlapClass[T: Hashable]:
         return interesting_assignments, items_results, items_scores
 
 
-# === Properties and Relations ===
+# %% === Properties and Relations ===
 # TODO: Add support for automatic scene validity and action validity checking (action group, etc)
 # TODO: Add support for allowing property checking with other ways than equality.
 # TODO: Check if we need to add a hash
@@ -653,10 +614,10 @@ class ItemProp:
 
     def __init__(
         self,
-        target_ai2thor_property: ObjPropId,
+        target_ai2thor_property: SimObjProp,
         value_type: type,
         is_fixed: bool = False,
-        candidate_required_property: ObjFixedPropId | None = None,
+        candidate_required_property: SimObjFixedProp | None = None,
         candidate_required_property_value: Any | None = None,
     ) -> None:
         """Initialize the Property object."""
@@ -673,7 +634,7 @@ class Relation(ABC):
 
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
-    candidate_required_prop: ObjFixedPropId | None = None
+    candidate_required_prop: SimObjFixedProp | None = None
     candidate_required_prop_value: Any | None = None
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
@@ -697,10 +658,10 @@ class Relation(ABC):
         return hash((self.type_id, self.main_item.id, self.related_item.id))
 
     @abstractmethod
-    def _extract_related_object_ids(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+    def _extract_related_object_ids(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
         """Return the list of the ids of the main object's related objects according to the relation."""
 
-    def is_semi_satisfied(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> bool:
+    def is_semi_satisfied(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> bool:
         """
         Return True if the relation is semi satisfied.
 
@@ -713,7 +674,7 @@ class Relation(ABC):
             for related_object_id in self._extract_related_object_ids(main_obj_metadata)
         )
 
-    def get_satisfying_related_object_ids(self, main_obj_metadata: dict[ObjMetadataId, Any]) -> set[ObjId]:
+    def get_satisfying_related_object_ids(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> set[SimObjectType]:
         """Return related item's candidate's ids that satisfy the relation with the given main object."""
         return {
             related_object_id
@@ -735,7 +696,7 @@ class ReceptacleOfRelation(Relation):
 
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
-    candidate_required_prop = ObjFixedPropId.RECEPTACLE
+    candidate_required_prop = SimObjFixedProp.RECEPTACLE
     candidate_required_prop_value = True
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
@@ -749,7 +710,7 @@ class ReceptacleOfRelation(Relation):
         super().__init__(main_item, related_item)
 
     @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+    def _extract_related_object_ids(main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
         """Return the ids of the objects contained in the main object."""
         return main_obj_metadata["receptacleObjectIds"]
 
@@ -763,7 +724,7 @@ class ContainedInRelation(Relation):
 
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
-    candidate_required_prop = ObjFixedPropId.PICKUPABLE
+    candidate_required_prop = SimObjFixedProp.PICKUPABLE
     candidate_required_prop_value = True
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
@@ -777,12 +738,12 @@ class ContainedInRelation(Relation):
         super().__init__(main_item, related_item)
 
     @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: dict[ObjMetadataId, Any]) -> list[ObjId]:
+    def _extract_related_object_ids(main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
         """Return the ids of the objects containing the main object."""
         return main_obj_metadata["parentReceptacles"]
 
 
-# === Tasks ===
+# %% === Tasks ===
 class BaseTask(ABC):
     """Base class for tasks."""
 
@@ -1025,9 +986,9 @@ class GraphTask[T: Hashable](BaseTask):
             )
             # Strictly satisfied relation scores
             for item, obj_id in global_assignment.items():
-                item_relations_results: dict[T, dict[RelationTypeId, dict[ObjId, set[ObjId]]]] = items_results[item][
-                    "relations"
-                ]  # type: ignore  # TODO: Delete type ignore after simplifying the type
+                item_relations_results: dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]] = (
+                    items_results[item]["relations"]
+                )  # type: ignore  # TODO: Delete type ignore after simplifying the type
                 for related_item, relations in item_relations_results.items():
                     related_item_assigned_obj_id = global_assignment[related_item]
                     for relations_by_obj_id in relations.values():
@@ -1125,7 +1086,7 @@ class GraphTask[T: Hashable](BaseTask):
         return f"GraphTask({self.task_graph})"
 
 
-# == Alfred tasks ==
+# %% == Alfred tasks ==
 class PlaceIn(GraphTask):
     """
     Task for placing a given object in a given receptacle.
@@ -1215,30 +1176,30 @@ class PlaceWithMoveableRecepIn(GraphTask):
     This is equivalent to the pick_and_place_with_movable_recep task from Alfred.
     """
 
-    def __init__(self, placed_object_type: str, moveable_receptacle_type: str, receptacle_type: str) -> None:
+    def __init__(self, placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str) -> None:
         """
         Initialize the task.
 
         Args:
             placed_object_type (str): The type of object to place.
-            moveable_receptacle_type (str): The type of moveable receptacle to place the object in.
+            pickupable_receptacle_type (str): The type of pickupable receptacle to place the object in.
             receptacle_type (str): The type of receptacle to place the object in.
         """
         self.placed_object_type = placed_object_type
-        self.moveable_receptacle_type = moveable_receptacle_type
+        self.pickupable_receptacle_type = pickupable_receptacle_type
         self.receptacle_type = receptacle_type
 
         target_objects: TaskDict[str] = {
             "receptacle": {
-                "properties": {"objectType": self.receptacle_type, "moveable": True},
+                "properties": {"objectType": self.receptacle_type},
             },
-            "moveable_receptacle": {
-                "properties": {"objectType": self.moveable_receptacle_type},
+            "pickupable_receptacle": {
+                "properties": {"objectType": self.pickupable_receptacle_type},
                 "relations": {"receptacle": ["contained_in"]},
             },
             "placed_object": {
                 "properties": {"objectType": self.placed_object_type},
-                "relations": {"moveable_receptacle": ["contained_in"]},
+                "relations": {"pickupable_receptacle": ["contained_in"]},
             },
         }
         super().__init__(target_objects)
@@ -1250,7 +1211,7 @@ class PlaceWithMoveableRecepIn(GraphTask):
         Returns:
             description (str): Text description of the task.
         """
-        return f"Place {self.placed_object_type} in {self.moveable_receptacle_type} in {self.receptacle_type}"
+        return f"Place {self.placed_object_type} in {self.pickupable_receptacle_type} in {self.receptacle_type}"
 
 
 # TODO: Implement task reset
@@ -1490,192 +1451,200 @@ class LookInLight(GraphTask):
 
 # %% === Item properties ===
 object_type_prop = ItemProp(
-    ObjFixedPropId.OBJECT_TYPE,
+    SimObjFixedProp.OBJECT_TYPE,
     value_type=str,
     is_fixed=True,
 )
 is_interactable_prop = ItemProp(
-    ObjFixedPropId.IS_INTERACTABLE,
+    SimObjFixedProp.IS_INTERACTABLE,
     value_type=bool,
     is_fixed=True,
 )
 receptacle_prop = ItemProp(
-    ObjFixedPropId.RECEPTACLE,
+    SimObjFixedProp.RECEPTACLE,
     value_type=bool,
     is_fixed=True,
 )
 toggleable_prop = ItemProp(
-    ObjFixedPropId.TOGGLEABLE,
+    SimObjFixedProp.TOGGLEABLE,
     value_type=bool,
     is_fixed=True,
 )
 breakable_prop = ItemProp(
-    ObjFixedPropId.BREAKABLE,
+    SimObjFixedProp.BREAKABLE,
     value_type=bool,
     is_fixed=True,
 )
 can_fill_with_liquid_prop = ItemProp(
-    ObjFixedPropId.CAN_FILL_WITH_LIQUID,
+    SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     value_type=bool,
     is_fixed=True,
 )
 dirtyable_prop = ItemProp(
-    ObjFixedPropId.DIRTYABLE,
+    SimObjFixedProp.DIRTYABLE,
     value_type=bool,
     is_fixed=True,
 )
 can_be_used_up_prop = ItemProp(
-    ObjFixedPropId.CAN_BE_USED_UP,
+    SimObjFixedProp.CAN_BE_USED_UP,
     value_type=bool,
     is_fixed=True,
 )
 cookable_prop = ItemProp(
-    ObjFixedPropId.COOKABLE,
+    SimObjFixedProp.COOKABLE,
     value_type=bool,
     is_fixed=True,
 )
 is_heat_source_prop = ItemProp(
-    ObjFixedPropId.IS_HEAT_SOURCE,
+    SimObjFixedProp.IS_HEAT_SOURCE,
     value_type=bool,
     is_fixed=True,
 )
 is_cold_source_prop = ItemProp(
-    ObjFixedPropId.IS_COLD_SOURCE,
+    SimObjFixedProp.IS_COLD_SOURCE,
     value_type=bool,
     is_fixed=True,
 )
 sliceable_prop = ItemProp(
-    ObjFixedPropId.SLICEABLE,
+    SimObjFixedProp.SLICEABLE,
     value_type=bool,
     is_fixed=True,
 )
 openable_prop = ItemProp(
-    ObjFixedPropId.OPENABLE,
+    SimObjFixedProp.OPENABLE,
     value_type=bool,
     is_fixed=True,
 )
 pickupable_prop = ItemProp(
-    ObjFixedPropId.PICKUPABLE,
+    SimObjFixedProp.PICKUPABLE,
     value_type=bool,
     is_fixed=True,
 )
 moveable_prop = ItemProp(
-    ObjFixedPropId.MOVEABLE,
+    SimObjFixedProp.MOVEABLE,
     value_type=bool,
     is_fixed=True,
 )
 visible_prop = ItemProp(
-    ObjVariablePropId.VISIBLE,
+    SimObjVariableProp.VISIBLE,
     value_type=bool,
 )
 is_toggled_prop = ItemProp(
-    ObjVariablePropId.IS_TOGGLED,
+    SimObjVariableProp.IS_TOGGLED,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.TOGGLEABLE,
+    candidate_required_property=SimObjFixedProp.TOGGLEABLE,
     candidate_required_property_value=True,
 )
 is_broken_prop = ItemProp(
-    ObjVariablePropId.IS_BROKEN,
+    SimObjVariableProp.IS_BROKEN,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.BREAKABLE,
+    candidate_required_property=SimObjFixedProp.BREAKABLE,
     candidate_required_property_value=True,
 )
 is_filled_with_liquid_prop = ItemProp(
-    ObjVariablePropId.IS_FILLED_WITH_LIQUID,
+    SimObjVariableProp.IS_FILLED_WITH_LIQUID,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.CAN_FILL_WITH_LIQUID,
+    candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     candidate_required_property_value=True,
 )
 fill_liquid_prop = ItemProp(
-    ObjVariablePropId.FILL_LIQUID,
+    SimObjVariableProp.FILL_LIQUID,
     value_type=FillableLiquid,
-    candidate_required_property=ObjFixedPropId.CAN_FILL_WITH_LIQUID,
+    candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     candidate_required_property_value=True,
 )
 is_dirty_prop = ItemProp(
-    ObjVariablePropId.IS_DIRTY,
+    SimObjVariableProp.IS_DIRTY,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.DIRTYABLE,
+    candidate_required_property=SimObjFixedProp.DIRTYABLE,
     candidate_required_property_value=True,
 )
 is_used_up_prop = ItemProp(
-    ObjVariablePropId.IS_USED_UP,
+    SimObjVariableProp.IS_USED_UP,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.CAN_BE_USED_UP,
+    candidate_required_property=SimObjFixedProp.CAN_BE_USED_UP,
     candidate_required_property_value=True,
 )
 is_cooked_prop = ItemProp(
-    ObjVariablePropId.IS_COOKED,
+    SimObjVariableProp.IS_COOKED,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.COOKABLE,
+    candidate_required_property=SimObjFixedProp.COOKABLE,
     candidate_required_property_value=True,
 )
 temperature_prop = ItemProp(
-    ObjVariablePropId.TEMPERATURE,
+    SimObjVariableProp.TEMPERATURE,
     value_type=TemperatureValue,
 )
 is_sliced_prop = ItemProp(
-    ObjVariablePropId.IS_SLICED,
+    SimObjVariableProp.IS_SLICED,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.SLICEABLE,
+    candidate_required_property=SimObjFixedProp.SLICEABLE,
     candidate_required_property_value=True,
 )
 is_open_prop = ItemProp(
-    ObjVariablePropId.IS_OPEN,
+    SimObjVariableProp.IS_OPEN,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.OPENABLE,
+    candidate_required_property=SimObjFixedProp.OPENABLE,
     candidate_required_property_value=True,
 )
 openness_prop = ItemProp(
-    ObjVariablePropId.OPENNESS,
+    SimObjVariableProp.OPENNESS,
     value_type=float,
-    candidate_required_property=ObjFixedPropId.OPENABLE,
+    candidate_required_property=SimObjFixedProp.OPENABLE,
     candidate_required_property_value=True,
 )
 is_picked_up_prop = ItemProp(
-    ObjVariablePropId.IS_PICKED_UP,
+    SimObjVariableProp.IS_PICKED_UP,
     value_type=bool,
-    candidate_required_property=ObjFixedPropId.PICKUPABLE,
+    candidate_required_property=SimObjFixedProp.PICKUPABLE,
     candidate_required_property_value=True,
 )
 
 
 # %% === Property and relation ids mapping ===
-
 obj_prop_id_to_item_prop = {
-    ObjFixedPropId.OBJECT_TYPE: object_type_prop,
-    ObjFixedPropId.IS_INTERACTABLE: is_interactable_prop,
-    ObjFixedPropId.RECEPTACLE: receptacle_prop,
-    ObjFixedPropId.TOGGLEABLE: toggleable_prop,
-    ObjFixedPropId.BREAKABLE: breakable_prop,
-    ObjFixedPropId.CAN_FILL_WITH_LIQUID: can_fill_with_liquid_prop,
-    ObjFixedPropId.DIRTYABLE: dirtyable_prop,
-    ObjFixedPropId.CAN_BE_USED_UP: can_be_used_up_prop,
-    ObjFixedPropId.COOKABLE: cookable_prop,
-    ObjFixedPropId.IS_HEAT_SOURCE: is_heat_source_prop,
-    ObjFixedPropId.IS_COLD_SOURCE: is_cold_source_prop,
-    ObjFixedPropId.SLICEABLE: sliceable_prop,
-    ObjFixedPropId.OPENABLE: openable_prop,
-    ObjFixedPropId.PICKUPABLE: pickupable_prop,
-    ObjFixedPropId.MOVEABLE: moveable_prop,
-    ObjVariablePropId.VISIBLE: visible_prop,
-    ObjVariablePropId.IS_TOGGLED: is_toggled_prop,
-    ObjVariablePropId.IS_BROKEN: is_broken_prop,
-    ObjVariablePropId.IS_FILLED_WITH_LIQUID: is_filled_with_liquid_prop,
-    ObjVariablePropId.FILL_LIQUID: fill_liquid_prop,
-    ObjVariablePropId.IS_DIRTY: is_dirty_prop,
-    ObjVariablePropId.IS_USED_UP: is_used_up_prop,
-    ObjVariablePropId.IS_COOKED: is_cooked_prop,
-    ObjVariablePropId.TEMPERATURE: temperature_prop,
-    ObjVariablePropId.IS_SLICED: is_sliced_prop,
-    ObjVariablePropId.IS_OPEN: is_open_prop,
-    ObjVariablePropId.OPENNESS: openness_prop,
-    ObjVariablePropId.IS_PICKED_UP: is_picked_up_prop,
+    SimObjFixedProp.OBJECT_TYPE: object_type_prop,
+    SimObjFixedProp.IS_INTERACTABLE: is_interactable_prop,
+    SimObjFixedProp.RECEPTACLE: receptacle_prop,
+    SimObjFixedProp.TOGGLEABLE: toggleable_prop,
+    SimObjFixedProp.BREAKABLE: breakable_prop,
+    SimObjFixedProp.CAN_FILL_WITH_LIQUID: can_fill_with_liquid_prop,
+    SimObjFixedProp.DIRTYABLE: dirtyable_prop,
+    SimObjFixedProp.CAN_BE_USED_UP: can_be_used_up_prop,
+    SimObjFixedProp.COOKABLE: cookable_prop,
+    SimObjFixedProp.IS_HEAT_SOURCE: is_heat_source_prop,
+    SimObjFixedProp.IS_COLD_SOURCE: is_cold_source_prop,
+    SimObjFixedProp.SLICEABLE: sliceable_prop,
+    SimObjFixedProp.OPENABLE: openable_prop,
+    SimObjFixedProp.PICKUPABLE: pickupable_prop,
+    SimObjFixedProp.MOVEABLE: moveable_prop,
+    SimObjVariableProp.VISIBLE: visible_prop,
+    SimObjVariableProp.IS_TOGGLED: is_toggled_prop,
+    SimObjVariableProp.IS_BROKEN: is_broken_prop,
+    SimObjVariableProp.IS_FILLED_WITH_LIQUID: is_filled_with_liquid_prop,
+    SimObjVariableProp.FILL_LIQUID: fill_liquid_prop,
+    SimObjVariableProp.IS_DIRTY: is_dirty_prop,
+    SimObjVariableProp.IS_USED_UP: is_used_up_prop,
+    SimObjVariableProp.IS_COOKED: is_cooked_prop,
+    SimObjVariableProp.TEMPERATURE: temperature_prop,
+    SimObjVariableProp.IS_SLICED: is_sliced_prop,
+    SimObjVariableProp.IS_OPEN: is_open_prop,
+    SimObjVariableProp.OPENNESS: openness_prop,
+    SimObjVariableProp.IS_PICKED_UP: is_picked_up_prop,
 }
 
 relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
+}
+
+
+# %% === Scenes ===
+SCENE_IDS = {
+    "Kitchen": [f"FloorPlan{i}" for i in range(1, 31)],
+    "LivingRoom": [f"FloorPlan{200 + i}" for i in range(1, 31)],
+    "Bedroom": [f"FloorPlan{300 + i}" for i in range(1, 31)],
+    "Bathroom": [f"FloorPlan{400 + i}" for i in range(1, 31)],
 }
 
 

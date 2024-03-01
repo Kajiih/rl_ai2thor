@@ -23,7 +23,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
-from rl_ai2thor.envs.tasks import GraphTask, ObjFixedPropId, PlaceIn, UndefinableTask
+from rl_ai2thor.envs.tasks import GraphTask, PlaceIn, SimObjFixedProp, UndefinableTask
 from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -68,7 +68,7 @@ class ITHOREnv(gym.Env):
         general_config_path = config_dir / "general.yaml"
         config = yaml.safe_load(general_config_path.read_text(encoding="utf-8"))
 
-        env_mode_config_path = config_dir / "environment_modes" / f"{config['environment_mode']}.yaml"
+        env_mode_config_path = config_dir / "environment_modes" / f"{config["environment_mode"]}.yaml"
         env_mode_config = yaml.safe_load(env_mode_config_path.read_text(encoding="utf-8"))
 
         update_nested_dict(config, env_mode_config)
@@ -308,10 +308,10 @@ class ITHOREnv(gym.Env):
         # Temporarily return only a PlaceObject task
         # Sample a receptacle and an object to place
         scene_pickupable_objects = [
-            obj[ObjFixedPropId.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[ObjFixedPropId.PICKUPABLE]
+            obj[SimObjFixedProp.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[SimObjFixedProp.PICKUPABLE]
         ]
         scene_receptacles = [
-            obj[ObjFixedPropId.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[ObjFixedPropId.RECEPTACLE]
+            obj[SimObjFixedProp.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[SimObjFixedProp.RECEPTACLE]
         ]
 
         object_to_place = self.np_random.choice(scene_pickupable_objects)
