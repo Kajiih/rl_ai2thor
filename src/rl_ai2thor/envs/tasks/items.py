@@ -4,13 +4,17 @@ Task items in AI2THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from __future__ import annotations
+
 import itertools
 from collections.abc import Hashable
 from enum import StrEnum
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
-from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
+
+if TYPE_CHECKING:
+    from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
 
 # %% === Enums ==

@@ -4,15 +4,16 @@ Gymnasium interface for AI2THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from __future__ import annotations
+
 import pathlib
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import ai2thor.controller
 import gymnasium as gym
 import numpy as np
 import yaml
 from ai2thor.server import Event
-from numpy.typing import ArrayLike
 
 from rl_ai2thor.envs.actions import (
     ACTIONS_BY_CATEGORY,
@@ -25,8 +26,12 @@ from rl_ai2thor.envs.actions import (
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp
 from rl_ai2thor.envs.tasks.tasks import GraphTask, PlaceIn, UndefinableTask
-from rl_ai2thor.utils.ai2thor_types import EventLike
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
+    from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 # %% Environment definitions

@@ -4,12 +4,16 @@ Task relations in AI2THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata
-from rl_ai2thor.envs.tasks.items import TaskItem
+
+if TYPE_CHECKING:
+    from rl_ai2thor.envs.tasks.items import TaskItem
 
 
 # %% === Enums ===
