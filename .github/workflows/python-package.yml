@@ -37,14 +37,6 @@ jobs:
           ruff . --output-format=github # -v
         continue-on-error: true
 
-      - name: Pylance type checking ✅ @jakebailey
-        uses: jakebailey/pyright-action@v2
-        with:
-          pylance-version: latest-release
-          verbose: true
-          stats: true
-        continue-on-error: true
-
       # TODO: Make the output more readable
       - name: Test with pytest + doctest 🧪
         run: |
@@ -60,14 +52,21 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Install public interfcae package 📥
+      - name: Pylance type checking ✅ @jakebailey
+        uses: jakebailey/pyright-action@v2
+        with:
+          pylance-version: latest-release
+          stats: true
+          # verbose: true
+        continue-on-error: true
+
+      - name: Install public interface package 📥
         run: |
           python -m pip install .
-
       - name: Verify public API types with Pylance ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
         with:
           pylance-version: latest-release
           verify-types: rl_ai2thor
-          verbose: true
+          # verbose: true
         continue-on-error: true
