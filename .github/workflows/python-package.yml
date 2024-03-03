@@ -52,9 +52,17 @@ jobs:
           python -m pytest -v -rA --doctest-modules --cov=.
         continue-on-error: true
 
+      - name: Upload coverage to Codecov 📊
+        uses: codecov/codecov-action@v4
+        with:
+          # file: .coverage
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Install public interfcae package 📥
         run: |
-          python -m pip install .
+          python -m pip install ..
 
       - name: Verify public API types with Pylance ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
@@ -63,11 +71,3 @@ jobs:
           verify-types: rl_ai2thor
           verbose: true
         continue-on-error: true
-
-      - name: Upload coverage to Codecov 📊
-        uses: codecov/codecov-action@v4
-        with:
-          # file: .coverage
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
