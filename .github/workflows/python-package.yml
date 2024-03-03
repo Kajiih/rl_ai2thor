@@ -41,7 +41,6 @@ jobs:
         uses: jakebailey/pyright-action@v2
         with:
           pylance-version: latest-release
-          verify-types: rl_ai2thor
           verbose: true
           stats: true
         continue-on-error: true
@@ -51,6 +50,18 @@ jobs:
         run: |
           pip install pytest pytest-cov
           python -m pytest -v -rA --doctest-modules --cov=.
+        continue-on-error: true
+
+      - name: Install public interfcae package 📥
+        run: |
+          python -m pip install .
+
+      - name: Verify public API types with Pylance ✅ @jakebailey
+        uses: jakebailey/pyright-action@v2
+        with:
+          pylance-version: latest-release
+          verify-types: rl_ai2thor
+          verbose: true
         continue-on-error: true
 
       - name: Upload coverage to Codecov 📊
