@@ -26,10 +26,12 @@ from rl_ai2thor.envs.actions import (
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, GraphTask, PlaceIn, UndefinableTask
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, GraphTask, PlaceIn, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from numpy.typing import ArrayLike
 
     from rl_ai2thor.utils.ai2thor_types import EventLike
@@ -61,9 +63,8 @@ class ITHOREnv(gym.Env):
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
 
-        self.scenes = self._compute_available_scenes()
-
         # Add task set
+        self.task_blueprints = self._create_task_blueprints()
 
     @staticmethod
     def _load_and_override_config(override_config: dict | None = None) -> dict[str, Any]:
@@ -153,33 +154,56 @@ class ITHOREnv(gym.Env):
         nb_channels = 1 if self.config["grayscale"] else 3
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
 
-    def _compute_available_scenes(self) -> set[SceneId]:
+    @staticmethod
+    def _compute_available_scenes(scenes: Iterable[str], excluded_scenes: set[str] | None = None) -> set[SceneId]:
         """
         Compute the available scenes based on the environment mode config.
 
+        Args:
+            scenes (Iterable[str]): Scene names to consider.
+            excluded_scenes (set[str], Optional): Set of scene names to exclude.
+
         Returns:
-            set[str]: Set of available scene names.
+            set[SceneId]: Set of available scene names.
         """
         available_scenes = set()
-        for scene in self.config["scenes"]:
+        for scene in scenes:
             if scene in SceneGroup:
                 available_scenes.update(SCENE_IDS[SceneGroup(scene)])
             else:
-                available_scenes.add(SceneId(scene))
+                available_scenes.add(scene)
 
-        available_scenes -= set(self.config["exclude_scenes"])
+        if excluded_scenes is not None:
+            available_scenes -= excluded_scenes
 
         return available_scenes
 
-    def _create_task_set(self) -> None:
+    def _create_task_blueprints(self) -> set[TaskBlueprint]:
         """
         Create the task set for the environment.
 
         The task set is created based on the environment mode config.
+
+        Returns:
+            set[dict[str, Any]]: Set of tasks to perform in the environment.
         """
-        for task in self.config["tasks"]:
-            if task not in ALL_TASKS:
-                raise UnknownTaskError(task)
+        task_blueprints = set()
+        globally_excluded_scenes = set(self.config["globally_excluded_scenes"])
+        for task_description in self.config["tasks"]:
+            task_type = task_description["type"]
+            if task_type not in ALL_TASKS:
+                raise UnknownTaskError(task_type)
+            task_blueprints.add(
+                TaskBlueprint(
+                    task_type=ALL_TASKS[task_type],
+                    scenes=self._compute_available_scenes(
+                        task_description["scenes"], excluded_scenes=globally_excluded_scenes
+                    ),
+                    args=task_description.get("args", {}),
+                )
+            )
+
+        return task_blueprints
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"

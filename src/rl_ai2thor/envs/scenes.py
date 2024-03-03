@@ -5,9 +5,8 @@ TODO: Finish module docstring.
 """
 
 from enum import StrEnum
-from typing import NewType
 
-SceneId = NewType("SceneId", str)
+type SceneId = str
 
 
 class SceneGroup(StrEnum):
@@ -20,8 +19,8 @@ class SceneGroup(StrEnum):
 
 
 SCENE_IDS = {
-    SceneGroup.KITCHEN: [SceneId(f"FloorPlan{i}") for i in range(1, 31)],
-    SceneGroup.LIVING_ROOM: [SceneId(f"FloorPlan{200 + i}") for i in range(1, 31)],
-    SceneGroup.BEDROOM: [SceneId(f"FloorPlan{300 + i}") for i in range(1, 31)],
-    SceneGroup.BATHROOM: [SceneId(f"FloorPlan{400 + i}") for i in range(1, 31)],
+    SceneGroup.KITCHEN: [f"FloorPlan{i}" for i in range(1, 31)],
+    SceneGroup.LIVING_ROOM: [f"FloorPlan{200 + i}" for i in range(1, 31)],
+    SceneGroup.BEDROOM: [f"FloorPlan{300 + i}" for i in range(1, 31)],
+    SceneGroup.BATHROOM: [f"FloorPlan{400 + i}" for i in range(1, 31)],
 }

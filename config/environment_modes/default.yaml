@@ -91,28 +91,24 @@ action_parameter_data:
     range: [0, 1]
     # discrete_value: 1 # ! Should not be used in discrete environment mode
 
-# === Scenes ===
-scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
-exclude_scenes: [] # List of scene names to exclude (only full names like "FloorPlan1")
-
 # === Tasks ===
+globally_excluded_scenes: [] # List of scene names to exclude for all tasks(e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
 # TODO: Verify and improve this
-# TODO: Add exclude object types for each task
-# TODO: Add include and exclude scenes for each task
+# TODO: Add exclude object types for each task?
 tasks:
-  - PlaceIn:
-      args:
-        placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
-        receptacle_object_type: [RECEPTACLES]
-      exclude_scenes: [] # List of scene names to exclude for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
-  - PlaceSameTwoIn:
-      args:
-        placed_object_type: [PICKUPABLES]
-        receptacle_object_type: [RECEPTACLES]
-      exclude_scenes: []
-  - PlaceWithMoveableRecepIn:
-      args:
-        placed_object_type: [PICKUPABLES]
-        pickupable_receptacle_type: [PICKUPABLE_RECEPTACLES]
-        receptacle_object_type: [RECEPTACLES]
-      exclude_scenes: []
+  - type: PlaceIn
+    args:
+      placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
+      receptacle_object_type: [RECEPTACLES]
+    scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
+  - type: PlaceSameTwoIn
+    args:
+      placed_object_type: [PICKUPABLES]
+      receptacle_object_type: [RECEPTACLES]
+    scenes: [Kitchen, LivingRoom, Bedroom, Bathroom]
+  - type: PlaceWithMoveableRecepIn
+    args:
+      placed_object_type: [PICKUPABLES]
+      pickupable_receptacle_type: [PICKUPABLE_RECEPTACLES]
+      receptacle_object_type: [RECEPTACLES]
+    scenes: [Kitchen, LivingRoom, Bedroom, Bathroom]

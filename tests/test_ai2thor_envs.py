@@ -8,6 +8,7 @@ from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 
 from rl_ai2thor.envs.actions import EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskError
+from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceSameTwoIn, TaskBlueprint
 
 # %% === Constants ===
 abs_tolerance = 1
@@ -23,7 +24,7 @@ def ithor_env():
 
 
 # %% === Init tests ===
-def test_load_and_override_config(ithor_env: ITHOREnv):
+def test__load_and_override_config(ithor_env: ITHOREnv):
     base_config = {"environment_mode": "default", "key0": "value0", "key1": "value1", "key2": "value2"}
     env_mode_config = {"key2": "new_value2", "key3": "new_value3"}
     override_config = {"key1": "overridden_value1", "key2": "overridden_value2"}
@@ -77,7 +78,7 @@ partial_config = {
 }
 
 
-def test_compute_action_availabilities(ithor_env: ITHOREnv):
+def test__compute_action_availabilities(ithor_env: ITHOREnv):
     ithor_env.config = partial_config
 
     expected_availabilities = {
@@ -126,7 +127,7 @@ def test_compute_action_availabilities(ithor_env: ITHOREnv):
 def test_compute_action_availabilities_unknown_action_category(ithor_env: ITHOREnv):
     ithor_env.config = {
         "action_categories": {
-            "unknown_action_category": None,
+            "_unknown_action_category": None,
         }
     }
 
@@ -134,7 +135,7 @@ def test_compute_action_availabilities_unknown_action_category(ithor_env: ITHORE
         ithor_env._compute_action_availabilities()
 
 
-def test_action_space(ithor_env: ITHOREnv):
+def test__action_space(ithor_env: ITHOREnv):
     ithor_env.config = partial_config
 
     ithor_env._create_action_space()
@@ -148,7 +149,7 @@ def test_action_space(ithor_env: ITHOREnv):
     assert isinstance(ithor_env.action_space.spaces["target_object_position"], gym.spaces.Box)
 
 
-def test_create_observation_space(ithor_env: ITHOREnv):
+def test__create_observation_space(ithor_env: ITHOREnv):
     ithor_env.config = {
         "controller_parameters": {
             "height": 84,
@@ -163,7 +164,7 @@ def test_create_observation_space(ithor_env: ITHOREnv):
     assert ithor_env.observation_space.shape == (84, 44, 3)
 
 
-def test_create_observation_space_grayscale(ithor_env: ITHOREnv):
+def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
     ithor_env.config = {
         "controller_parameters": {
             "height": 84,
@@ -178,11 +179,9 @@ def test_create_observation_space_grayscale(ithor_env: ITHOREnv):
     assert ithor_env.observation_space.shape == (84, 44, 1)
 
 
-def test_compute_available_scenes(ithor_env: ITHOREnv):
-    ithor_env.config = {
-        "scenes": ["Kitchen", "FloorPlan201", "FloorPlan301"],
-        "exclude_scenes": ["FloorPlan1", "FloorPlan301", "FloorPlan401"],
-    }
+def test__compute_available_scenes(ithor_env: ITHOREnv):
+    scenes = ["Kitchen", "FloorPlan201", "FloorPlan301"]
+    excluded_scenes = {"FloorPlan1", "FloorPlan301", "FloorPlan401"}
 
     expected_available_scenes = {
         "FloorPlan10",
@@ -217,17 +216,50 @@ def test_compute_available_scenes(ithor_env: ITHOREnv):
         "FloorPlan9",
     }
 
-    available_scenes = ithor_env._compute_available_scenes()
+    available_scenes = ithor_env._compute_available_scenes(scenes, excluded_scenes)
 
     assert available_scenes == expected_available_scenes
 
 
-def test_create_task_set(ithor_env: ITHOREnv):
-    raise NotImplementedError
+def test__create_task_blueprints(ithor_env: ITHOREnv):
+    args1 = {"placed_object_type": ["Mug", "Knife"], "receptacle_type": ["Sink", "Pot"]}
+    args2 = {"placed_object_type": "Apple", "receptacle_type": "Plate"}
+    ithor_env.config = {
+        "globally_excluded_scenes": ["FloorPlan1"],
+        "tasks": [
+            {
+                "type": "PlaceIn",
+                "args": args1,
+                "scenes": ["FloorPlan1", "FloorPlan201", "FloorPlan202"],
+            },
+            {
+                "type": "PlaceSameTwoIn",
+                "args": args2,
+                "scenes": ["FloorPlan2"],
+            },
+        ],
+    }
+
+    expected_task_blueprints = {
+        TaskBlueprint(PlaceIn, {"FloorPlan201", "FloorPlan202"}, args1),
+        TaskBlueprint(PlaceSameTwoIn, {"FloorPlan2"}, args1),
+    }
 
 
-def test_create_task_set_unknown_task(ithor_env: ITHOREnv):
-    raise NotImplementedError
+def test__create_task_blueprints_unknown_task(ithor_env: ITHOREnv):
+    ithor_env.config = {
+        "globally_excluded_scenes": [],
+        "tasks": [
+            {
+                "type": "_unknown_task",
+                "args": {},
+                "scenes": [],
+            },
+        ]
+    }
+
+    with pytest.raises(UnknownTaskError):
+        ithor_env._create_task_blueprints()
 
 
 # %% === Reproducibility tests ===

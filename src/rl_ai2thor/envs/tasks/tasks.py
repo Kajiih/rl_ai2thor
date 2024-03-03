@@ -9,6 +9,7 @@ from __future__ import annotations
 import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -19,6 +20,7 @@ from rl_ai2thor.envs.tasks.items import ItemOverlapClass, TaskItem, TemperatureV
 from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
 
 if TYPE_CHECKING:
+    from rl_ai2thor.envs.scenes import SceneId
     from rl_ai2thor.envs.sim_objects import SimObjectType
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
     from rl_ai2thor.utils.ai2thor_types import EventLike
@@ -365,6 +367,20 @@ class GraphTask[T: Hashable](BaseTask):
     # TODO: Improve this
     def __repr__(self) -> str:
         return f"GraphTask({self.task_graph})"
+
+
+# %% === Task Blueprints ===
+@dataclass
+class TaskBlueprint:
+    """Blueprint containing the information to instantiate a task in the environment."""
+
+    task_type: type[BaseTask]
+    scenes: set[SceneId]
+    args: dict[str, Any] = field(default_factory=dict)
+
+    def __hash__(self) -> int:
+        """Return the hash of the task blueprint."""
+        return hash(self.task_type)
 
 
 # %% == Alfred tasks ==
