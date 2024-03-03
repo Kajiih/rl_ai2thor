@@ -37,10 +37,13 @@ jobs:
           ruff . --output-format=github # -v
         continue-on-error: true
 
-      - name: Pylance type checking 🐍 @jakebailey
+      - name: Pylance type checking ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
         with:
           pylance-version: latest-release
+          verify-types: rl_ai2thor
+          verbose: true
+          stats: true
         continue-on-error: true
 
       # TODO: Make the output more readable
