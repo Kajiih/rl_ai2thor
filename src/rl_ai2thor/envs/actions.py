@@ -18,6 +18,7 @@ Constants:
 - ACTIONS_BY_NAME: Dictionary mapping action names to their corresponding definitions.
 """
 
+# %% === Imports ===
 from __future__ import annotations
 
 import dataclasses
@@ -264,6 +265,9 @@ class EnvironmentAction:
         event.metadata["errorMessage"] = error_message
         return event
 
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 
 @dataclass
 class BaseActionCondition:
@@ -348,6 +352,10 @@ class ConditionalExecutionAction(EnvironmentAction):
             if self.action_condition(env)
             else self.fail_perform(env, error_message=self.action_condition.error_message(self))
         )
+
+    # We need to redefine the hash manually because of dataclass behavior
+    def __hash__(self) -> int:
+        return super().__hash__()
 
 
 @dataclass
@@ -736,7 +744,7 @@ clean_object_action = ConditionalExecutionAction(
 # Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
 
 
-# === Constants ===
+# %% === Constants ===
 ALL_ACTIONS: set[EnvironmentAction] = {
     move_ahead_action,
     move_back_action,
@@ -774,7 +782,6 @@ ALL_ACTIONS: set[EnvironmentAction] = {
     dirty_object_action,
     clean_object_action,
 }
-
 ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]] = {category: [] for category in ActionCategory}
 for action in ALL_ACTIONS:
     category = action.action_category

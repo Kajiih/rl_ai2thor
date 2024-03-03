@@ -3,5 +3,6 @@
 import json
 from pathlib import Path
 
-with Path("src/rl_ai2thor/data/object_types.json").open("r") as f:
+script_path = Path(__file__).parent.resolve()
+with Path(script_path / "object_types.json").open("r") as f:
     OBJECT_TYPES_DATA = json.load(f)
