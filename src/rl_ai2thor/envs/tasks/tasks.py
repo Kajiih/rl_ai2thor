@@ -384,7 +384,7 @@ class TaskBlueprint:
 
 
 # %% == Alfred tasks ==
-class PlaceIn(GraphTask):
+class PlaceIn(GraphTask[str]):
     """
     Task for placing a given object in a given receptacle.
 
@@ -423,7 +423,7 @@ class PlaceIn(GraphTask):
         return f"Place {self.placed_object_type} in {self.receptacle_type}"
 
 
-class PlaceSameTwoIn(GraphTask):
+class PlaceSameTwoIn(GraphTask[str]):
     """
     Task for placing two objects of the same given type in a given receptacle.
 
@@ -466,7 +466,7 @@ class PlaceSameTwoIn(GraphTask):
         return f"Place 2 {self.placed_object_type} in {self.receptacle_type}"
 
 
-class PlaceWithMoveableRecepIn(GraphTask):
+class PlaceWithMoveableRecepIn(GraphTask[str]):
     """
     Task for placing an given object with a given moveable receptacle in a given receptacle.
 
@@ -512,7 +512,7 @@ class PlaceWithMoveableRecepIn(GraphTask):
 
 
 # TODO: Implement task reset
-class PlaceCleanedIn(GraphTask):
+class PlaceCleanedIn(GraphTask[str]):
     """
     Task for placing a given cleaned object in a given receptacle.
 
@@ -573,7 +573,7 @@ class PlaceCleanedIn(GraphTask):
 
 
 # TODO: Implement task reset
-class PlaceHeatedIn(GraphTask):
+class PlaceHeatedIn(GraphTask[str]):
     """
     Task for placing a given heated object in a given receptacle.
 
@@ -638,7 +638,7 @@ class PlaceHeatedIn(GraphTask):
 
 
 # TODO: Implement task reset
-class PlaceCooledIn(GraphTask):
+class PlaceCooledIn(GraphTask[str]):
     """
     Task for placing a given cooled object in a given receptacle.
 
@@ -704,7 +704,7 @@ class PlaceCooledIn(GraphTask):
 
 # TODO: Implement the fact that any light source can be used instead of only desk lamps
 # TODO: Implement with close_t0 relation instead of visible for the light source
-class LookInLight(GraphTask):
+class LookInLight(GraphTask[str]):
     """
     Task for looking at a given object in light.
 
