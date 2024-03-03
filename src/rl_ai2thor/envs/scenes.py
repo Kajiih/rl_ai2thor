@@ -4,9 +4,24 @@ Scenes in AI2THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from enum import StrEnum
+from typing import NewType
+
+SceneId = NewType("SceneId", str)
+
+
+class SceneGroup(StrEnum):
+    """Scene groups in AI2THOR environment."""
+
+    KITCHEN = "Kitchen"
+    LIVING_ROOM = "LivingRoom"
+    BEDROOM = "Bedroom"
+    BATHROOM = "Bathroom"
+
+
 SCENE_IDS = {
-    "Kitchen": [f"FloorPlan{i}" for i in range(1, 31)],
-    "LivingRoom": [f"FloorPlan{200 + i}" for i in range(1, 31)],
-    "Bedroom": [f"FloorPlan{300 + i}" for i in range(1, 31)],
-    "Bathroom": [f"FloorPlan{400 + i}" for i in range(1, 31)],
+    SceneGroup.KITCHEN: [SceneId(f"FloorPlan{i}") for i in range(1, 31)],
+    SceneGroup.LIVING_ROOM: [SceneId(f"FloorPlan{200 + i}") for i in range(1, 31)],
+    SceneGroup.BEDROOM: [SceneId(f"FloorPlan{300 + i}") for i in range(1, 31)],
+    SceneGroup.BATHROOM: [SceneId(f"FloorPlan{400 + i}") for i in range(1, 31)],
 }
