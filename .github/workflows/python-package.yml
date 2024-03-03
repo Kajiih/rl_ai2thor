@@ -62,7 +62,7 @@ jobs:
 
       - name: Install public interfcae package 📥
         run: |
-          python -m pip install ..
+          python -m pip install .
 
       - name: Verify public API types with Pylance ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
