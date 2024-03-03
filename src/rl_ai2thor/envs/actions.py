@@ -136,7 +136,7 @@ class ActionCategory(StrEnum):
 # === Action Classes ===
 # TODO: Change perform to not need the environment
 # TODO: Add target value to object required property
-@dataclass
+@dataclass(frozen=True)
 class EnvironmentAction:
     """
     Base class for complex environment actions that correspond to ai2thor actions.
@@ -309,7 +309,7 @@ class BaseActionCondition:
         return f"Condition {self.__class__.__name__} not met for action {action.ai2thor_action}!"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ConditionalExecutionAction(EnvironmentAction):
     """
     Base class for actions that can only be performed under certain conditions.
@@ -320,7 +320,8 @@ class ConditionalExecutionAction(EnvironmentAction):
 
     Attributes:
         condition_function (Callable): Function that takes the environment as input
-            and returns a boolean indicating whether the action can be performed.
+            and returns a boolean indicating whether the action can be successfully
+            performed.
     """
 
     action_condition: BaseActionCondition
@@ -736,7 +737,7 @@ clean_object_action = ConditionalExecutionAction(
 
 
 # === Constants ===
-ALL_ACTIONS: list[EnvironmentAction] = [
+ALL_ACTIONS: set[EnvironmentAction] = {
     move_ahead_action,
     move_back_action,
     move_left_action,
@@ -772,7 +773,7 @@ ALL_ACTIONS: list[EnvironmentAction] = [
     use_up_object_action,
     dirty_object_action,
     clean_object_action,
-]
+}
 
 ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]] = {category: [] for category in ActionCategory}
 for action in ALL_ACTIONS:
