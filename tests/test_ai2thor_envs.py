@@ -7,7 +7,7 @@ import yaml
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 
 from rl_ai2thor.envs.actions import EnvActionName
-from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
+from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskError
 
 # %% === Constants ===
 abs_tolerance = 1
@@ -78,10 +78,8 @@ partial_config = {
 
 
 def test_compute_action_availabilities(ithor_env: ITHOREnv):
-    # Set the environment mode config
     ithor_env.config = partial_config
 
-    # Define the expected action availabilities based on the environment mode config
     expected_availabilities = {
         EnvActionName.MOVE_AHEAD: True,
         EnvActionName.MOVE_BACK: False,
@@ -120,21 +118,27 @@ def test_compute_action_availabilities(ithor_env: ITHOREnv):
         EnvActionName.DIRTY_OBJECT: False,
     }
 
-    # Call the _compute_action_availabilities method
     action_availabilities = ithor_env._compute_action_availabilities()
 
-    # Assert the expected action availabilities
     assert action_availabilities == expected_availabilities
 
 
+def test_compute_action_availabilities_unknown_action_category(ithor_env: ITHOREnv):
+    ithor_env.config = {
+        "action_categories": {
+            "unknown_action_category": None,
+        }
+    }
+
+    with pytest.raises(UnknownActionCategoryError):
+        ithor_env._compute_action_availabilities()
+
+
 def test_action_space(ithor_env: ITHOREnv):
-    # Set the environment mode config
     ithor_env.config = partial_config
 
-    # Call the _create_action_space method
     ithor_env._create_action_space()
 
-    # Assert the action space dictionary
     assert isinstance(ithor_env.action_space, gym.spaces.Dict)
     assert "action_index" in ithor_env.action_space.spaces
     assert isinstance(ithor_env.action_space.spaces["action_index"], gym.spaces.Discrete)
@@ -145,7 +149,6 @@ def test_action_space(ithor_env: ITHOREnv):
 
 
 def test_create_observation_space(ithor_env: ITHOREnv):
-    # Set the environment mode config
     ithor_env.config = {
         "controller_parameters": {
             "height": 84,
@@ -154,16 +157,13 @@ def test_create_observation_space(ithor_env: ITHOREnv):
         "grayscale": False,
     }
 
-    # Call the _create_observation_space method
     ithor_env._create_observation_space()
 
-    # Assert the observation space
     assert isinstance(ithor_env.observation_space, gym.spaces.Box)
     assert ithor_env.observation_space.shape == (84, 44, 3)
 
 
 def test_create_observation_space_grayscale(ithor_env: ITHOREnv):
-    # Set the environment mode config
     ithor_env.config = {
         "controller_parameters": {
             "height": 84,
@@ -172,20 +172,18 @@ def test_create_observation_space_grayscale(ithor_env: ITHOREnv):
         "grayscale": True,
     }
 
-    # Call the _create_observation_space method
     ithor_env._create_observation_space()
 
-    # Assert the observation space
     assert isinstance(ithor_env.observation_space, gym.spaces.Box)
     assert ithor_env.observation_space.shape == (84, 44, 1)
 
 
 def test_compute_available_scenes(ithor_env: ITHOREnv):
-    # Set the environment mode config
     ithor_env.config = {
         "scenes": ["Kitchen", "FloorPlan201", "FloorPlan301"],
         "exclude_scenes": ["FloorPlan1", "FloorPlan301", "FloorPlan401"],
     }
+
     expected_available_scenes = {
         "FloorPlan10",
         "FloorPlan11",
@@ -219,47 +217,43 @@ def test_compute_available_scenes(ithor_env: ITHOREnv):
         "FloorPlan9",
     }
 
-    # Call the _compute_available_scenes method
     available_scenes = ithor_env._compute_available_scenes()
 
-    # Assert the expected available scenes
     assert available_scenes == expected_available_scenes
+
+
+def test_create_task_set(ithor_env: ITHOREnv):
+    raise NotImplementedError
+
+
+def test_create_task_set_unknown_task(ithor_env: ITHOREnv):
+    raise NotImplementedError
 
 
 # %% === Reproducibility tests ===
 @pytest.mark.xfail(reason="Rendering in ai2thor is not deterministic")
 def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
-    # Initialize the environment with the seed
     obs1, info1 = ithor_env.reset(seed=seed)
-
-    # Reinitialize the environment with the same seed
     obs2, info2 = ithor_env.reset(seed=seed)
 
-    # Check if the observations are identical
     assert obs1 == pytest.approx(obs2, abs=2)
     assert info1 == info2
 
 
 def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv):
-    # Initialize the environment with the seed
     _, info1 = ithor_env.reset(seed=seed)
-
-    # Reinitialize the environment with the same seed
     _, info2 = ithor_env.reset(seed=seed)
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
 
 def test_reset_not_same_scene(ithor_env: ITHOREnv):
-    # Initialize the environment with the seed
     _, info1 = ithor_env.reset(seed=seed)
-
-    # Reset the environment to get a different scene
     _, info2 = ithor_env.reset()
 
-    # Check that the scenes are different
     assert not are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
 

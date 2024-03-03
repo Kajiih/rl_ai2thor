@@ -26,7 +26,7 @@ from rl_ai2thor.envs.actions import (
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp
-from rl_ai2thor.envs.tasks.tasks import GraphTask, PlaceIn, UndefinableTask
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, GraphTask, PlaceIn, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ class ITHOREnv(gym.Env):
 
         self.scenes = self._compute_available_scenes()
 
-        # Add tasks
+        # Add task set
 
     @staticmethod
     def _load_and_override_config(override_config: dict | None = None) -> dict[str, Any]:
@@ -170,6 +170,16 @@ class ITHOREnv(gym.Env):
         available_scenes -= set(self.config["exclude_scenes"])
 
         return available_scenes
+
+    def _create_task_set(self) -> None:
+        """
+        Create the task set for the environment.
+
+        The task set is created based on the environment mode config.
+        """
+        for task in self.config["tasks"]:
+            if task not in ALL_TASKS:
+                raise UnknownTaskError(task)
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"
@@ -360,5 +370,15 @@ class UnknownActionCategoryError(ValueError):
         self.action_category = action_category
         super().__init__(
             f"Unknown action category {action_category} in environment mode config. "
-            "Available action categories are ACTION_CATEGORIES."
+            f"Available action categories are {[category.value for category in ActionCategory]}."
+        )
+
+
+class UnknownTaskError(ValueError):
+    """Exception raised for unknown tasks in environment mode config."""
+
+    def __init__(self, task: str) -> None:
+        self.task = task
+        super().__init__(
+            f"Unknown task {task} in environment mode config. Available tasks are {list(ALL_TASKS.keys())}."
         )

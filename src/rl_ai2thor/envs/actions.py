@@ -178,7 +178,6 @@ class EnvironmentAction:
             error_message (str): Error message to log in the event.
         ) -> EventLike:
             Generate an event corresponding to the failure of the action.
-
     """
 
     name: EnvActionName

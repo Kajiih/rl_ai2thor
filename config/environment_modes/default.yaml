@@ -97,23 +97,22 @@ exclude_scenes: [] # List of scene names to exclude (only full names like "Floor
 
 # === Tasks ===
 # TODO: Verify and improve this
-# TODO: Add exclude object types
+# TODO: Add exclude object types for each task
+# TODO: Add include and exclude scenes for each task
 tasks:
-  PlaceIn:
-    placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
-    receptacle_object_type: [RECEPTACLES]
-    include_scenes: []
-    exclude_scenes: []
-
-  PlaceSameTwoIn:
-    placed_object_type: [PICKUPABLES]
-    receptacle_object_type: [RECEPTACLES]
-    include_scenes: []
-    exclude_scenes: []
-
-  PlaceWithMoveableRecepIn:
-    placed_object_type: [PICKUPABLES]
-    pickupable_receptacle_type: [PICKUPABLE_RECEPTACLES]
-    receptacle_object_type: [RECEPTACLES]
-    include_scenes: []
-    exclude_scenes: []
+  - PlaceIn:
+      args:
+        placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
+        receptacle_object_type: [RECEPTACLES]
+      exclude_scenes: [] # List of scene names to exclude for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
+  - PlaceSameTwoIn:
+      args:
+        placed_object_type: [PICKUPABLES]
+        receptacle_object_type: [RECEPTACLES]
+      exclude_scenes: []
+  - PlaceWithMoveableRecepIn:
+      args:
+        placed_object_type: [PICKUPABLES]
+        pickupable_receptacle_type: [PICKUPABLE_RECEPTACLES]
+        receptacle_object_type: [RECEPTACLES]
+      exclude_scenes: []

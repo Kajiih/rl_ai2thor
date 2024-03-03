@@ -738,3 +738,15 @@ class LightSourcesType(StrEnum):
     DESK_LAMP = "DeskLamp"
     FLOOR_LAMP = "FloorLamp"
     # LIGHT_SWITCH = "LightSwitch"
+
+
+# %% === Constants ===
+ALL_TASKS = {
+    "PlaceIn": PlaceIn,
+    "PlaceSameTwoIn": PlaceSameTwoIn,
+    "PlaceWithMoveableRecepIn": PlaceWithMoveableRecepIn,
+    "PlaceCleanedIn": PlaceCleanedIn,
+    "PlaceHeatedIn": PlaceHeatedIn,
+    "PlaceCooledIn": PlaceCooledIn,
+    "LookInLight": LookInLight,
+}
