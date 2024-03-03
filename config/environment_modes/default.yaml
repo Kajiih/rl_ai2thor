@@ -92,11 +92,12 @@ action_parameter_data:
     # discrete_value: 1 # ! Should not be used in discrete environment mode
 
 # === Scenes ===
-include_scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to exclude from the environment (e.g. "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
-exclude_scenes: [] # List of scene names to exclude from the environment (e.g. "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
+scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1")
+exclude_scenes: [] # List of scene names to exclude (only full names like "FloorPlan1")
 
 # === Tasks ===
 # TODO: Verify and improve this
+# TODO: Add exclude object types
 tasks:
   PlaceIn:
     placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")

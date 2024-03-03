@@ -24,6 +24,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.reward import GraphTaskRewardHandler
+from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp
 from rl_ai2thor.envs.tasks.tasks import GraphTask, PlaceIn, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
@@ -59,6 +60,10 @@ class ITHOREnv(gym.Env):
         self._create_observation_space()
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
+
+        self.scenes = self._compute_available_scenes()
+
+        # Add tasks
 
     @staticmethod
     def _load_and_override_config(override_config: dict | None = None) -> dict[str, Any]:
@@ -147,6 +152,24 @@ class ITHOREnv(gym.Env):
         )
         nb_channels = 1 if self.config["grayscale"] else 3
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
+
+    def _compute_available_scenes(self) -> set[SceneId]:
+        """
+        Compute the available scenes based on the environment mode config.
+
+        Returns:
+            set[str]: Set of available scene names.
+        """
+        available_scenes = set()
+        for scene in self.config["scenes"]:
+            if scene in SceneGroup:
+                available_scenes.update(SCENE_IDS[SceneGroup(scene)])
+            else:
+                available_scenes.add(SceneId(scene))
+
+        available_scenes -= set(self.config["exclude_scenes"])
+
+        return available_scenes
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"

@@ -180,6 +180,52 @@ def test_create_observation_space_grayscale(ithor_env: ITHOREnv):
     assert ithor_env.observation_space.shape == (84, 44, 1)
 
 
+def test_compute_available_scenes(ithor_env: ITHOREnv):
+    # Set the environment mode config
+    ithor_env.config = {
+        "scenes": ["Kitchen", "FloorPlan201", "FloorPlan301"],
+        "exclude_scenes": ["FloorPlan1", "FloorPlan301", "FloorPlan401"],
+    }
+    expected_available_scenes = {
+        "FloorPlan10",
+        "FloorPlan11",
+        "FloorPlan12",
+        "FloorPlan13",
+        "FloorPlan14",
+        "FloorPlan15",
+        "FloorPlan16",
+        "FloorPlan17",
+        "FloorPlan18",
+        "FloorPlan19",
+        "FloorPlan2",
+        "FloorPlan20",
+        "FloorPlan201",
+        "FloorPlan21",
+        "FloorPlan22",
+        "FloorPlan23",
+        "FloorPlan24",
+        "FloorPlan25",
+        "FloorPlan26",
+        "FloorPlan27",
+        "FloorPlan28",
+        "FloorPlan29",
+        "FloorPlan3",
+        "FloorPlan30",
+        "FloorPlan4",
+        "FloorPlan5",
+        "FloorPlan6",
+        "FloorPlan7",
+        "FloorPlan8",
+        "FloorPlan9",
+    }
+
+    # Call the _compute_available_scenes method
+    available_scenes = ithor_env._compute_available_scenes()
+
+    # Assert the expected available scenes
+    assert available_scenes == expected_available_scenes
+
+
 # %% === Reproducibility tests ===
 @pytest.mark.xfail(reason="Rendering in ai2thor is not deterministic")
 def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
@@ -288,6 +334,3 @@ def are_close_dict(d1, d2, abs_tol=None, rel_tol=None, nan_ok=False):
             return False
 
     return True
-
-
-# %%
