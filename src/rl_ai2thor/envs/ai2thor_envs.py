@@ -192,7 +192,7 @@ class ITHOREnv(gym.Env):
         for task_description in self.config["tasks"]:
             task_type = task_description["type"]
             if task_type not in ALL_TASKS:
-                raise UnknownTaskError(task_type)
+                raise UnknownTaskTypeError(task_type)
             task_blueprints.add(
                 TaskBlueprint(
                     task_type=ALL_TASKS[task_type],
@@ -398,11 +398,11 @@ class UnknownActionCategoryError(ValueError):
         )
 
 
-class UnknownTaskError(ValueError):
-    """Exception raised for unknown tasks in environment mode config."""
+class UnknownTaskTypeError(ValueError):
+    """Exception raised for unknown task types in environment mode config."""
 
-    def __init__(self, task: str) -> None:
-        self.task = task
+    def __init__(self, task_type: str) -> None:
+        self.task_type = task_type
         super().__init__(
-            f"Unknown task {task} in environment mode config. Available tasks are {list(ALL_TASKS.keys())}."
+            f"Unknown task type {task_type} in environment mode config. Available tasks are {list(ALL_TASKS.keys())}."
         )

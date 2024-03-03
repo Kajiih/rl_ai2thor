@@ -7,7 +7,7 @@ import yaml
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 
 from rl_ai2thor.envs.actions import EnvActionName
-from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskError
+from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceSameTwoIn, TaskBlueprint
 
 # %% === Constants ===
@@ -131,8 +131,10 @@ def test_compute_action_availabilities_unknown_action_category(ithor_env: ITHORE
         }
     }
 
-    with pytest.raises(UnknownActionCategoryError):
+    with pytest.raises(UnknownActionCategoryError) as exc_info:
         ithor_env._compute_action_availabilities()
+
+    assert exc_info.value.action_category == "_unknown_action_category"
 
 
 def test__action_space(ithor_env: ITHOREnv):
@@ -255,11 +257,13 @@ def test__create_task_blueprints_unknown_task(ithor_env: ITHOREnv):
                 "args": {},
                 "scenes": [],
             },
-        ]
+        ],
     }
 
-    with pytest.raises(UnknownTaskError):
+    with pytest.raises(UnknownTaskTypeError) as exc_info:
         ithor_env._create_task_blueprints()
+
+    assert exc_info.value.task_type == "_unknown_task"
 
 
 # %% === Reproducibility tests ===
