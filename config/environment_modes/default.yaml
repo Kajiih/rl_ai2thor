@@ -98,7 +98,7 @@ globally_excluded_scenes: [] # List of scene names to exclude for all tasks(e.g.
 tasks:
   - type: PlaceIn
     args:
-      placed_object_type: [PICKUPABLES] # Sim object type or sim object type group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
+      placed_object_type: [PICKUPABLES] # Sim object type or sim object group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
       receptacle_object_type: [RECEPTACLES]
     scenes: [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
   - type: PlaceSameTwoIn

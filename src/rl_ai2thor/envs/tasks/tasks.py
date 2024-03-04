@@ -189,7 +189,7 @@ class GraphTask[T: Hashable](BaseTask):
                 }
 
         self.overlap_classes = [
-            ItemOverlapClass(
+            ItemOverlapClass[T](
                 items=overlap_class["items"],
                 candidate_ids=list(overlap_class["candidate_ids"]),
             )
