@@ -4,5 +4,5 @@ import json
 from pathlib import Path
 
 script_path = Path(__file__).parent.resolve()
-with Path(script_path / "object_types.json").open("r") as f:
+with Path(script_path / "object_types_data.json").open("r") as f:
     OBJECT_TYPES_DATA = json.load(f)

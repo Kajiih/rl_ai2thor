@@ -7,7 +7,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 url = "https://ai2thor.allenai.org/ithor/documentation/objects/object-types/"
-object_types_json_path = Path("src/rl_ai2thor/data/object_types.json")
+object_types_data_json_path = Path("src/rl_ai2thor/data/object_types_data.json")
 
 with urllib.request.urlopen(url) as response:
     data = response.read()
