@@ -7,7 +7,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 url = "https://ai2thor.allenai.org/ithor/documentation/objects/object-types/"
-object_types_data_json_path = Path("src/rl_ai2thor/data/object_types_data.json")
+object_types_data_path = Path("src/rl_ai2thor/data/object_types_data.json")
 
 with urllib.request.urlopen(url) as response:
     data = response.read()
@@ -35,5 +35,6 @@ for item in items:
         "contextual_interactions": tds[5].text,
     }
 
-with object_types_json_path.open("w") as f:
+with object_types_data_path.open("w") as f:
     json.dump(data_dict, f, indent=4)
+    print(f"Object types data written to {object_types_data_path}")
