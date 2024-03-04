@@ -226,15 +226,30 @@ class GraphTask[T: Hashable](BaseTask):
                 if item.is_candidate(obj_metadata):
                     item.candidate_ids.add(obj_metadata["objectId"])
 
-        # Check that every item has at least one candidate # TODO: Remove?
-        # for item in self.items:
-        #     if not item.candidate_ids:
-        #         raise NoCandidateError(item)
+        self.overlap_classes = self._compute_overlap_classes(self.items)
 
-        # TODO: Add check that every overlap class has
-        # Compute the overlap classes
+        # Compute max task advancement
+        # Total number of properties and relations of the items
+        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
+
+        # Return initial task advancement
+        return self.compute_task_advancement(event)
+
+    @staticmethod
+    def _compute_overlap_classes(items: list[TaskItem[T]]) -> list[ItemOverlapClass[T]]:
+        """
+        Compute the overlap classes of the items in the scene.
+
+        Items must have their candidates initialized before calling this method.
+
+        Args:
+            items (list[TaskItem[T]]): List of items.
+
+        Returns:
+            overlap_classes (list[ItemOverlapClass[T]]): List of overlap classes.
+        """
         overlap_classes: dict[int, dict[str, Any]] = {}
-        for item in self.items:
+        for item in items:
             item_class_idx = None
             remaining_candidates_ids = item.candidate_ids.copy()
             for class_idx, overlap_class in overlap_classes.items():
@@ -260,20 +275,13 @@ class GraphTask[T: Hashable](BaseTask):
                     "candidate_ids": item.candidate_ids,
                 }
 
-        self.overlap_classes = [
+        return [
             ItemOverlapClass[T](
                 items=overlap_class["items"],
                 candidate_ids=list(overlap_class["candidate_ids"]),
             )
             for overlap_class in overlap_classes.values()
         ]
-
-        # Compute max task advancement
-        # Total number of properties and relations of the items
-        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
-
-        # Return initial task advancement
-        return self.compute_task_advancement(event)
 
     # TODO: Add trying only the top k interesting assignments according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
     def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
