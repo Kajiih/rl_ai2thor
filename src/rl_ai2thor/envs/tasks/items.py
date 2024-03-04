@@ -147,7 +147,7 @@ class TaskItem[T: Hashable]:
             **self._candidate_required_properties_rel,
         }
 
-    def is_obj_candidate(self, obj_metadata: dict[SimObjMetadata, Any]) -> bool:
+    def is_candidate(self, obj_metadata: dict[SimObjMetadata, Any]) -> bool:
         """
         Return True if the given object is a valid candidate for the item.
 
@@ -552,6 +552,9 @@ class ItemOverlapClass[T: Hashable]:
             if all(obj_id in item.candidate_ids for item, obj_id in permutation.items())
         ]
 
+        if not self.valid_assignments:
+            raise NoValidAssignmentError(self)
+
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[SimObjectType, Any]
     ) -> tuple[
@@ -613,6 +616,51 @@ class ItemOverlapClass[T: Hashable]:
         ]
 
         return interesting_assignments, items_results, items_scores
+
+    def __str__(self) -> str:
+        return f"OverlapClass({self.items})"
+
+
+# %% Exceptions
+class NoCandidateError(Exception):
+    """
+    Exception raised when no candidate is found for an item.
+
+    The task cannot be completed if no candidate is found for an item, and this
+    is probably a sign that the task and the scene are not compatible are that the task is impossible.
+    """
+
+    def __init__(self, item: TaskItem) -> None:
+        """Initialize the NoCandidateError object."""
+        self.item = item
+
+    def __str__(self) -> str:
+        return f"Item '{self.item}' has no candidate with the required properties {self.item.candidate_required_properties}"
+
+
+class NoValidAssignmentError(Exception):
+    """
+    Exception raised when no valid assignment is found during the initialization of an overlap class.
+
+    This means that it is not possible to assign a different candidates to all
+    items in the overlap class, making the task impossible to complete.
+
+    Either the task and the scene are not compatible or the task is impossible because
+    at least one item has no valid candidate (a NoCandidateError should be automatically
+    raised in this case).
+    """
+
+    def __init__(self, overlap_class: ItemOverlapClass) -> None:
+        """Initialize the NoValidAssignmentError object."""
+        self.overlap_class = overlap_class
+
+        # Check that the items have at least one valid candidate
+        for item in self.overlap_class.items:
+            if not item.candidate_ids:
+                raise NoCandidateError(item)
+
+    def __str__(self) -> str:
+        return f"Overlap class '{self.overlap_class}' has no valid assignment."
 
 
 # %% === Property Definitions ===

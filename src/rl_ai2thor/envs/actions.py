@@ -440,7 +440,7 @@ class MissingParameterRangeError(ValueError):
     """
     Exception raised when an action requires a parameter but parameter range has been defined for the action.
 
-    Either the action should not require a parameter, or the action has been badly defined in the environment.
+    Either the action should not require a parameter, or the action has been incorrectly defined in the environment.
     """
 
     def __init__(self, ai2thor_action: str) -> None:

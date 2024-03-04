@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from copy import deepcopy
 from unittest.mock import call, patch
 
 import gymnasium as gym
@@ -8,6 +9,7 @@ from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 
 from rl_ai2thor.envs.actions import EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskTypeError
+from rl_ai2thor.envs.sim_objects import PICKUPABLE_RECEPTACLES
 from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceSameTwoIn, TaskBlueprint
 
 # %% === Constants ===
@@ -18,6 +20,7 @@ seed = 42
 
 
 # %% === Fixtures ===
+# TODO: Change fixture to have a specific base config
 @pytest.fixture()
 def ithor_env():
     return ITHOREnv()
@@ -224,7 +227,9 @@ def test__compute_available_scenes(ithor_env: ITHOREnv):
 
 
 def test__create_task_blueprints(ithor_env: ITHOREnv):
-    args1 = {"placed_object_type": ["Mug", "Knife"], "receptacle_type": ["Sink", "Pot"]}
+    args1 = {"placed_object_type": ["Mug", "Knife"], "receptacle_type": ["Sink", "Pot", "PICKUPABLE_RECEPTACLES"]}
+    expected_args1 = deepcopy(args1)
+    expected_args1["receptacle_type"] = ["Sink", *[obj_type.value for obj_type in PICKUPABLE_RECEPTACLES]]
     args2 = {"placed_object_type": "Apple", "receptacle_type": "Plate"}
     ithor_env.config = {
         "globally_excluded_scenes": ["FloorPlan1"],

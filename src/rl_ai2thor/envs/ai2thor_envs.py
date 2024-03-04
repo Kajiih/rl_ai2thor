@@ -23,10 +23,10 @@ from rl_ai2thor.envs.actions import (
     EnvActionName,
     EnvironmentAction,
 )
-from rl_ai2thor.envs.reward import GraphTaskRewardHandler
+from rl_ai2thor.envs.reward import BaseRewardHandler, MultiRewardHandler
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.sim_objects import SimObjFixedProp
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, GraphTask, PlaceIn, TaskBlueprint, UndefinableTask
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjFixedProp
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, GraphTask, PlaceIn, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
@@ -178,28 +178,39 @@ class ITHOREnv(gym.Env):
 
         return available_scenes
 
-    def _create_task_blueprints(self) -> set[TaskBlueprint]:
+    def _create_task_blueprints(self) -> list[TaskBlueprint]:
         """
-        Create the task set for the environment.
-
-        The task set is created based on the environment mode config.
+        Create the task blueprints based on the environment mode config.
 
         Returns:
-            set[dict[str, Any]]: Set of tasks to perform in the environment.
+            list[TaskBlueprint]: List of task blueprints.
         """
-        task_blueprints = set()
+        task_blueprints = []
         globally_excluded_scenes = set(self.config["globally_excluded_scenes"])
         for task_description in self.config["tasks"]:
             task_type = task_description["type"]
             if task_type not in ALL_TASKS:
                 raise UnknownTaskTypeError(task_type)
-            task_blueprints.add(
+            task_args = task_description.get("args", {})
+
+            # Compute the full set of arguments
+            # TODO: Make it more general
+            for arg_name, arg_list in task_args.items():
+                arg_values = set()
+                for arg_value in arg_list:
+                    if isinstance(arg_value, str) and arg_value in ALL_OBJECT_GROUPS:
+                        arg_values.update([obj_type_member.value for obj_type_member in ALL_OBJECT_GROUPS[arg_value]])
+                    else:
+                        arg_values.add(arg_value)
+                task_args[arg_name] = list(arg_values)
+
+            task_blueprints.append(
                 TaskBlueprint(
                     task_type=ALL_TASKS[task_type],
                     scenes=self._compute_available_scenes(
                         task_description["scenes"], excluded_scenes=globally_excluded_scenes
                     ),
-                    args=task_description.get("args", {}),
+                    args=task_args,
                 )
             )
 
@@ -259,7 +270,7 @@ class ITHOREnv(gym.Env):
 
         self.step_count += 1
 
-        observation: ArrayLike = new_event.frame  # TODO: Check how to fix this type issue
+        observation: ArrayLike = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
         reward, terminated, task_info = self.reward_handler.get_reward(new_event)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
@@ -329,19 +340,14 @@ class ITHOREnv(gym.Env):
         # TODO: Check that the seed is used correctly
         super().reset(seed=seed)
 
-        # TODO: Add scene id handling
-        scenes_list = self.controller.ithor_scenes(
-            include_kitchens=True, include_living_rooms=True, include_bedrooms=True, include_bathrooms=True
-        )
-        sampled_scene = self.np_random.choice(scenes_list)
+        # Sample a task blueprint
+        task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
 
-        # Setup the scene
-        self.last_event = self.controller.reset(sampled_scene)
-        observation = self.last_event.frame  # type: ignore
+        # Initialize controller and sample task
+        self.last_event, self.task = self._initialize_controller_and_task(task_blueprint)
 
-        # Initialize the task and reward handler
-        self.task = self._sample_task(self.last_event)
-        self.reward_handler = GraphTaskRewardHandler(self.task)
+        # TODO: Support more than one reward handler
+        self.reward_handler = self.task.get_reward_handler()
         task_completion, task_info = self.reward_handler.reset(self.last_event)
 
         # TODO: Check if this is correct
@@ -351,6 +357,7 @@ class ITHOREnv(gym.Env):
         self.step_count = 0
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
+        observation: ArrayLike = self.last_event.frame  # type: ignore
         return observation, info
 
     def close(self) -> None:
@@ -362,28 +369,34 @@ class ITHOREnv(gym.Env):
         self.controller.stop()
 
     # TODO: Implement appropriate task sampling
-    def _sample_task(self, event: EventLike) -> GraphTask:
+    def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
         """
-        Sample a task for the environment.
+        Sample a task from the task blueprint compatible with the given event.
 
-        # TODO: Make it dependant on the scene..?
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint to sample from.
+
+        Returns:
+            Event: Initial event of the environment.
+            BaseTask: Sampled task.
         """
-        # Temporarily return only a PlaceObject task
-        # Sample a receptacle and an object to place
-        scene_pickupable_objects = [
-            obj[SimObjFixedProp.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[SimObjFixedProp.PICKUPABLE]
-        ]
-        scene_receptacles = [
-            obj[SimObjFixedProp.OBJECT_TYPE] for obj in event.metadata["objects"] if obj[SimObjFixedProp.RECEPTACLE]
-        ]
+        # Sample a scene from the task blueprint
+        sampled_scene = self.np_random.choice(list(task_blueprint.scenes))
+        # Instantiate the scene
+        controller_parameters = self.config["controller_parameters"]
+        controller_parameters["scene"] = sampled_scene
+        initial_event = self.controller.reset(sampled_scene)
 
-        object_to_place = self.np_random.choice(scene_pickupable_objects)
-        receptacle = self.np_random.choice(scene_receptacles)
+        sampled_task_args = {}
+        # TODO!! Need to make sure the sampled task is compatible with the scene
+        # scene_objects = initial_event.metadata["objects"]
+        for arg_name, arg_values in task_blueprint.args.items():
+            sample_value = self.np_random.choice(arg_values)
+            sampled_task_args[arg_name] = sample_value
 
-        return PlaceIn(
-            placed_object_type=object_to_place,
-            receptacle_type=receptacle,
-        )
+        task = task_blueprint.task_type(**sampled_task_args)
+
+        return initial_event, task
 
 
 # %% Exceptions

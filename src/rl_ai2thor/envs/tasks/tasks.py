@@ -15,8 +15,15 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import networkx as nx
 
+from rl_ai2thor.envs.reward import BaseRewardHandler
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.items import ItemOverlapClass, TaskItem, TemperatureValue, obj_prop_id_to_item_prop
+from rl_ai2thor.envs.tasks.items import (
+    ItemOverlapClass,
+    NoCandidateError,
+    TaskItem,
+    TemperatureValue,
+    obj_prop_id_to_item_prop,
+)
 from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
 
 if TYPE_CHECKING:
@@ -26,17 +33,81 @@ if TYPE_CHECKING:
     from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
+# %% === Reward handlers ===
+# TODO: Add more options
+class GraphTaskRewardHandler(BaseRewardHandler):
+    """
+    Reward handler for graph tasks AI2-THOR environments.
+
+    TODO: Finish docstring
+    """
+
+    def __init__(self, task: GraphTask) -> None:
+        """
+        Initialize the reward handler.
+
+        Args:
+            task (GraphTask): Task to calculate rewards for.
+        """
+        self.task = task
+        self.last_step_advancement: float | int = 0
+
+    # TODO: Add shortcut when the action failed or similar special cases
+    def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        """
+        Return the reward, task completion and additional information about the task for the given event.
+
+        Args:
+            event (Any): Event to calculate the reward for.
+
+        Returns:
+            reward (float): Reward for the event.
+            terminated (bool, Optional): Whether the episode has terminated.
+            info (dict[str, Any]): Additional information about the state of the task.
+        """
+        task_advancement, task_completion, info = self.task.compute_task_advancement(event)
+        reward = task_advancement - self.last_step_advancement
+        self.last_step_advancement = task_advancement
+
+        return reward, task_completion, info
+
+    def reset(self, event: EventLike) -> tuple[bool, dict[str, Any]]:
+        """
+        Reset the reward handler.
+
+        Args:
+            event (Any): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            terminated (bool): Whether the episode has terminated.
+            info (dict[str, Any]): Additional information about the state of the task.
+        """
+        # Reset the task
+        task_advancement, task_completion, info = self.task.reset(event)
+        # Initialize the last step advancement
+        self.last_step_advancement = task_advancement
+
+        return task_completion, info
+
+
 # %% === Tasks ===
 class BaseTask(ABC):
     """Base class for tasks."""
+
+    _reward_handler_type: type[BaseRewardHandler]
 
     @abstractmethod
     def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """Reset the task with the information of the event."""
 
     @abstractmethod
-    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
+
+    def get_reward_handler(self) -> BaseRewardHandler:
+        """Return the reward handler for the task."""
+        return self._reward_handler_type(self)
 
 
 class UndefinableTask(BaseTask):
@@ -48,7 +119,7 @@ class UndefinableTask(BaseTask):
         return 0.0, False, {}
 
     @staticmethod
-    def get_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
 
@@ -111,6 +182,8 @@ class GraphTask[T: Hashable](BaseTask):
 
     """
 
+    _reward_handler_type = GraphTaskRewardHandler
+
     def __init__(
         self,
         task_description_dict: TaskDict[T],
@@ -126,18 +199,11 @@ class GraphTask[T: Hashable](BaseTask):
 
         # Initialize the task graph
         self.task_graph = nx.DiGraph()
-
-        # TODO: Check if we create ids and mappings for the items
-        for item in self.items:
-            self.task_graph.add_node(item)
-            for relation in item.relations:
-                self.task_graph.add_edge(item, relation.related_item)
-                self.task_graph[item][relation.related_item][relation.type_id] = relation
         # TODO: Check if we keep the graph (unused for now)
 
         self.overlap_classes: list[ItemOverlapClass] = []
 
-    # TODO: Finish this method
+    # TODO? Add check to make sure the task is feasible?
     def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
@@ -157,9 +223,15 @@ class GraphTask[T: Hashable](BaseTask):
         # Initialize the candidates of the items
         for item in self.items:
             for obj_metadata in event.metadata["objects"]:
-                if item.is_obj_candidate(obj_metadata):
+                if item.is_candidate(obj_metadata):
                     item.candidate_ids.add(obj_metadata["objectId"])
 
+        # Check that every item has at least one candidate # TODO: Remove?
+        # for item in self.items:
+        #     if not item.candidate_ids:
+        #         raise NoCandidateError(item)
+
+        # TODO: Add check that every overlap class has
         # Compute the overlap classes
         overlap_classes: dict[int, dict[str, Any]] = {}
         for item in self.items:
@@ -201,11 +273,10 @@ class GraphTask[T: Hashable](BaseTask):
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
         # Return initial task advancement
-        return self.get_task_advancement(event)
+        return self.compute_task_advancement(event)
 
     # TODO: Add trying only the top k interesting assignments according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
-    # TODO: Implement this method
-    def get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -345,8 +416,8 @@ class GraphTask[T: Hashable](BaseTask):
             for relation in relations.values()
         }
 
-        for main_item_id in inverse_relations_type_ids:
-            for related_item_id, relation_type_id in inverse_relations_type_ids[main_item_id].items():
+        for related_item_id in inverse_relations_type_ids:
+            for main_item_id, relation_type_id in inverse_relations_type_ids[related_item_id].items():
                 if main_item_id not in organized_relations[related_item_id]:
                     organized_relations[related_item_id][main_item_id] = {}
                 if relation_type_id not in organized_relations[related_item_id][main_item_id]:
@@ -366,7 +437,9 @@ class GraphTask[T: Hashable](BaseTask):
 
     # TODO: Improve this
     def __repr__(self) -> str:
-        return f"GraphTask({self.task_graph})"
+        nb_items = len(self.items)
+        nb_relations = sum(len(item.relations) for item in self.items)
+        return f"GraphTask({nb_items} items, {nb_relations} relations)"
 
 
 # %% === Task Blueprints ===
@@ -376,7 +449,7 @@ class TaskBlueprint:
 
     task_type: type[BaseTask]
     scenes: set[SceneId]
-    args: dict[str, Any] = field(default_factory=dict)
+    args: dict[str, list[Any]] = field(default_factory=dict)
 
     def __hash__(self) -> int:
         """Return the hash of the task blueprint."""
