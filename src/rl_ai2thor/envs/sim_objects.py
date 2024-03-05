@@ -5,7 +5,7 @@ TODO: Finish module docstring.
 """
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, NewType
 
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 
@@ -190,7 +190,8 @@ class SimObjVariableProp(StrEnum):
 # TODO: Change this to a union of enums instead of type alias.
 type SimObjProp = SimObjFixedProp | SimObjVariableProp
 type SimObjMetadataKey = SimObjProp | str
-type SimObjId = str
+SimObjId = NewType("SimObjId", str)
+# type SimObjId = str
 type SimObjPropValue = Any
 type SimObjMetadata = dict[SimObjMetadataKey, SimObjPropValue]
 
@@ -251,15 +252,15 @@ PICKUPABLE_RECEPTACLES = PICKUPABLES & RECEPTACLES
 
 
 ALL_OBJECT_GROUPS = {
-    "PICKUPABLES": PICKUPABLES,
-    "RECEPTACLES": RECEPTACLES,
-    "MOVEABLES": MOVEABLES,
-    "SLICEABLES": SLICEABLES,
-    "OPENABLES": OPENABLES,
-    "TOGGLEABLES": TOGGLEABLES,
-    "BREAKABLES": BREAKABLES,
-    "FILLABLES": FILLABLES,
-    "DIRTYABLES": DIRTYABLES,
-    "COOKABLES": COOKABLES,
-    "PICKUPABLE_RECEPTACLES": PICKUPABLE_RECEPTACLES,
+    "_PICKUPABLES": PICKUPABLES,
+    "_RECEPTACLES": RECEPTACLES,
+    "_MOVEABLES": MOVEABLES,
+    "_SLICEABLES": SLICEABLES,
+    "_OPENABLES": OPENABLES,
+    "_TOGGLEABLES": TOGGLEABLES,
+    "_BREAKABLES": BREAKABLES,
+    "_FILLABLES": FILLABLES,
+    "_DIRTYABLES": DIRTYABLES,
+    "_COOKABLES": COOKABLES,
+    "_PICKUPABLE_RECEPTACLES": PICKUPABLE_RECEPTACLES,
 }
