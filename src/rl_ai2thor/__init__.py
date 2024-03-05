@@ -1,4 +1,4 @@
-"""RL package for AI2-THOR environment."""
+"""Main module for AI2THOR RL environment."""
 
 from gymnasium.envs.registration import register
 
