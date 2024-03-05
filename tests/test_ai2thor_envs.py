@@ -14,8 +14,8 @@ from rl_ai2thor.envs.ai2thor_envs import (
     UnknownActionCategoryError,
     UnknownTaskTypeError,
 )
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, PICKUPABLE_RECEPTACLES, SimObjectType
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, PlaceIn, PlaceSameTwoIn, TaskBlueprint
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjectType
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS
 
 # %% === Constants ===
 abs_tolerance = 1
@@ -28,7 +28,10 @@ seed = 42
 # TODO: Change fixture to have a specific base config
 @pytest.fixture()
 def ithor_env():
-    return ITHOREnv()
+    env = ITHOREnv()
+    yield env
+
+    env.close()
 
 
 # %% === Init tests ===

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import networkx as nx
 
 from rl_ai2thor.data import OBJECT_TYPES_DATA
+from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
 from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjFixedProp, SimObjVariableProp
 from rl_ai2thor.envs.tasks.items import (
@@ -34,6 +35,9 @@ from rl_ai2thor.envs.tasks.items import (
 from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
 
 if TYPE_CHECKING:
+    from ai2thor.controller import Controller
+    from ai2thor.server import Event, MultiAgentEvent
+
     from rl_ai2thor.envs.scenes import SceneId
     from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
@@ -44,7 +48,7 @@ if TYPE_CHECKING:
 # TODO: Add more options
 class GraphTaskRewardHandler(BaseRewardHandler):
     """
-    Reward handler for graph tasks AI2-THOR environments.
+    Reward handler for graph tasks.
 
     TODO: Finish docstring
     """
@@ -78,20 +82,19 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 
         return reward, task_completion, info
 
-    def reset(self, event: EventLike) -> tuple[bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, dict[str, Any]]:
         """
         Reset the reward handler.
 
         Args:
-            event (Any): Event corresponding to the state of the scene
-                at the beginning of the episode.
+            controller (Controller): AI2THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether the episode has terminated.
             info (dict[str, Any]): Additional information about the state of the task.
         """
         # Reset the task
-        task_advancement, task_completion, info = self.task.reset(event)
+        task_advancement, task_completion, info = self.task.reset(controller)
         # Initialize the last step advancement
         self.last_step_advancement = task_advancement
 
@@ -105,8 +108,8 @@ class BaseTask(ABC):
     _reward_handler_type: type[BaseRewardHandler]
 
     @abstractmethod
-    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
-        """Reset the task with the information of the event."""
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+        """Reset and initialize the task and the controller."""
 
     @abstractmethod
     def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
@@ -139,8 +142,8 @@ class UndefinableTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
 
     @staticmethod
-    def reset(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
-        """Reset the task with the information of the event."""
+    def reset(controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+        """Reset and initialize the task and the controller."""
         return 0.0, False, {}
 
     @staticmethod
@@ -239,7 +242,7 @@ class GraphTask[T: Hashable](BaseTask):
         self.overlap_classes: list[ItemOverlapClass] = []
 
     # TODO? Add check to make sure the task is feasible?
-    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
 
@@ -247,14 +250,14 @@ class GraphTask[T: Hashable](BaseTask):
         in the scene and compute the overlap classes.
 
         Args:
-            event (EventLike): Event corresponding to the state of the scene
-                at the beginning of the episode.
+            controller (Controller): AI2THOR controller at the beginning of the episode.
 
         Returns:
             initial_task_advancement (float): Initial task advancement.
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
+        event: Event = controller.last_event  # type: ignore
         # Initialize the candidates of the items
         for item in self.items:
             for obj_metadata in event.metadata["objects"]:
@@ -795,7 +798,6 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         ]
 
 
-# TODO: Implement task reset
 class PlaceCleanedIn(PlaceIn):
     """
     Task for placing a given cleaned object in a given receptacle.
@@ -803,7 +805,6 @@ class PlaceCleanedIn(PlaceIn):
     This is equivalent to the pick_clean_then_place_in_recep task from Alfred.
 
     All instance of placed_object_type are made dirty during the reset of the task.
-    # TODO: Implement this
     """
 
     def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
@@ -822,23 +823,31 @@ class PlaceCleanedIn(PlaceIn):
 
         return task_description_dict
 
-    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
 
-        All instance of placed_object_type are made dirty during the reset of the task.
+        All instances of placed_object_type are made dirty during the reset of the task.
 
         Args:
-            event (EventLike): Event corresponding to the state of the scene
-                at the beginning of the episode.
+            controller (Controller): AI2THOR controller at the beginning of the episode.
 
         Returns:
             initial_task_advancement (float): Initial task advancement.
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
-        # Make all instances of placed_object_type dirty
-        raise NotImplementedError
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == self.placed_object_type:
+                controller.step(
+                    action=Ai2thorAction.DIRTY_OBJECT,
+                    objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
+                    forceAction=True,
+                )
+
+        return super().reset(controller)
 
     def text_description(self) -> str:
         """
@@ -892,15 +901,14 @@ class PlaceCleanedIn(PlaceIn):
 
 
 # TODO: Add check for heating source in the scene and the fact that the object has to be able to be heated by it
-# TODO: Implement task reset
 class PlaceHeatedIn(PlaceIn):
     """
     Task for placing a given heated object in a given receptacle.
 
     This is equivalent to the pick_heat_then_place_in_recep task from Alfred.
 
-    All instance of placed_object_type are made at room temperature during the reset of the task.
-    # TODO: Implement this
+    All sim object start at room temperature so we don't need to do anything
+    during the reset of the task.
 
     Args:
         placed_object_type (str): The type of object to place.
@@ -923,24 +931,6 @@ class PlaceHeatedIn(PlaceIn):
 
         return task_description_dict
 
-    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
-        """
-        Reset the task with the information of the event.
-
-        All instance of placed_object_type are made at room temperature during the reset of the task.
-
-        Args:
-            event (EventLike): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            initial_task_advancement (float): Initial task advancement.
-            is_task_completed (bool): True if the task is completed.
-            info (dict[str, Any]): Additional information about the task advancement.
-        """
-        # Make all instances of placed_object_type at room temperature
-        raise NotImplementedError
-
     def text_description(self) -> str:
         """
         Return a text description of the task.
@@ -952,15 +942,14 @@ class PlaceHeatedIn(PlaceIn):
 
 
 # TODO: Add check for cold source in the scene and the fact that the object has to be able to be cooled by it (refrigerator and object that can be put in it)
-# TODO: Implement task reset
 class PlaceCooledIn(PlaceIn):
     """
     Task for placing a given cooled object in a given receptacle.
 
     This is equivalent to the pick_cool_then_place_in_recep task from Alfred.
 
-    All instance of placed_object_type are made at room temperature during the reset of the task.
-    # TODO: Implement this
+    All sim object start at room temperature so we don't need to do anything
+    during the reset of the task.
 
     Args:
         placed_object_type (str): The type of object to place.
@@ -982,24 +971,6 @@ class PlaceCooledIn(PlaceIn):
         task_description_dict["placed_object"]["properties"][SimObjVariableProp.TEMPERATURE] = TemperatureValue.COLD
 
         return task_description_dict
-
-    def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
-        """
-        Reset the task with the information of the event.
-
-        All instance of placed_object_type are made at room temperature during the reset of the task.
-
-        Args:
-            event (EventLike): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            initial_task_advancement (float): Initial task advancement.
-            is_task_completed (bool): True if the task is completed.
-            info (dict[str, Any]): Additional information about the task advancement.
-        """
-        # Make all instances of placed_object_type at room temperature
-        raise NotImplementedError
 
     def text_description(self) -> str:
         """

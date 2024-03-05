@@ -1,18 +1,24 @@
 """
-Module for defining reward functions for AI2-THOR environments.
+Module for defining reward functions for AI2THOR RL environments.
 
 TODO: Finish module docstring.
 """
 
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from typing import Any
+from __future__ import annotations
 
-from rl_ai2thor.utils.ai2thor_types import EventLike
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from ai2thor.controller import Controller
+
+    from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 class BaseRewardHandler(ABC):
-    """Base class for reward handlers for AI2-THOR environments."""
+    """Base class for reward handlers."""
 
     @abstractmethod
     def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
@@ -29,13 +35,12 @@ class BaseRewardHandler(ABC):
         """
 
     @abstractmethod
-    def reset(self, event: EventLike) -> tuple[bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, dict[str, Any]]:
         """
         Reset the reward handler.
 
         Args:
-            event (Any): Event corresponding to the state of the scene
-                at the beginning of the episode.
+            controller (Controller): AI2THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether the episode has terminated.
@@ -44,7 +49,7 @@ class BaseRewardHandler(ABC):
 
 
 class MultiRewardHandler(BaseRewardHandler):
-    """Reward handler for AI2-THOR environments."""
+    """Reward handler for that combines multiple reward handlers."""
 
     def __init__(self, reward_handlers: Iterable[BaseRewardHandler]) -> None:
         """
@@ -75,20 +80,19 @@ class MultiRewardHandler(BaseRewardHandler):
         }
         return sum(rewards), any(task_completions), combined_info
 
-    def reset(self, event: EventLike) -> tuple[bool, dict[str, dict[str, Any]]]:
+    def reset(self, controller: Controller) -> tuple[bool, dict[str, dict[str, Any]]]:
         """
         Reset the reward handlers.
 
         Args:
-            event (Any): Event corresponding to the state of the scene
-                at the beginning of the episode.
+            controller (Controller): AI2THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether one of the reward handlers has terminated the episode.
             info (dict[str, Any]): Additional information about the state of the task.
         """
         task_completions, infos = zip(
-            *(reward_handler.reset(event) for reward_handler in self.reward_handlers), strict=True
+            *(reward_handler.reset(controller) for reward_handler in self.reward_handlers), strict=True
         )
         combined_info = {
             handler.__class__.__name__: info for handler, info in zip(self.reward_handlers, infos, strict=True)

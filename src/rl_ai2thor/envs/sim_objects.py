@@ -144,8 +144,9 @@ class SimObjectType(StrEnum):
 # === Sim Object Properties ===
 # TODO: Add support for more mass and salient materials.
 class SimObjFixedProp(StrEnum):
-    """Fixed properties of objects in AI2THOR."""
+    """Fixed properties of sim objects in AI2THOR."""
 
+    OBJECT_ID = "objectId"
     OBJECT_TYPE = "objectType"
     IS_INTERACTABLE = "isInteractable"
     RECEPTACLE = "receptacle"
@@ -167,7 +168,7 @@ class SimObjFixedProp(StrEnum):
 
 # TODO: Add support for position, rotation and distance.
 class SimObjVariableProp(StrEnum):
-    """Variable properties of objects in AI2THOR."""
+    """Variable properties of sim objects in AI2THOR."""
 
     VISIBLE = "visible"
     IS_TOGGLED = "isToggled"

@@ -363,7 +363,7 @@ class ITHOREnv(gym.Env):
 
         # TODO: Support more than one reward handler
         self.reward_handler = self.task.get_reward_handler()
-        task_completion, task_info = self.reward_handler.reset(self.last_event)
+        task_completion, task_info = self.reward_handler.reset(self.controller)
 
         # TODO: Check if this is correct
         if task_completion:
