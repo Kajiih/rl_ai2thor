@@ -383,7 +383,6 @@ class ITHOREnv(gym.Env):
         """
         self.controller.stop()
 
-    # TODO: Implement appropriate task sampling
     def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
         """
         Sample a task from the task blueprint compatible with the given event.

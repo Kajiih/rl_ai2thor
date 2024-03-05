@@ -353,6 +353,8 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
     assert info1 == info2
 
 
+# This test fails sometimes because AI2THOR is not deterministic
+# ! Sometimes 'Pen' and 'Pencil' are switched...?
 def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv):
     _, info1 = ithor_env.reset(seed=seed)
     _, info2 = ithor_env.reset(seed=seed)

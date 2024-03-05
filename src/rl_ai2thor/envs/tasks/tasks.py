@@ -1123,5 +1123,3 @@ ALL_TASKS = {
     "PlaceCooledIn": PlaceCooledIn,
     "LookInLight": LookInLight,
 }
-
-# %%
