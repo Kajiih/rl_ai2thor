@@ -35,7 +35,7 @@ def ithor_env():
 
 
 # %% === Init tests ===
-def test__load_and_override_config(ithor_env: ITHOREnv):
+def test__load_and_override_config():
     base_config = {"environment_mode": "default", "key0": "value0", "key1": "value1", "key2": "value2"}
     env_mode_config = {"key2": "new_value2", "key3": "new_value3"}
     override_config = {"key1": "overridden_value1", "key2": "overridden_value2"}
@@ -52,7 +52,7 @@ def test__load_and_override_config(ithor_env: ITHOREnv):
         patch("pathlib.Path.is_file", return_value=True),
     ):
         # Call the _load_and_override_config method with the override config
-        config = ithor_env._load_and_override_config(override_config)
+        config = ITHOREnv._load_and_override_config(override_config)
 
         # Assert the expected configuration values
         assert config == {
@@ -192,7 +192,7 @@ def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
     assert ithor_env.observation_space.shape == (84, 44, 1)
 
 
-def test__compute_available_scenes(ithor_env: ITHOREnv):
+def test__compute_available_scenes():
     scenes = ["Kitchen", "FloorPlan201", "FloorPlan301"]
     excluded_scenes = {"FloorPlan1", "FloorPlan301", "FloorPlan401"}
 
@@ -229,7 +229,7 @@ def test__compute_available_scenes(ithor_env: ITHOREnv):
         "FloorPlan9",
     }
 
-    available_scenes = ithor_env._compute_available_scenes(scenes, excluded_scenes)
+    available_scenes = ITHOREnv._compute_available_scenes(scenes, excluded_scenes)
 
     assert available_scenes == expected_available_scenes
 

@@ -34,7 +34,7 @@ jobs:
       - name: Lint with ruff 🧹
         run: |
           pip install ruff
-          ruff . --output-format=github # -v
+          ruff check . --output-format=github # -v
         continue-on-error: true
 
       # TODO: Make the output more readable
