@@ -186,16 +186,9 @@ class ITHOREnv(gym.Env):
                 raise UnknownTaskTypeError(task_type)
             task_args = task_description.get("args", {})
 
-            # Compute the full set of arguments
-            # TODO: Make it more general
-            for arg_name, arg_list in task_args.items():
-                arg_values = set()
-                for arg_value in arg_list:
-                    if isinstance(arg_value, str) and arg_value in ALL_OBJECT_GROUPS:
-                        arg_values.update([obj_type_member.value for obj_type_member in ALL_OBJECT_GROUPS[arg_value]])
-                    else:
-                        arg_values.add(arg_value)
-                task_args[arg_name] = arg_values
+            developed_task_args = {
+                arg_name: self._develop_config_task_args(arg_values) for arg_name, arg_values in task_args.items()
+            }
 
             task_blueprints.append(
                 TaskBlueprint(
@@ -203,11 +196,40 @@ class ITHOREnv(gym.Env):
                     scenes=self._compute_available_scenes(
                         task_description["scenes"], excluded_scenes=globally_excluded_scenes
                     ),
-                    task_args=task_args,
+                    task_args=developed_task_args,
                 )
             )
 
+        if not task_blueprints:
+            raise NoTaskBlueprintError(self.config)
+
         return task_blueprints
+
+    # TODO: Make it more general
+    @staticmethod
+    def _develop_config_task_args[V](task_args: list[V] | V) -> frozenset[V]:
+        """
+        Develop an argument or a list of arguments from the environment mode config.
+
+        Developing the argument means replacing the names of argument groups by the
+        actual members of the group (e.g. replacing "_PICKUPABLES" by the set of
+        pickupable object types as defined in ALL_OBJECT_GROUPS["_PICKUPABLES"]).
+
+        Args:
+            task_args (list[V] | V): Task argument or list of task arguments to develop.
+
+        Returns:
+            developed_task_arg (frozenset[V]): Developed task arguments.
+        """
+        if not isinstance(task_args, list):
+            task_args = [task_args]
+        developed_task_arg = set()
+        for arg_value in task_args:
+            if isinstance(arg_value, str) and arg_value in ALL_OBJECT_GROUPS:
+                developed_task_arg.update([obj_type_member.value for obj_type_member in ALL_OBJECT_GROUPS[arg_value]])
+            else:
+                developed_task_arg.add(arg_value)
+        return frozenset(developed_task_arg)
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"
@@ -411,4 +433,14 @@ class UnknownTaskTypeError(ValueError):
         self.task_type = task_type
         super().__init__(
             f"Unknown task type {task_type} in environment mode config. Available tasks are {list(ALL_TASKS.keys())}."
+        )
+
+
+class NoTaskBlueprintError(ValueError):
+    """Exception raised when no task blueprint is found in the environment mode config."""
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        self.config = config
+        super().__init__(
+            f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {config}."
         )

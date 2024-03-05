@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Hashable
+from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
@@ -485,11 +485,7 @@ class TaskBlueprint:
 
     task_type: type[BaseTask]
     scenes: set[SceneId]
-    task_args: dict[str, set[PropValue]] = field(default_factory=dict)
-
-    def __hash__(self) -> int:
-        """Return the hash of the task blueprint."""
-        return hash(self.task_type)
+    task_args: Mapping[str, frozenset[PropValue]] = field(default_factory=dict)
 
     def compute_compatible_task_args(self, event: EventLike) -> list[tuple[PropValue, ...]]:
         """

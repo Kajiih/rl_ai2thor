@@ -8,9 +8,14 @@ import yaml
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 
 from rl_ai2thor.envs.actions import EnvActionName
-from rl_ai2thor.envs.ai2thor_envs import ITHOREnv, UnknownActionCategoryError, UnknownTaskTypeError
-from rl_ai2thor.envs.sim_objects import PICKUPABLE_RECEPTACLES
-from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceSameTwoIn, TaskBlueprint
+from rl_ai2thor.envs.ai2thor_envs import (
+    ITHOREnv,
+    NoTaskBlueprintError,
+    UnknownActionCategoryError,
+    UnknownTaskTypeError,
+)
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, PICKUPABLE_RECEPTACLES, SimObjectType
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, PlaceIn, PlaceSameTwoIn, TaskBlueprint
 
 # %% === Constants ===
 abs_tolerance = 1
@@ -226,30 +231,83 @@ def test__compute_available_scenes(ithor_env: ITHOREnv):
     assert available_scenes == expected_available_scenes
 
 
+def test__develop_config_task_args_single_arg():
+    task_args = "Mug"
+    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
+    assert developed_task_arg == frozenset(["Mug"])
+
+
+def test__develop_config_task_args_single_arg_from_group():
+    task_args = "_PICKUPABLES"
+    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
+    expected_developed_task_arg = frozenset(ALL_OBJECT_GROUPS["_PICKUPABLES"])
+    assert developed_task_arg == expected_developed_task_arg
+
+
+def test__develop_config_task_args_multiple_args():
+    task_args = ["Mug", "Knife", "_PICKUPABLES"]
+    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
+    expected_developed_task_arg = frozenset(["Mug", "Knife", *ALL_OBJECT_GROUPS["_PICKUPABLES"]])
+    assert developed_task_arg == expected_developed_task_arg
+
+
+def test__develop_config_task_args_multiple_args_with_duplicates():
+    task_args = ["Mug", "Knife", "_PICKUPABLES", "Mug"]
+    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
+    expected_developed_task_arg = frozenset(["Mug", "Knife", *ALL_OBJECT_GROUPS["_PICKUPABLES"]])
+    assert developed_task_arg == expected_developed_task_arg
+
+
+def test__develop_config_task_args_empty_arg():
+    task_args = []
+    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
+    assert developed_task_arg == frozenset()
+
+
 def test__create_task_blueprints(ithor_env: ITHOREnv):
-    args1 = {"placed_object_type": ["Mug", "Knife"], "receptacle_type": ["Sink", "Pot", "PICKUPABLE_RECEPTACLES"]}
-    expected_args1 = deepcopy(args1)
-    expected_args1["receptacle_type"] = ["Sink", *[obj_type.value for obj_type in PICKUPABLE_RECEPTACLES]]
-    args2 = {"placed_object_type": "Apple", "receptacle_type": "Plate"}
     ithor_env.config = {
         "globally_excluded_scenes": ["FloorPlan1"],
         "tasks": [
             {
                 "type": "PlaceIn",
-                "args": args1,
-                "scenes": ["FloorPlan1", "FloorPlan201", "FloorPlan202"],
+                "args": {
+                    "placed_object_type": ["Mug", "Knife"],
+                    "receptacle_type": ["Sink", "Pot", "_PICKUPABLE_RECEPTACLES"],
+                },
+                "scenes": ["FloorPlan1", "FloorPlan2"],
             },
             {
                 "type": "PlaceSameTwoIn",
-                "args": args2,
-                "scenes": ["FloorPlan2"],
+                "args": {"placed_object_type": ["Apple"], "receptacle_type": ["Plate"]},
+                "scenes": ["FloorPlan3", "FloorPlan4"],
             },
         ],
     }
 
-    expected_task_blueprints = {
-        TaskBlueprint(PlaceIn, {"FloorPlan201", "FloorPlan202"}, args1),
-        TaskBlueprint(PlaceSameTwoIn, {"FloorPlan2"}, args1),
+    task_blueprints = ithor_env._create_task_blueprints()
+
+    assert len(task_blueprints) == 2  # noqa: PLR2004
+
+    # Check task blueprint 1
+    task_blueprint_1 = task_blueprints[0]
+    assert task_blueprint_1.task_type == ALL_TASKS["PlaceIn"]
+    assert task_blueprint_1.scenes == {"FloorPlan2"}
+    assert task_blueprint_1.task_args == {
+        "placed_object_type": frozenset([SimObjectType("Mug"), SimObjectType("Knife")]),
+        "receptacle_type": frozenset([
+            SimObjectType("Sink"),
+            SimObjectType("Pot"),
+            *list(ALL_OBJECT_GROUPS["_PICKUPABLE_RECEPTACLES"]),
+        ]),
+    }
+
+    # Check task blueprint 2
+    task_blueprint_2 = task_blueprints[1]
+    assert task_blueprint_2.task_type == ALL_TASKS["PlaceSameTwoIn"]
+    assert task_blueprint_2.scenes == {"FloorPlan3", "FloorPlan4"}
+    assert task_blueprint_2.task_args == {
+        "placed_object_type": frozenset([SimObjectType("Apple")]),
+        "receptacle_type": frozenset([SimObjectType("Plate")]),
     }
 
 
@@ -269,6 +327,20 @@ def test__create_task_blueprints_unknown_task(ithor_env: ITHOREnv):
         ithor_env._create_task_blueprints()
 
     assert exc_info.value.task_type == "_unknown_task"
+
+
+# More with empty task config
+def test__create_task_blueprints_empty_task_config(ithor_env: ITHOREnv):
+    env_config = {
+        "globally_excluded_scenes": [],
+        "tasks": [],
+    }
+    ithor_env.config = deepcopy(env_config)
+
+    with pytest.raises(NoTaskBlueprintError) as exc_info:
+        ithor_env._create_task_blueprints()
+
+    assert exc_info.value.config == {"globally_excluded_scenes": [], "tasks": []}
 
 
 # %% === Reproducibility tests ===
