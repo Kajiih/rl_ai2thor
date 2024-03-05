@@ -347,15 +347,15 @@ class GraphTask[T: Hashable](BaseTask):
         # Extract the interesting assignments, results and scores
         interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
         # Merge the results and scores of the items
-        items_results = {
-            item: item_result
-            for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_result in overlap_class_assignment_data[1].items()
-        }
-        items_scores = {
+        relation_results = {
             item: item_score
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_score in overlap_class_assignment_data[2].items()
+        }
+        properties_scores = {
+            item: item_score
+            for overlap_class_assignment_data in overlap_classes_assignment_data
+            for item, item_score in overlap_class_assignment_data[3].items()
         }
 
         # Construct a generator of the cartesian product of the interesting assignments
@@ -367,21 +367,18 @@ class GraphTask[T: Hashable](BaseTask):
 
         # Compute the task advancement for each global assignment
         for assignment_product in assignment_products:
+            task_advancement = 0
             # Merge the assignments of the overlap classes
             global_assignment: dict[TaskItem[T], Any] = {
                 item: obj_id
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
-            # Property scores
-            task_advancement = sum(
-                items_scores[item][obj_id]["sum_property_scores"] for item, obj_id in global_assignment.items()
-            )
-            # Strictly satisfied relation scores
+            # Add property scores
+            task_advancement += sum(properties_scores[item][obj_id] for item, obj_id in global_assignment.items())
+            # Add strictly satisfied relation scores
             for item, obj_id in global_assignment.items():
-                item_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]] = items_results[
-                    item
-                ]["relations"]
+                item_relations_results = relation_results[item]
                 for related_item_id, relations in item_relations_results.items():
                     related_item_assigned_obj_id = global_assignment[self._items_by_id[related_item_id]]
                     for relations_by_obj_id in relations.values():
