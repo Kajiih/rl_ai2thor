@@ -3,12 +3,13 @@ Tasks in AI2THOR RL environment.
 
 TODO: Finish module docstring.
 """
+
 # TODO: Add a way to handle the fact that not every object can be placed in every receptacle in the task advancement computation
 # -> Need to add a list of object types to the receptacle required properties (its object type has to be in this list)
 # -> Need to implement handling properties where the value is a list of possible values instead of a single value
 # -> Then compute_compatible_args_from_blueprint can be more simply implemented using the candidates of the items
 # TODO: Implement compute_compatible_args_from_blueprint for other tasks
-
+# %% === Imports ===
 from __future__ import annotations
 
 import itertools
@@ -22,6 +23,7 @@ import networkx as nx
 
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.reward import BaseRewardHandler
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjFixedProp, SimObjVariableProp
 from rl_ai2thor.envs.tasks.items import (
     ItemOverlapClass,
     PropValue,
@@ -179,7 +181,7 @@ class GraphTask[T: Hashable](BaseTask):
     item, its properties and relations.
 
     Example of task description dictionary for the task of placing an apple in a plate:
-    target_objects = {
+    task_description_dict = {
             "receptacle_plate": {
                 "properties": {"objectType": "Plate"},
             },
@@ -226,6 +228,7 @@ class GraphTask[T: Hashable](BaseTask):
             task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
                 Dictionary describing the items and their properties and relations.
         """
+        self.task_description_dict = task_description_dict
         self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
         self._items_by_id = {item.id: item for item in self.items}
 
@@ -520,16 +523,31 @@ class PlaceIn(GraphTask[str]):
         self.placed_object_type = placed_object_type
         self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
+        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type)
+
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
             "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
+                "properties": {"objectType": receptacle_type},
             },
             "placed_object": {
-                "properties": {"objectType": self.placed_object_type},
+                "properties": {"objectType": placed_object_type},
                 "relations": {"receptacle": ["contained_in"]},
             },
         }
-        super().__init__(target_objects)
 
     def text_description(self) -> str:
         """
@@ -559,7 +577,7 @@ class PlaceIn(GraphTask[str]):
         """
         scene_object_types_count = {}
         for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata["objectType"]
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
             if obj_type not in scene_object_types_count:
                 scene_object_types_count[obj_type] = 0
             scene_object_types_count[obj_type] += 1
@@ -590,26 +608,40 @@ class PlaceSameTwoIn(GraphTask[str]):
         Initialize the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
+            placed_object_type (str): The type of objects to place.
             receptacle_type (str): The type of receptacle to place the object in.
         """
         self.placed_object_type = placed_object_type
         self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
+        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type)
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            receptacle_type (str): The type of receptacle to place the object in.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
             "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
+                "properties": {"objectType": receptacle_type},
             },
             "placed_object_1": {
-                "properties": {"objectType": self.placed_object_type},
+                "properties": {"objectType": placed_object_type},
                 "relations": {"receptacle": ["contained_in"]},
             },
             "placed_object_2": {
-                "properties": {"objectType": self.placed_object_type},
+                "properties": {"objectType": placed_object_type},
                 "relations": {"receptacle": ["contained_in"]},
             },
         }
-        super().__init__(target_objects)
 
     def text_description(self) -> str:
         """
@@ -638,7 +670,7 @@ class PlaceSameTwoIn(GraphTask[str]):
         """
         scene_object_types_count = {}
         for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata["objectType"]
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
             if obj_type not in scene_object_types_count:
                 scene_object_types_count[obj_type] = 0
             scene_object_types_count[obj_type] += 1
@@ -678,20 +710,40 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         self.pickupable_receptacle_type = pickupable_receptacle_type
         self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
+        task_description_dict = self._create_task_description_dict(
+            placed_object_type, pickupable_receptacle_type, receptacle_type
+        )
+
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(
+        placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str
+    ) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            placed_object_type (str): The type of object to place.
+            pickupable_receptacle_type (str): The type of pickupable receptacle to place the object in.
+            receptacle_type (str): The type of receptacle to place the object in.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
             "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
+                "properties": {"objectType": receptacle_type},
             },
             "pickupable_receptacle": {
-                "properties": {"objectType": self.pickupable_receptacle_type},
+                "properties": {"objectType": pickupable_receptacle_type},
                 "relations": {"receptacle": ["contained_in"]},
             },
             "placed_object": {
-                "properties": {"objectType": self.placed_object_type},
+                "properties": {"objectType": placed_object_type},
                 "relations": {"pickupable_receptacle": ["contained_in"]},
             },
         }
-        super().__init__(target_objects)
 
     def text_description(self) -> str:
         """
@@ -720,7 +772,7 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         scene_object_types_count = {}
         for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata["objectType"]
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
             if obj_type not in scene_object_types_count:
                 scene_object_types_count[obj_type] = 0
             scene_object_types_count[obj_type] += 1
@@ -744,7 +796,7 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
 
 
 # TODO: Implement task reset
-class PlaceCleanedIn(GraphTask[str]):
+class PlaceCleanedIn(PlaceIn):
     """
     Task for placing a given cleaned object in a given receptacle.
 
@@ -754,27 +806,21 @@ class PlaceCleanedIn(GraphTask[str]):
     # TODO: Implement this
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
-        Initialize the task.
+        Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
-        """
-        self.placed_object_type = placed_object_type
-        self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
-            "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
-            },
-            "cleaned_object": {
-                "properties": {"objectType": self.placed_object_type, "isDirty": False},
-                "relations": {"receptacle": ["contained_in"]},
-            },
-        }
-        super().__init__(target_objects)
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
+        task_description_dict["placed_object"]["properties"][SimObjVariableProp.IS_DIRTY] = False
+
+        return task_description_dict
 
     def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
@@ -803,9 +849,51 @@ class PlaceCleanedIn(GraphTask[str]):
         """
         return f"Place cleaned {self.placed_object_type} in {self.receptacle_type}"
 
+    # TODO: Add check for water source in the scene
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
 
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        dirtyable_object_types = ALL_OBJECT_GROUPS["_DIRTYABLES"]
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"]
+            & set(scene_object_types_count)
+            & set(dirtyable_object_types),
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
+        return [
+            (placed_object_type, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
+
+
+# TODO: Add check for heating source in the scene and the fact that the object has to be able to be heated by it
 # TODO: Implement task reset
-class PlaceHeatedIn(GraphTask[str]):
+class PlaceHeatedIn(PlaceIn):
     """
     Task for placing a given heated object in a given receptacle.
 
@@ -819,27 +907,21 @@ class PlaceHeatedIn(GraphTask[str]):
         receptacle_type (str): The type of receptacle to place the object in.
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
-        Initialize the task.
+        Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
-        """
-        self.placed_object_type = placed_object_type
-        self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
-            "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
-            },
-            "heated_object": {
-                "properties": {"objectType": self.placed_object_type, "temperature": TemperatureValue.HOT},
-                "relations": {"receptacle": ["contained_in"]},
-            },
-        }
-        super().__init__(target_objects)
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
+        task_description_dict["placed_object"]["properties"][SimObjVariableProp.TEMPERATURE] = TemperatureValue.HOT
+
+        return task_description_dict
 
     def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
@@ -869,8 +951,9 @@ class PlaceHeatedIn(GraphTask[str]):
         return f"Place heated {self.placed_object_type} in {self.receptacle_type}"
 
 
+# TODO: Add check for cold source in the scene and the fact that the object has to be able to be cooled by it (refrigerator and object that can be put in it)
 # TODO: Implement task reset
-class PlaceCooledIn(GraphTask[str]):
+class PlaceCooledIn(PlaceIn):
     """
     Task for placing a given cooled object in a given receptacle.
 
@@ -884,27 +967,21 @@ class PlaceCooledIn(GraphTask[str]):
         receptacle_type (str): The type of receptacle to place the object in.
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
-        Initialize the task.
+        Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
-        """
-        self.placed_object_type = placed_object_type
-        self.receptacle_type = receptacle_type
 
-        target_objects: TaskDict[str] = {
-            "receptacle": {
-                "properties": {"objectType": self.receptacle_type},
-            },
-            "cooled_object": {
-                "properties": {"objectType": self.placed_object_type, "temperature": TemperatureValue.COLD},
-                "relations": {"receptacle": ["contained_in"]},
-            },
-        }
-        super().__init__(target_objects)
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
+        task_description_dict["placed_object"]["properties"][SimObjVariableProp.TEMPERATURE] = TemperatureValue.COLD
+
+        return task_description_dict
 
     def reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """
@@ -935,7 +1012,7 @@ class PlaceCooledIn(GraphTask[str]):
 
 
 # TODO: Implement the fact that any light source can be used instead of only desk lamps
-# TODO: Implement with close_t0 relation instead of visible for the light source
+# TODO: Implement with close_to relation instead of visible for the light source
 class LookInLight(GraphTask[str]):
     """
     Task for looking at a given object in light.
@@ -954,7 +1031,21 @@ class LookInLight(GraphTask[str]):
         """
         self.looked_at_object_type = looked_at_object_type
 
-        target_objects: TaskDict[str] = {
+        task_description_dict = self._create_task_description_dict(looked_at_object_type)
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(looked_at_object_type: str) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            looked_at_object_type (str): The type of object to look at.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
             "light_source": {
                 "properties": {
                     "objectType": LightSourcesType.DESK_LAMP,  # TODO: Add support for other light sources
@@ -963,10 +1054,9 @@ class LookInLight(GraphTask[str]):
                 },
             },
             "looked_at_object": {
-                "properties": {"objectType": self.looked_at_object_type, "visible": True},
+                "properties": {"objectType": looked_at_object_type, "visible": True},
             },
         }
-        super().__init__(target_objects)
 
     def text_description(self) -> str:
         """
@@ -976,6 +1066,41 @@ class LookInLight(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Look st {self.looked_at_object_type} in light"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Check that there is at least one light source in the scene
+        # TODO: Add support for other light sources
+        if LightSourcesType.DESK_LAMP not in scene_object_types_count:
+            return []
+
+        # Keep only the object types that are present in the scene for the blueprint of 'looked_at_object_type'
+        args_blueprints = {
+            "looked_at_object_type": task_blueprint.task_args["looked_at_object_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of looked_at_object_type
+        return [(looked_at_object_type,) for looked_at_object_type in args_blueprints["looked_at_object_type"]]
 
 
 # %%  === Task object types ===
@@ -998,3 +1123,5 @@ ALL_TASKS = {
     "PlaceCooledIn": PlaceCooledIn,
     "LookInLight": LookInLight,
 }
+
+# %%

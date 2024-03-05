@@ -29,7 +29,7 @@ class RelationTypeId(StrEnum):
 
 # %% === Relations ===
 # TODO: Add support to parameterize the relations (e.g. distance in CLOSE_TO)
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False, eq=False)
 class Relation(ABC):
     """
     A relation between two items in the definition of a task.
@@ -45,12 +45,6 @@ class Relation(ABC):
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: SimObjFixedProp | None = None
     candidate_required_prop_value: Any | None = None
-
-    def __str__(self) -> str:
-        return f"{self.main_item} is {self.type_id} {self.related_item}"
-
-    def __repr__(self) -> str:
-        return f"Relation({self.type_id}, {self.main_item}, {self.related_item})"
 
     @abstractmethod
     def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
@@ -99,8 +93,27 @@ class Relation(ABC):
             if related_object_id in self.related_item.candidate_ids
         }
 
+    def __str__(self) -> str:
+        return f"{self.main_item} is {self.type_id} {self.related_item}"
 
-@dataclass(frozen=True)
+    def __repr__(self) -> str:
+        return f"Relation({self.type_id}, {self.main_item.id}, {self.related_item.id})"
+
+    # TODO: Check if we keep this
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Relation):
+            return False
+        return (
+            self.type_id == other.type_id
+            and self.main_item.id == other.main_item.id
+            and self.related_item.id == other.related_item.id
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.type_id, self.main_item, self.related_item))
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class ReceptacleOfRelation(Relation):
     """
     A relation of the form "main_item is a receptacle of related_item".
@@ -126,7 +139,7 @@ class ReceptacleOfRelation(Relation):
         return main_obj_metadata["receptacleObjectIds"]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False, eq=False)
 class ContainedInRelation(Relation):
     """
     A relation of the form "main_item is_contained_in related_item".

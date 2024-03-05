@@ -67,6 +67,12 @@ class ItemProp:
         self.candidate_required_property = target_ai2thor_property if is_fixed else candidate_required_property
         self.candidate_required_property_value = candidate_required_property_value
 
+    def __str__(self) -> str:
+        return f"{self.target_ai2thor_property}"
+
+    def __repr__(self) -> str:
+        return f"ItemProp({self.target_ai2thor_property})"
+
 
 # %% === Items ===
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
@@ -503,10 +509,15 @@ class TaskItem[T: Hashable]:
         return f"{self.id}"
 
     def __repr__(self) -> str:
-        return f"TaskItem({self.id})"
+        return f"TaskItem({self.id})\n  properties={self.properties})\n  relations={self.relations})"
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, TaskItem):
+            return False
+        return self.id == other.id and self.properties == other.properties and self.relations == other.relations
 
 
 class ItemOverlapClass[T: Hashable]:
