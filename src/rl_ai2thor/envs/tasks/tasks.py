@@ -3,6 +3,11 @@ Tasks in AI2THOR RL environment.
 
 TODO: Finish module docstring.
 """
+# TODO: Add a way to handle the fact that not every object can be placed in every receptacle in the task advancement computation
+# -> Need to add a list of object types to the receptacle required properties (its object type has to be in this list)
+# -> Need to implement handling properties where the value is a list of possible values instead of a single value
+# -> Then compute_compatible_args_from_blueprint can be more simply implemented using the candidates of the items
+# TODO: Implement compute_compatible_args_from_blueprint for other tasks
 
 from __future__ import annotations
 
@@ -15,11 +20,11 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import networkx as nx
 
+from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.reward import BaseRewardHandler
-from rl_ai2thor.envs.sim_objects import SimObjectType
 from rl_ai2thor.envs.tasks.items import (
     ItemOverlapClass,
-    NoCandidateError,
+    PropValue,
     TaskItem,
     TemperatureValue,
     obj_prop_id_to_item_prop,
@@ -28,7 +33,7 @@ from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.scenes import SceneId
-    from rl_ai2thor.envs.sim_objects import SimObjectType
+    from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
     from rl_ai2thor.utils.ai2thor_types import EventLike
 
@@ -105,6 +110,24 @@ class BaseTask(ABC):
     def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
 
+    @staticmethod
+    @abstractmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+
     def get_reward_handler(self) -> BaseRewardHandler:
         """Return the reward handler for the task."""
         return self._reward_handler_type(self)
@@ -122,6 +145,14 @@ class UndefinableTask(BaseTask):
     def compute_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """Compute the compatible task arguments from the task blueprint and the event."""
+        raise NotImplementedError
 
 
 type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], dict]]
@@ -196,6 +227,7 @@ class GraphTask[T: Hashable](BaseTask):
                 Dictionary describing the items and their properties and relations.
         """
         self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
+        self._items_by_id = {item.id: item for item in self.items}
 
         # Initialize the task graph
         self.task_graph = nx.DiGraph()
@@ -228,8 +260,7 @@ class GraphTask[T: Hashable](BaseTask):
 
         self.overlap_classes = self._compute_overlap_classes(self.items)
 
-        # Compute max task advancement
-        # Total number of properties and relations of the items
+        # Compute max task advancement = Total number of properties and relations of the items
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
         # Return initial task advancement
@@ -309,9 +340,9 @@ class GraphTask[T: Hashable](BaseTask):
             info (dict[str, Any]): Additional information about the task advancement.
         """
         # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
         overlap_classes_assignment_data = [
-            overlap_class.compute_interesting_assignments(event.metadata["objects"])
-            for overlap_class in self.overlap_classes
+            overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]
         # Extract the interesting assignments, results and scores
         interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
@@ -337,7 +368,7 @@ class GraphTask[T: Hashable](BaseTask):
         # Compute the task advancement for each global assignment
         for assignment_product in assignment_products:
             # Merge the assignments of the overlap classes
-            global_assignment = {
+            global_assignment: dict[TaskItem[T], Any] = {
                 item: obj_id
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
@@ -348,11 +379,11 @@ class GraphTask[T: Hashable](BaseTask):
             )
             # Strictly satisfied relation scores
             for item, obj_id in global_assignment.items():
-                item_relations_results: dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]] = (
-                    items_results[item]["relations"]
-                )  # type: ignore  # TODO: Delete type ignore after simplifying the type
-                for related_item, relations in item_relations_results.items():
-                    related_item_assigned_obj_id = global_assignment[related_item]
+                item_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]] = items_results[
+                    item
+                ]["relations"]
+                for related_item_id, relations in item_relations_results.items():
+                    related_item_assigned_obj_id = global_assignment[self._items_by_id[related_item_id]]
                     for relations_by_obj_id in relations.values():
                         satisfying_obj_ids = relations_by_obj_id[obj_id]
                         if related_item_assigned_obj_id in satisfying_obj_ids:
@@ -457,11 +488,24 @@ class TaskBlueprint:
 
     task_type: type[BaseTask]
     scenes: set[SceneId]
-    args: dict[str, list[Any]] = field(default_factory=dict)
+    task_args: dict[str, set[PropValue]] = field(default_factory=dict)
 
     def __hash__(self) -> int:
         """Return the hash of the task blueprint."""
         return hash(self.task_type)
+
+    def compute_compatible_task_args(self, event: EventLike) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the event.
+
+        Args:
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        return self.task_type.compute_compatible_args_from_blueprint(self, event)
 
 
 # %% == Alfred tasks ==
@@ -502,6 +546,43 @@ class PlaceIn(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Place {self.placed_object_type} in {self.receptacle_type}"
+
+    # TODO: Create a generalized version of this that works for all tasks
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata["objectType"]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count.keys()),
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count.keys()),
+        }
+        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
+        return [
+            (placed_object_type, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
 
 
 class PlaceSameTwoIn(GraphTask[str]):
@@ -545,6 +626,43 @@ class PlaceSameTwoIn(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Place 2 {self.placed_object_type} in {self.receptacle_type}"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata["objectType"]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"]
+            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= 2},
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
+        return [
+            (placed_object_type, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
 
 
 class PlaceWithMoveableRecepIn(GraphTask[str]):
@@ -590,6 +708,46 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Place {self.placed_object_type} in {self.pickupable_receptacle_type} in {self.receptacle_type}"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata["objectType"]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type', 'pickupable_receptacle_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
+            "pickupable_receptacle_type": task_blueprint.task_args["pickupable_receptacle_type"]
+            & set(scene_object_types_count),
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of placed_object_type, pickupable_receptacle_type and receptacle_types
+        return [
+            (placed_object_type, pickupable_receptacle, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            for pickupable_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if pickupable_receptacle in args_blueprints["pickupable_receptacle_type"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[pickupable_receptacle]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
 
 
 # TODO: Implement task reset

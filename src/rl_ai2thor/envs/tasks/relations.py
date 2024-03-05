@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata
+from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjId, SimObjMetadata
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.items import PropValue, TaskItem
@@ -53,24 +53,46 @@ class Relation(ABC):
         return f"Relation({self.type_id}, {self.main_item}, {self.related_item})"
 
     @abstractmethod
-    def _extract_related_object_ids(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
-        """Return the list of the ids of the main object's related objects according to the relation."""
-
-    def is_semi_satisfied(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> bool:
+    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
         """
-        Return True if the relation is semi satisfied.
+        Return the list of the ids of the main object's related objects according to the relation.
+
+        Args:
+            main_obj_metadata (SimObjMetadata): The metadata of the main object.
+
+        Returns:
+            list[SimObjId]: The ids of the main object's related objects.
+        """
+
+    def is_semi_satisfied(self, main_obj_metadata: SimObjMetadata) -> bool:
+        """
+        Return True if the relation is semi satisfied in the given main object.
 
         A relation is semi satisfied if the main object is correctly
         related to a candidate of the related item (but no related
         object might be assigned to the related item).
+
+        Args:
+            main_obj_metadata (SimObjMetadata): The metadata of the main object.
+
+        Returns:
+            bool: True if the relation is semi satisfied.
         """
         return any(
             related_object_id in self.related_item.candidate_ids
             for related_object_id in self._extract_related_object_ids(main_obj_metadata)
         )
 
-    def get_satisfying_related_object_ids(self, main_obj_metadata: dict[SimObjMetadata, Any]) -> set[SimObjectType]:
-        """Return related item's candidate's ids that satisfy the relation with the given main object."""
+    def get_satisfying_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> set[SimObjId]:
+        """
+        Return related item's candidate's ids that satisfy the relation with the given main object.
+
+        Args:
+            main_obj_metadata (SimObjMetadata): The metadata of the main object.
+
+        Returns:
+            set[SimObjId]: The ids of the related item's candidate's that satisfy the relation.
+        """
         return {
             related_object_id
             for related_object_id in self._extract_related_object_ids(main_obj_metadata)
@@ -99,7 +121,7 @@ class ReceptacleOfRelation(Relation):
     related_item: TaskItem
 
     @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
+    def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
         """Return the ids of the objects contained in the main object."""
         return main_obj_metadata["receptacleObjectIds"]
 
@@ -126,7 +148,7 @@ class ContainedInRelation(Relation):
     related_item: TaskItem
 
     @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: dict[SimObjMetadata, Any]) -> list[SimObjectType]:
+    def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
         """Return the ids of the objects containing the main object."""
         return main_obj_metadata["parentReceptacles"]
 

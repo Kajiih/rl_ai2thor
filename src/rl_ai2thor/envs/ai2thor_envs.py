@@ -7,7 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 import ai2thor.controller
 import gymnasium as gym
@@ -23,10 +23,9 @@ from rl_ai2thor.envs.actions import (
     EnvActionName,
     EnvironmentAction,
 )
-from rl_ai2thor.envs.reward import BaseRewardHandler, MultiRewardHandler
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjFixedProp
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, GraphTask, PlaceIn, TaskBlueprint, UndefinableTask
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
@@ -40,12 +39,6 @@ if TYPE_CHECKING:
 # %% Environment definitions
 class ITHOREnv(gym.Env):
     """Wrapper base class for iTHOR environment."""
-
-    metadata: ClassVar[dict] = {
-        "render_modes": ["human"],
-        "render_fps": 30,
-    }
-    # TODO: Check if we keep this
 
     def __init__(
         self,
@@ -202,7 +195,7 @@ class ITHOREnv(gym.Env):
                         arg_values.update([obj_type_member.value for obj_type_member in ALL_OBJECT_GROUPS[arg_value]])
                     else:
                         arg_values.add(arg_value)
-                task_args[arg_name] = list(arg_values)
+                task_args[arg_name] = arg_values
 
             task_blueprints.append(
                 TaskBlueprint(
@@ -210,7 +203,7 @@ class ITHOREnv(gym.Env):
                     scenes=self._compute_available_scenes(
                         task_description["scenes"], excluded_scenes=globally_excluded_scenes
                     ),
-                    args=task_args,
+                    task_args=task_args,
                 )
             )
 
@@ -380,23 +373,23 @@ class ITHOREnv(gym.Env):
             Event: Initial event of the environment.
             BaseTask: Sampled task.
         """
-        # Sample a scene from the task blueprint
-        sampled_scene = self.np_random.choice(list(task_blueprint.scenes))
-        # Instantiate the scene
-        controller_parameters = self.config["controller_parameters"]
-        controller_parameters["scene"] = sampled_scene
-        initial_event = self.controller.reset(sampled_scene)
+        compatible_arguments = []
+        # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
+        while not compatible_arguments:
+            # Sample a scene from the task blueprint
+            sampled_scene = self.np_random.choice(list(task_blueprint.scenes))
+            # Instantiate the scene
+            controller_parameters = self.config["controller_parameters"]
+            controller_parameters["scene"] = sampled_scene
+            initial_event = self.controller.reset(sampled_scene)
 
-        sampled_task_args = {}
-        # TODO!! Need to make sure the sampled task is compatible with the scene
-        # scene_objects = initial_event.metadata["objects"]
-        for arg_name, arg_values in task_blueprint.args.items():
-            sample_value = self.np_random.choice(arg_values)
-            sampled_task_args[arg_name] = sample_value
+            compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
+            if not compatible_arguments:
+                task_blueprint.scenes.remove(sampled_scene)
 
-        task = task_blueprint.task_type(**sampled_task_args)
+        sampled_task_args = self.np_random.choice(compatible_arguments)
 
-        return initial_event, task
+        return initial_event, task_blueprint.task_type(*sampled_task_args)
 
 
 # %% Exceptions

@@ -5,6 +5,7 @@ TODO: Finish module docstring.
 """
 
 from enum import StrEnum
+from typing import Any
 
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 
@@ -188,7 +189,11 @@ class SimObjVariableProp(StrEnum):
 
 # TODO: Change this to a union of enums instead of type alias.
 type SimObjProp = SimObjFixedProp | SimObjVariableProp
-type SimObjMetadata = SimObjProp | str
+type SimObjMetadataKey = SimObjProp | str
+type SimObjId = str
+type SimObjPropValue = Any
+type SimObjMetadata = dict[SimObjMetadataKey, SimObjPropValue]
+
 
 # %% === Sim Object Groups ===
 PICKUPABLES = {

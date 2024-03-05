@@ -43,6 +43,8 @@ Virtual env: `rl_thor_benchmark`
 
 -[`Started`] Create iTHOR environment class
 
+- [] Refactor envs.tasks.tasks.py by using only item ids as dictionary key instead of sometimes the ids and sometimes the item itself
+- [] Refactor results and scores in envs.tasks.tasks.py to use 2 different dicts for relations and properties instead of 1 common dict to simplify types
 - [] Add checking if actions are compatible with each other
 
 - [] Can't be 100% accurate, but we can do some checks (e.g.`hand_movements` implies `pickup`, ...)

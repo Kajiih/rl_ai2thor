@@ -11,7 +11,14 @@ from collections.abc import Hashable
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
-from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import (
+    SimObjectType,
+    SimObjFixedProp,
+    SimObjId,
+    SimObjMetadata,
+    SimObjProp,
+    SimObjVariableProp,
+)
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
@@ -35,7 +42,7 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-type PropValue = float | bool | TemperatureValue
+type PropValue = int | float | bool | TemperatureValue | SimObjectType
 
 
 # %% === Properties  ===
@@ -97,7 +104,7 @@ class TaskItem[T: Hashable]:
         # Other attributes
         self._candidate_required_properties_rel: dict[SimObjProp, PropValue] = {}
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
-        self.candidate_ids: set[SimObjectType] = set()
+        self.candidate_ids: set[SimObjId] = set()
 
     @property
     def relations(self) -> set[Relation]:
@@ -147,12 +154,12 @@ class TaskItem[T: Hashable]:
             **self._candidate_required_properties_rel,
         }
 
-    def is_candidate(self, obj_metadata: dict[SimObjMetadata, Any]) -> bool:
+    def is_candidate(self, obj_metadata: SimObjMetadata) -> bool:
         """
         Return True if the given object is a valid candidate for the item.
 
         Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
+            obj_metadata (SimObjMetadata): Object metadata.
 
         Returns:
             is_candidate (bool): True if the given object is a valid candidate for the item.
@@ -161,15 +168,15 @@ class TaskItem[T: Hashable]:
             obj_metadata[prop_id] == prop_value for prop_id, prop_value in self.candidate_required_properties.items()
         )
 
-    def _get_properties_satisfaction(self, obj_metadata: dict[SimObjMetadata, Any]) -> dict[SimObjProp, bool]:
+    def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
         """
         Return a dictionary indicating which properties are satisfied by the given object.
 
         Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
+            obj_metadata (SimObjMetadata): Object metadata.
 
         Returns:
-            prop_satisfaction (dict[ObjPropId, bool]): Dictionary indicating which properties are satisfied by the given object.
+            prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are satisfied by the given object.
         """
         return {
             prop.target_ai2thor_property: obj_metadata[prop.target_ai2thor_property] == prop_value
@@ -177,18 +184,18 @@ class TaskItem[T: Hashable]:
         }
 
     def _get_relations_semi_satisfying_objects(
-        self, candidate_metadata: dict[SimObjMetadata, Any]
-    ) -> dict[T, dict[RelationTypeId, set[SimObjectType]]]:
+        self, candidate_metadata: SimObjMetadata
+    ) -> dict[T, dict[RelationTypeId, set[SimObjId]]]:
         """
         Return the dictionary of satisfying objects with the given candidate for each relations.
 
         The relations are organized by related item id.
 
         Args:
-            candidate_metadata (dict[ObjMetadataPropId, Any]): Metadata of the candidate.
+            candidate_metadata (SimObjMetadata): Metadata of the candidate.
 
         Returns:
-            semi_satisfying_objects (dict[T, dict[RelationTypeId, set[ObjId]]]): Dictionary indicating which objects are semi-satisfying the relations with the given object.
+            semi_satisfying_objects (dict[T, dict[RelationTypeId, set[SimObjId]]]): Dictionary indicating which objects are semi-satisfying the relations with the given object.
         """
         return {
             related_item_id: {
@@ -199,10 +206,10 @@ class TaskItem[T: Hashable]:
         }
 
     def _compute_obj_results(
-        self, obj_metadata: dict[SimObjMetadata, Any]
+        self, obj_metadata: SimObjMetadata
     ) -> dict[
         Literal["properties", "relations"],
-        dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjectType]]],
+        dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
     ]:  # TODO: Simplify this big type after finish the implementation
         """
         Return the results dictionary of the object for the item.
@@ -211,14 +218,14 @@ class TaskItem[T: Hashable]:
         objects of each relation of the item.
 
         Args:
-            obj_metadata (dict[ObjMetadataPropId, Any]): Object metadata.
+            obj_metadata (SimObjMetadata): Object metadata.
 
         Returns:
-            results (dict[Literal["properties", "relations"], dict]): Results of the object for the item.
+            results (dict[Literal["properties", "relations"], dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]]]): Results of the object for the item.
         """
         results: dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjectType]]],
+            dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
         ] = {
             "properties": self._get_properties_satisfaction(obj_metadata),
             "relations": self._get_relations_semi_satisfying_objects(obj_metadata),
@@ -226,26 +233,24 @@ class TaskItem[T: Hashable]:
         return results
 
     def _compute_all_obj_results(
-        self, scene_objects_dict: dict[SimObjectType, Any]
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> dict[
         Literal["properties", "relations"],
-        dict[SimObjProp, dict[SimObjectType, bool]]
-        | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+        dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
     ]:
         """
         Return the results dictionary with the results of each candidate of the item.
 
         Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
-                the objects in the scene. The keys are the object ids.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
 
         Returns:
-            results (dict[ObjId, dict]): Results of each object for the item.
+            results (dict[Literal["properties", "relations"], dict]): Results of each object for the item.
         """
         results: dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, dict[SimObjectType, bool]]
-            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+            dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
         ] = {
             "properties": {
                 prop.target_ai2thor_property: {
@@ -264,7 +269,7 @@ class TaskItem[T: Hashable]:
                     for relation in self.organized_relations[related_item_id].values()
                 }
                 for related_item_id in self.organized_relations
-            },  # type: ignore  # TODO: Delete type ignore after simplifying the type
+            },
         }
 
         return results
@@ -273,36 +278,36 @@ class TaskItem[T: Hashable]:
         self,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, dict[SimObjectType, bool]]
-            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+            dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
         ],
     ) -> dict[
-        SimObjectType,
+        SimObjId,
         dict[Literal["sum_property_scores", "sum_relation_scores"], float],
     ]:
         """
         Return the property and relation scores of each candidate of the item.
 
         Args:
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]):
+            objects_results (dict[Literal["properties", "relations"], dict]):
                 Results of each object for the item.
 
         Returns:
-            scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+            scores (dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
                 Scores of each object for the item.
         """
         scores: dict[
-            SimObjectType,
+            SimObjId,
             dict[Literal["sum_property_scores", "sum_relation_scores"], float],
         ] = {
             obj_id: {
                 "sum_property_scores": sum(
-                    bool(objects_results["properties"][prop_id][obj_id])  # type: ignore  # TODO: Delete type ignore after simplifying the type
-                    for prop_id in objects_results["properties"]
+                    bool(objects_results["properties"][prop_id][obj_id]) for prop_id in objects_results["properties"]
                 ),
                 "sum_relation_scores": sum(
-                    len(objects_results["relations"][relation_type_id][obj_id]) > 0  # type: ignore  # TODO: Delete type ignore after simplifying the type
-                    for relation_type_id in objects_results["relations"]
+                    1
+                    for related_item_id in objects_results["relations"]
+                    for relation_type_id in objects_results["relations"][related_item_id]
+                    if objects_results["relations"][related_item_id][relation_type_id][obj_id]
                 ),
             }
             for obj_id in self.candidate_ids
@@ -310,15 +315,14 @@ class TaskItem[T: Hashable]:
         return scores
 
     def compute_interesting_candidates(
-        self, scene_objects_dict: dict[SimObjectType, Any]
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
-        set[SimObjectType],
+        set[SimObjId],
         dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, dict[SimObjectType, bool]]
-            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+            dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
         ],
-        dict[SimObjectType, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
+        dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
     ]:
         """
         Return the set of interesting candidates and the results and scores of each candidate of the item.
@@ -337,14 +341,14 @@ class TaskItem[T: Hashable]:
         satisfied in the assignment).
 
         Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary containing the metadata of
                 the objects in the scene. The keys are the object ids.
 
         Returns:
-            interesting_candidates (set[ObjId]): Set of interesting candidates for the item.
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]):
+            interesting_candidates (set[SimObjId]): Set of interesting candidates for the item.
+            objects_results (dict[Literal["properties", "relations"], dict]):
                 Results of each object for the item.
-            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+            objects_scores (dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
                 Scores of each object for the item.
         """
         # Compute the results of each object for the item
@@ -388,15 +392,14 @@ class TaskItem[T: Hashable]:
 
     def _get_stronger_candidate(
         self,
-        obj_1_id: SimObjectType,
-        obj_2_id: SimObjectType,
+        obj_1_id: SimObjId,
+        obj_2_id: SimObjId,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, dict[SimObjectType, bool]]
-            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+            dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
         ],
-        objects_scores: dict[SimObjectType, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
-    ) -> SimObjectType | Literal["equal", "incomparable"]:
+        objects_scores: dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]],
+    ) -> SimObjId | Literal["equal", "incomparable"]:
         """
         Return the stronger candidate between the two given candidates.
 
@@ -417,15 +420,15 @@ class TaskItem[T: Hashable]:
         objects for both candidates.
 
         Args:
-            obj_1_id (ObjId): First candidate object id.
-            obj_2_id (ObjId): Second candidate object id.
-            objects_results (dict[ObjId, dict[Literal["properties", "relations"], dict]]): Results of
-                each object for the item.
-            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+            obj_1_id (SimObjId): First candidate object id.
+            obj_2_id (SimObjId): Second candidate object id.
+            objects_results (dict[Literal["properties", "relations"], dict]):
+                Results of each object for the item.
+            objects_scores (dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
                 Scores of each object for the item.
 
         Returns:
-            stronger_candidate (ObjId|Literal["equal", "incomparable"]): The stronger candidate
+            stronger_candidate (SimObjId | Literal["equal", "incomparable"]): The stronger candidate
                 between the two given candidates or "equal" if they have same strength or
                 "incomparable" if they cannot be compared.
 
@@ -456,15 +459,14 @@ class TaskItem[T: Hashable]:
 
     @staticmethod
     def _is_stronger_candidate_than(
-        obj_1_id: SimObjectType,
-        obj_2_id: SimObjectType,
+        obj_1_id: SimObjId,
+        obj_2_id: SimObjId,
         objects_results: dict[
             Literal["properties", "relations"],
-            dict[SimObjProp, dict[SimObjectType, bool]]
-            | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+            dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
         ],
         objects_scores: dict[
-            SimObjectType,
+            SimObjId,
             dict[Literal["sum_property_scores", "sum_relation_scores"], float],
         ],
     ) -> bool:
@@ -482,11 +484,11 @@ class TaskItem[T: Hashable]:
         See the get_stronger_candidate method for more details about the "is stronger than" relation.
 
         Args:
-            obj_1_id (ObjId): First candidate object id.
-            obj_2_id (ObjId): Second candidate object id.
+            obj_1_id (SimObjId): First candidate object id.
+            obj_2_id (SimObjId): Second candidate object id.
             objects_results (dict[Literal["properties", "relations"], dict]): Results of
                 each object for the item.
-            objects_scores (dict[ObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+            objects_scores (dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
                 Scores of each object for the item.
 
         Returns:
@@ -498,9 +500,7 @@ class TaskItem[T: Hashable]:
 
         # Calculate d[x,y]
         d_xy = 0
-        relations_results: dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]] = objects_results[
-            "relations"
-        ]  # type: ignore  # TODO: Delete type ignore after simplifying the type
+        relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]] = objects_results["relations"]
         for related_item_id in relations_results:
             for relation_type_id in relations_results[related_item_id]:
                 x_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_1_id]
@@ -526,14 +526,14 @@ class ItemOverlapClass[T: Hashable]:
     def __init__(
         self,
         items: list[TaskItem[T]],
-        candidate_ids: list[SimObjectType],
+        candidate_ids: list[SimObjId],
     ) -> None:
         """
         Initialize the overlap class with the given items and candidate ids.
 
         Args:
             items (list[TaskItem[T]]): The items in the overlap class.
-            candidate_ids (list[ObjId]): The candidate ids of candidates in the overlap class.
+            candidate_ids (list[SimObjId]): The candidate ids of candidates in the overlap class.
         """
         self.items = items
         self.candidate_ids = candidate_ids
@@ -556,27 +556,26 @@ class ItemOverlapClass[T: Hashable]:
             raise NoValidAssignmentError(self)
 
     def compute_interesting_assignments(
-        self, scene_objects_dict: dict[SimObjectType, Any]
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
-        list[dict[TaskItem[T], SimObjectType]],
+        list[dict[TaskItem[T], SimObjId]],
         dict[
             TaskItem[T],
             dict[
                 Literal["properties", "relations"],
-                dict[SimObjProp, dict[SimObjectType, bool]]
-                | dict[T, dict[RelationTypeId, dict[SimObjectType, set[SimObjectType]]]],
+                dict[SimObjProp, dict[SimObjId, bool]] | dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
             ],
         ],
         dict[
             TaskItem[T],
             dict[
-                SimObjectType,
+                SimObjId,
                 dict[Literal["sum_property_scores", "sum_relation_scores"], float],
             ],
         ],
     ]:
         """
-        Return the interesting assignments of objects to the items in the overlap class.
+        Return the interesting assignments of objects to the items in the overlap class, the items results and items scores.
 
         The interesting assignments are the ones that can lead to a maximum of task advancement
         depending on the assignment of objects in the other overlap classes.
@@ -587,12 +586,16 @@ class ItemOverlapClass[T: Hashable]:
         compute_interesting_candidates method of the TaskItem class.
 
         Args:
-            scene_objects_dict (dict[ObjId, Any]): Dictionary containing the metadata of
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary containing the metadata of
                 the objects in the scene. The keys are the object ids.
 
         Returns:
-            interesting_assignments (list[dict[TaskItem[T], ObjId]]):
+            interesting_assignments (list[dict[TaskItem[T], SimObjId]]):
                 List of the interesting assignments of objects to the items in the overlap class.
+            items_results (dict[TaskItem[T], dict[Literal["properties", "relations"], dict]]):
+                Results of each item for each candidate.
+            items_scores (dict[TaskItem[T], dict[SimObjId, dict[Literal["sum_property_scores", "sum_relation_scores"], float]]):
+                Scores of each item for each candidate.
         """
         interesting_candidates_data = {
             item: item.compute_interesting_candidates(scene_objects_dict) for item in self.items
@@ -603,7 +606,7 @@ class ItemOverlapClass[T: Hashable]:
         items_scores: dict[
             TaskItem[T],
             dict[
-                SimObjectType,
+                SimObjId,
                 dict[Literal["sum_property_scores", "sum_relation_scores"], float],
             ],
         ] = {item: data[2] for item, data in interesting_candidates_data.items()}
@@ -618,6 +621,9 @@ class ItemOverlapClass[T: Hashable]:
         return interesting_assignments, items_results, items_scores
 
     def __str__(self) -> str:
+        return f"{{self.items}}"
+
+    def __repr__(self) -> str:
         return f"OverlapClass({self.items})"
 
 
