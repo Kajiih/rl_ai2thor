@@ -100,6 +100,7 @@ ignore = [
   # TODO: Comment out for produciton release
   "ERA001", # Found commented-out code
   "S101",   # Use of `assert` detected
+  "RET504", # Unnecessary assignment to `...` before `return` statement
 ]
 
 [tool.ruff.lint.per-file-ignores]

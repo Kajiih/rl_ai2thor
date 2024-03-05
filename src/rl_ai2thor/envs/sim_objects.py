@@ -251,6 +251,36 @@ COOKABLES = {
 
 PICKUPABLE_RECEPTACLES = PICKUPABLES & RECEPTACLES
 
+LIGHT_SOURCES = {
+    SimObjectType.CANDLE,
+    SimObjectType.DESK_LAMP,
+    SimObjectType.FLOOR_LAMP,
+    # SimObjectType.LIGHT_SWITCH,
+}
+
+WATER_SOURCES = {
+    SimObjectType.FAUCET,
+    SimObjectType.SHOWER_HEAD,
+}
+
+COLD_SOURCES = {
+    SimObjectType.FRIDGE,
+}
+
+HEAT_SOURCES = {
+    SimObjectType.COFFEE_MACHINE,  # Only Mug
+    SimObjectType.MICROWAVE,
+    SimObjectType.STOVE_BURNER,  # Turned on by StoveKnob
+    # SimObjectType.TOASTER,  # Only BreadSlice // Not sure it actually heats the bread and not only cooks it
+}
+
+COOKING_SOURCES = {
+    SimObjectType.COFFEE_MACHINE,  # Only Mug
+    SimObjectType.MICROWAVE,
+    SimObjectType.STOVE_BURNER,  # Turned on by StoveKnob
+    SimObjectType.TOASTER,  # Only BreadSlice
+}
+
 
 ALL_OBJECT_GROUPS = {
     "_PICKUPABLES": PICKUPABLES,
@@ -264,4 +294,9 @@ ALL_OBJECT_GROUPS = {
     "_DIRTYABLES": DIRTYABLES,
     "_COOKABLES": COOKABLES,
     "_PICKUPABLE_RECEPTACLES": PICKUPABLE_RECEPTACLES,
+    "_LIGHT_SOURCES": LIGHT_SOURCES,
+    "_WATER_SOURCES": WATER_SOURCES,
+    "_COLD_SOURCES": COLD_SOURCES,
+    "_HEAT_SOURCES": HEAT_SOURCES,
+    "_COOKING_SOURCES": COOKING_SOURCES,
 }

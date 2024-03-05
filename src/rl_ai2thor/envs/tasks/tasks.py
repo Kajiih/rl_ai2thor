@@ -16,7 +16,6 @@ import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
-from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
 import networkx as nx
@@ -24,7 +23,15 @@ import networkx as nx
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjFixedProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import (
+    COLD_SOURCES,
+    DIRTYABLES,
+    HEAT_SOURCES,
+    WATER_SOURCES,
+    SimObjectType,
+    SimObjFixedProp,
+    SimObjVariableProp,
+)
 from rl_ai2thor.envs.tasks.items import (
     ItemOverlapClass,
     PropValue,
@@ -36,7 +43,7 @@ from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
-    from ai2thor.server import Event, MultiAgentEvent
+    from ai2thor.server import Event
 
     from rl_ai2thor.envs.scenes import SceneId
     from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
@@ -142,12 +149,12 @@ class UndefinableTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
 
     @staticmethod
-    def reset(controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+    def reset(controller: Controller) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
         """Reset and initialize the task and the controller."""
         return 0.0, False, {}
 
     @staticmethod
-    def compute_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
 
@@ -858,12 +865,11 @@ class PlaceCleanedIn(PlaceIn):
         """
         return f"Place cleaned {self.placed_object_type} in {self.receptacle_type}"
 
-    # TODO: Add check for water source in the scene
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
         event: EventLike,
-    ) -> list[tuple[PropValue, ...]]:
+    ) -> list[tuple[PropValue, ...]]:  # sourcery skip: invert-any-all
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
@@ -882,13 +888,15 @@ class PlaceCleanedIn(PlaceIn):
                 scene_object_types_count[obj_type] = 0
             scene_object_types_count[obj_type] += 1
 
-        dirtyable_object_types = ALL_OBJECT_GROUPS["_DIRTYABLES"]
+        # Check if there is a water source in the scene
+        if not any(water_source_type in scene_object_types_count for water_source_type in WATER_SOURCES):
+            return []
 
         # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
         args_blueprints = {
             "placed_object_type": task_blueprint.task_args["placed_object_type"]
             & set(scene_object_types_count)
-            & set(dirtyable_object_types),
+            & DIRTYABLES,
             "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
         }
         # Return a list with all the compatible combinations of placed_object_type and receptacle_types
@@ -900,7 +908,6 @@ class PlaceCleanedIn(PlaceIn):
         ]
 
 
-# TODO: Add check for heating source in the scene and the fact that the object has to be able to be heated by it
 class PlaceHeatedIn(PlaceIn):
     """
     Task for placing a given heated object in a given receptacle.
@@ -940,8 +947,48 @@ class PlaceHeatedIn(PlaceIn):
         """
         return f"Place heated {self.placed_object_type} in {self.receptacle_type}"
 
+    # TODO: Change this to avoid duplicating code with PlaceIn
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
 
-# TODO: Add check for cold source in the scene and the fact that the object has to be able to be cooled by it (refrigerator and object that can be put in it)
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        scene_heat_sources = {heat_source for heat_source in HEAT_SOURCES if heat_source in scene_object_types_count}
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
+        }
+        # Compute a list with all the compatible combinations of placed_object_type and receptacle_types
+        compatible_args = [
+            (placed_object_type, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            if OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"] & scene_heat_sources
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
+        return compatible_args
+
+
 class PlaceCooledIn(PlaceIn):
     """
     Task for placing a given cooled object in a given receptacle.
@@ -981,6 +1028,46 @@ class PlaceCooledIn(PlaceIn):
         """
         return f"Place cooled {self.placed_object_type} in {self.receptacle_type}"
 
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: EventLike,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (EventLike): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        scene_cold_sources = {cold_source for cold_source in COLD_SOURCES if obj_type in scene_object_types_count}
+
+        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        args_blueprints = {
+            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
+        }
+        # Compute a list with all the compatible combinations of placed_object_type and receptacle_types
+        compatible_args = [
+            (placed_object_type, compatible_receptacle)
+            for placed_object_type in args_blueprints["placed_object_type"]
+            if OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"] & scene_cold_sources
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if compatible_receptacle in args_blueprints["receptacle_type"]
+        ]
+        return compatible_args
+
 
 # TODO: Implement the fact that any light source can be used instead of only desk lamps
 # TODO: Implement with close_to relation instead of visible for the light source
@@ -1019,7 +1106,7 @@ class LookInLight(GraphTask[str]):
         return {
             "light_source": {
                 "properties": {
-                    "objectType": LightSourcesType.DESK_LAMP,  # TODO: Add support for other light sources
+                    "objectType": SimObjectType.DESK_LAMP,  # TODO: Add support for other light sources
                     "isToggled": True,
                     "visible": True,
                 },
@@ -1063,7 +1150,7 @@ class LookInLight(GraphTask[str]):
 
         # Check that there is at least one light source in the scene
         # TODO: Add support for other light sources
-        if LightSourcesType.DESK_LAMP not in scene_object_types_count:
+        if SimObjectType.DESK_LAMP not in scene_object_types_count:
             return []
 
         # Keep only the object types that are present in the scene for the blueprint of 'looked_at_object_type'
@@ -1072,16 +1159,6 @@ class LookInLight(GraphTask[str]):
         }
         # Return a list with all the compatible combinations of looked_at_object_type
         return [(looked_at_object_type,) for looked_at_object_type in args_blueprints["looked_at_object_type"]]
-
-
-# %%  === Task object types ===
-class LightSourcesType(StrEnum):
-    """Types of light sources."""
-
-    CANDLE = "Candle"
-    DESK_LAMP = "DeskLamp"
-    FLOOR_LAMP = "FloorLamp"
-    # LIGHT_SWITCH = "LightSwitch"
 
 
 # %% === Constants ===
