@@ -1,5 +1,7 @@
 """Integration tests for rl_ai2thor package."""
 
+import pytest
+
 from rl_ai2thor.agents.agents import RandomAgent
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 
@@ -18,6 +20,7 @@ def test_random_agent_1_ep() -> None:
     random_agent.close()
 
 
+@pytest.mark.slow()
 def test_random_agent_n_ep() -> None:
     """Test running the environment with a random agent."""
     env = ITHOREnv()
