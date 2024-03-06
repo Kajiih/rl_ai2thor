@@ -4,14 +4,14 @@
 
 ## Install requirement
 
-```
+```bash
 pip install -r requirements/base.txt
 
 ```
 
 or
 
-```
+```bash
 
 pip install -r requirements/base.txt
 
@@ -100,7 +100,7 @@ Virtual env: `rl_thor_benchmark`
 - [] Add documentation
 - [] Add Pre-commit hooks
 
-  - [] Ruff
+- [] Write changelog (<https://keepachangelog.com/en/1.0.0/>)
 
 ## Interesting Github Issues
 

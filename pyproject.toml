@@ -4,12 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rl_ai2thor"
-version = "0.2.2"
+version = "0.3.0"
 description = "RL environment for AI2THOR"
 readme = "README.md"
 license = "MIT" # TODO: Check this
 requires-python = ">=3.12"
-keywords = ["reinforcement learning", "ai2thor", "gymnasium"]
+keywords = [
+  "artificial intelligence",
+  "reinforcement learning",
+  "research",
+  "ai2thor",
+  "gymnasium",
+]
 authors = [{ name = "Julian Paquerot", email = "julian_p@snu.ac.kr" }]
 dependencies = ["ai2thor>=5.0.0", "gymnasium"]
 classifiers = [

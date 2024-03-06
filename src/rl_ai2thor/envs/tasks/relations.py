@@ -89,7 +89,9 @@ class Relation(ABC):
         """
         return {
             related_object_id
-            for related_object_id in self._extract_related_object_ids(main_obj_metadata)
+            for related_object_id in self._extract_related_object_ids(
+                main_obj_metadata
+            )  # BUG: self._extract_related_object_ids(main_obj_metadata) is None?
             if related_object_id in self.related_item.candidate_ids
         }
 
