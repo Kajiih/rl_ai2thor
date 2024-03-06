@@ -1,7 +1,7 @@
 """Callbacks for RL AI2THOR agents."""
 
 from pathlib import Path
-from typing import Any, SupportsFloat
+from typing import Any
 
 import imageio
 
@@ -16,7 +16,7 @@ class BaseCallback:
     def on_step(
         self,
         obs: Any = None,
-        reward: SupportsFloat = 0,
+        reward: float = 0,
         terminated: bool = False,
         truncated: bool = False,
         info: dict[str, Any] | None = None,
@@ -42,7 +42,7 @@ class RecordVideoCallback(BaseCallback):
     def on_step(
         self,
         obs: Any,
-        reward: SupportsFloat = 0,  # noqa: ARG002
+        reward: float = 0,  # noqa: ARG002
         terminated: bool = False,  # noqa: ARG002
         truncated: bool = False,  # noqa: ARG002
         info: dict[str, Any] | None = None,  # noqa: ARG002

@@ -7,7 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, SupportsFloat
+from typing import TYPE_CHECKING, Any
 
 import ai2thor.controller
 import gymnasium as gym
@@ -248,7 +248,7 @@ class ITHOREnv(gym.Env):
         self.step_count = 0
         self.np_random = np.random.default_rng(self.config["seed"])
 
-    def step(self, action: dict) -> tuple[ArrayLike, SupportsFloat, bool, bool, dict]:
+    def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
         """
         Take a step in the environment.
 
@@ -257,7 +257,7 @@ class ITHOREnv(gym.Env):
 
         Returns:
             observation(ArrayLike): Observation of the environment.
-            reward (SupportsFloat): Reward of the action.
+            reward (float): Reward of the action.
             terminated (bool): Whether the agent reaches a terminal state (realized the task).
             truncated (bool): Whether the limit of steps per episode has been reached.
             info (dict): Additional information about the environment.

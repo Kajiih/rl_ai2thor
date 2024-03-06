@@ -16,6 +16,7 @@ jobs:
         os: ["ubuntu-latest"] # [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12"] # ["3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
 
     steps:
       - name: Checkout 🛎️
@@ -35,14 +36,12 @@ jobs:
         run: |
           pip install ruff
           ruff check . --output-format=github # -v
-        continue-on-error: true
 
       # TODO: Make the output more readable
       - name: Test with pytest + doctest 🧪
         run: |
           pip install pytest pytest-cov
           python -m pytest -v -rA --doctest-modules --cov=.
-        continue-on-error: true
 
       - name: Upload coverage to Codecov 📊
         uses: codecov/codecov-action@v4
@@ -58,7 +57,6 @@ jobs:
           pylance-version: latest-release
           stats: true
           # verbose: true
-        continue-on-error: true
 
       - name: Install public interface package 📥
         run: |
@@ -69,4 +67,3 @@ jobs:
           pylance-version: latest-release
           verify-types: rl_ai2thor
           # verbose: true
-        continue-on-error: true
