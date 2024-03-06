@@ -7,6 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import pathlib
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 import ai2thor.controller
@@ -14,6 +15,7 @@ import gymnasium as gym
 import numpy as np
 import yaml
 from ai2thor.server import Event
+from numpy.typing import NDArray
 
 from rl_ai2thor.envs.actions import (
     ACTIONS_BY_CATEGORY,
@@ -31,13 +33,43 @@ from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from numpy.typing import ArrayLike
-
-    from rl_ai2thor.utils.ai2thor_types import EventLike
-
 
 # %% Environment definitions
-class ITHOREnv(gym.Env):
+class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
+    """Base class for AI2THOR environment."""
+
+    def __init__(self) -> None:
+        """Initialize the environment."""
+
+    @abstractmethod
+    def step(self, action: ActType) -> tuple[ObsType, float, bool, bool, dict[str, Any]]:
+        """
+        Take a step in the environment.
+
+        Args:
+            action (ActType): Action to take in the environment.
+
+        Returns:
+            observation (ObsType): Observation of the environment.
+            reward (float): Reward of the action.
+            terminated (bool): Whether the agent reaches a terminal state (realized the task).
+            truncated (bool): Whether the limit of steps per episode has been reached.
+            info (dict): Additional information about the environment.
+        """
+
+    @abstractmethod
+    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
+        """
+        Reset the environment.
+
+        New scene is sampled and new task and reward handlers are initialized.
+        """
+
+    def close(self) -> None:
+        """Close the environment."""
+
+
+class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
     """Wrapper base class for iTHOR environment."""
 
     def __init__(
@@ -248,7 +280,7 @@ class ITHOREnv(gym.Env):
         self.step_count = 0
         self.np_random = np.random.default_rng(self.config["seed"])
 
-    def step(self, action: dict) -> tuple[ArrayLike, float, bool, bool, dict]:
+    def step(self, action: dict[str, Any]) -> tuple[NDArray[np.int8], float, bool, bool, dict[str, Any]]:
         """
         Take a step in the environment.
 
@@ -256,7 +288,7 @@ class ITHOREnv(gym.Env):
             action (dict): Action to take in the environment.
 
         Returns:
-            observation(ArrayLike): Observation of the environment.
+            observation(NDArray[np.int8]): Observation of the environment.
             reward (float): Reward of the action.
             terminated (bool): Whether the agent reaches a terminal state (realized the task).
             truncated (bool): Whether the limit of steps per episode has been reached.
@@ -276,7 +308,7 @@ class ITHOREnv(gym.Env):
             new_event = env_action.perform(
                 env=self,
                 action_parameter=action_parameter,
-                target_object_id=target_object_id,
+                target_object_id=target_object_id,  # TODO: Create NoObject object
             )
         else:
             new_event = failed_action_event
@@ -285,7 +317,7 @@ class ITHOREnv(gym.Env):
 
         self.step_count += 1
 
-        observation: ArrayLike = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
+        observation: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
         reward, terminated, task_info = self.reward_handler.get_reward(new_event)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
@@ -297,7 +329,7 @@ class ITHOREnv(gym.Env):
 
     def _identify_target_object(
         self, env_action: EnvironmentAction, target_object_coordinates: tuple[float, float] | None
-    ) -> tuple[str | None, EventLike | None]:
+    ) -> tuple[str | None, Event | None]:
         """
         Identify the target object the given action (if any) and a failed action event if their is no valid target object.
 
@@ -307,7 +339,7 @@ class ITHOREnv(gym.Env):
 
         Returns:
             target_object_id (str | None): Id of the target object.
-            failed_action_event (EventLike | None): Event corresponding to the failed action.
+            failed_action_event (Event | None): Event corresponding to the failed action.
         """
         # No target object case
         if not env_action.has_target_object:
@@ -345,7 +377,7 @@ class ITHOREnv(gym.Env):
         )
 
     # TODO: Adapt this with general task and reward handling
-    def reset(self, seed: int | None = None) -> tuple[ArrayLike, dict]:
+    def reset(self, seed: int | None = None) -> tuple[NDArray[np.int8], dict]:
         """
         Reset the environment.
 
@@ -372,16 +404,8 @@ class ITHOREnv(gym.Env):
         self.step_count = 0
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
-        observation: ArrayLike = self.last_event.frame  # type: ignore
+        observation: NDArray = self.last_event.frame  # type: ignore
         return observation, info
-
-    def close(self) -> None:
-        """
-        Close the environment.
-
-        In particular, stop the ai2thor controller.
-        """
-        self.controller.stop()
 
     def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
         """
@@ -411,6 +435,14 @@ class ITHOREnv(gym.Env):
         sampled_task_args = self.np_random.choice(compatible_arguments)
 
         return initial_event, task_blueprint.task_type(*sampled_task_args)
+
+    def close(self) -> None:
+        """
+        Close the environment.
+
+        In particular, stop the ai2thor controller.
+        """
+        self.controller.stop()
 
 
 # %% Exceptions

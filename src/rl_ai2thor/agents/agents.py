@@ -10,13 +10,15 @@ from rl_ai2thor.agents.callbacks import BaseCallback
 if TYPE_CHECKING:
     import gymnasium as gym
 
+    from rl_ai2thor.envs.ai2thor_envs import BaseAI2THOREnv
+
 
 # TODO: Improve type hints with more specific types
 # %% === Agents ===
-class BaseAgent(ABC):
+class BaseAgent[ObsType, ActType](ABC):
     """Base class for agents in the AI2THOR RL environment."""
 
-    def __init__(self, env: gym.Env, callback: BaseCallback | None = None) -> None:
+    def __init__(self, env: BaseAI2THOREnv[ObsType, ActType], callback: BaseCallback | None = None) -> None:
         """Initialize the agent."""
         self.env = env
         if callback is None:
@@ -24,14 +26,14 @@ class BaseAgent(ABC):
         self.callback = callback
 
     @abstractmethod
-    def __call__(self, obs: Any = None) -> Any:
+    def __call__(self, obs: ObsType) -> ActType:
         """Return the action to take given the current observation."""
 
     def continue_episode(
         self,
-        obs: Any,
+        obs: ObsType,
         max_steps: int | None = None,
-    ) -> tuple[float, int, Any, float, bool, bool, dict[str, Any]]:
+    ) -> tuple[float, int, ObsType, float, bool, bool, dict[str, Any]]:
         """Continue the episode and return the final state of the environment and the number of steps taken."""
         terminated, truncated = False, False
         nb_steps = 0
@@ -48,22 +50,23 @@ class BaseAgent(ABC):
         self,
         nb_episodes: int = 1,
         total_max_steps: int | None = None,
-    ) -> tuple[float, int, Any, float, bool, bool, dict[str, Any]]:
+    ) -> tuple[float, int, ObsType, float, bool, bool, dict[str, Any]]:
         """Start and run a certain number of episodes and return the final state of the environment and the number of steps taken."""
         total_reward = 0
         total_nb_steps = 0
 
         for _ep in range(nb_episodes):
-            obs = self.reset()
+            obs, info = self.reset()
             remaining_steps = total_max_steps - total_nb_steps if total_max_steps is not None else None
             sum_reward, nb_steps, obs, reward, terminated, truncated, info = self.continue_episode(obs, remaining_steps)
             total_reward += sum_reward
             total_nb_steps += nb_steps
             if total_max_steps is not None and total_nb_steps >= total_max_steps:
                 break
+
         return total_reward, total_nb_steps, obs, reward, terminated, truncated, info
 
-    def step(self, obs: Any) -> tuple[Any, Any, float, bool, bool, dict[str, Any]]:
+    def step(self, obs: ObsType) -> tuple[ActType, ObsType, float, bool, bool, dict[str, Any]]:
         """Return the next action to take and the resulting state of the environment."""
         action = self(obs)
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -75,19 +78,19 @@ class BaseAgent(ABC):
         self.env.close()
         self.callback.on_close()
 
-    def reset(self, seed: int | None = None) -> Any:
+    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
         """Reset the environment and return the initial observation."""
         return self.env.reset(seed=seed)
 
 
-class RandomAgent(BaseAgent):
+class RandomAgent[ObsType, ActType](BaseAgent[ObsType, ActType]):
     """A random agent."""
 
-    def __init__(self, env: gym.Env, callback: BaseCallback | None = None) -> None:
+    def __init__(self, env: BaseAI2THOREnv[ObsType, ActType], callback: BaseCallback | None = None) -> None:
         """Initialize the agent."""
         super().__init__(env, callback)
 
-    def __call__(self, obs: Any = None) -> Any:  # noqa: ARG002
+    def __call__(self, obs: ObsType | None = None) -> ActType:  # noqa: ARG002
         """Return a random action."""
         action = self.env.action_space.sample()
         return action

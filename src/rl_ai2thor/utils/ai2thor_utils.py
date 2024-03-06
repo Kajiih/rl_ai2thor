@@ -1,9 +1,9 @@
 """Utility functions specific to AI2THOR."""
 
-from typing import Any
+from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjId, SimObjMetadata
 
 
-def get_object_type_from_id(object_id: str) -> str:
+def get_object_type_from_id(object_id: str) -> SimObjectType:
     """
     Return the object type from an object id.
 
@@ -11,12 +11,12 @@ def get_object_type_from_id(object_id: str) -> str:
         object_id (str): Object id to parse.
 
     Returns:
-        str: Object type.
+        object_type (str): Object type.
     """
-    return object_id.split("|")[0]
+    return SimObjectType(object_id.split("|")[0])
 
 
-def get_objects_dict(objects: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def get_scene_objects_dict(objects: list[SimObjMetadata]) -> dict[SimObjId, SimObjMetadata]:
     """
     Return a dictionary of objects indexed by object id.
 
@@ -24,6 +24,6 @@ def get_objects_dict(objects: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
         objects (list[dict]): List of objects to index.
 
     Returns:
-        dict[str, dict]: Dictionary of objects indexed by object id.
+        scene_object_dict (dict[SimObjId, SimObjMetadata]): Dictionary of objects indexed by object id.
     """
     return {obj["objectId"]: obj for obj in objects}

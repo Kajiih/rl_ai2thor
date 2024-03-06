@@ -1,13 +1,16 @@
 """Callbacks for RL AI2THOR agents."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 
 import imageio
+from numpy.typing import NDArray
 
 
 # %% === Callbacks ===
-class BaseCallback:
+class BaseCallback[ObsType]:
     """Base class for callbacks."""
 
     def __init__(self, verbose: int = 1) -> None:
@@ -15,7 +18,7 @@ class BaseCallback:
 
     def on_step(
         self,
-        obs: Any = None,
+        obs: ObsType | None = None,
         reward: float = 0,
         terminated: bool = False,
         truncated: bool = False,
@@ -30,7 +33,7 @@ class BaseCallback:
         """Triggered when the agent is reset."""
 
 
-class RecordVideoCallback(BaseCallback):
+class RecordVideoCallback(BaseCallback[NDArray]):
     """Callback to record a video of the environment."""
 
     def __init__(self, path_to_write: str | Path, frame_rate: int = 30) -> None:
@@ -41,7 +44,7 @@ class RecordVideoCallback(BaseCallback):
 
     def on_step(
         self,
-        obs: Any,
+        obs: NDArray,
         reward: float = 0,  # noqa: ARG002
         terminated: bool = False,  # noqa: ARG002
         truncated: bool = False,  # noqa: ARG002

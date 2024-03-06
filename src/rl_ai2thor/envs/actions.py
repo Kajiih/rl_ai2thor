@@ -27,12 +27,15 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from rl_ai2thor.envs.sim_objects import WATER_SOURCES, SimObjectType
 from rl_ai2thor.envs.tasks.items import SimObjFixedProp, SimObjVariableProp
 from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:
+    from ai2thor.server import Event
+
     from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
-    from rl_ai2thor.utils.ai2thor_types import EventLike
+    from rl_ai2thor.envs.sim_objects import SimObjId
 
 
 # %% == Enums ==
@@ -143,14 +146,14 @@ class EnvironmentAction:
     Base class for complex environment actions that correspond to ai2thor actions.
 
     Attributes:
-        name (str): Name of the action in the RL environment.
-        ai2thor_action (str): Name of the ai2thor action corresponding to the
+        name (EnvActionName): Name of the action in the RL environment.
+        ai2thor_action (Ai2thorAction): Name of the ai2thor action corresponding to the
             environment's action.
-        action_category (str): Category of the action (e.g. movement_actions
+        action_category (ActionCategory): Category of the action (e.g. movement_actions
             for MoveAhead).
         has_target_object (bool, optional): Whether the action requires a target
             object.
-        object_required_property (str, optional): Name of the required property
+        object_required_property (SimObjFixedProp, optional): Name of the required property
             of the target object.
         parameter_name (str, optional): Name of the quantitative parameter of
             the action.
@@ -170,13 +173,13 @@ class EnvironmentAction:
             env (ITHOREnv): Environment in which to perform the action.
             action_parameter (float, optional): Quantitative parameter of the action.
             target_object_id (str, optional): ID of the target object for the action.
-        ) -> EventLike:
+        ) -> Event:
             Perform the action in the environment and return the event.
 
         fail_perform(
             env (ITHOREnv): Environment in which the action was performed.
             error_message (str): Error message to log in the event.
-        ) -> EventLike:
+        ) -> Event:
             Generate an event corresponding to the failure of the action.
     """
 
@@ -196,18 +199,18 @@ class EnvironmentAction:
         self,
         env: ITHOREnv,
         action_parameter: float | None = None,
-        target_object_id: str | None = None,
-    ) -> EventLike:
+        target_object_id: SimObjId | None = None,
+    ) -> Event:
         """
         Perform the action in the environment.
 
         Args:
             env (ITHOREnv): Environment in which to perform the action.
             action_parameter (float, optional): Quantitative parameter of the action.
-            target_object_id (str, optional): ID of the target object for the action.
+            target_object_id (SimObjId, optional): ID of the target object for the action.
 
         Returns:
-            event (EventLike): Event returned by the controller.
+            event (Event): Event returned by the controller.
         """
         action_parameters = self.other_ai2thor_parameters.copy()
         if self.parameter_name is not None:
@@ -230,7 +233,7 @@ class EnvironmentAction:
                 )
                 action_parameter = parameter_range[0] + action_parameter * (parameter_range[1] - parameter_range[0])
             else:
-                raise MissingParameterRangeError(self.ai2thor_action)
+                raise MissingParameterRangeError(self)
 
             action_parameters[self.parameter_name] = action_parameter
         if self.has_target_object:
@@ -238,16 +241,14 @@ class EnvironmentAction:
         for parameter_name in self.config_dependent_parameters:
             action_parameters[parameter_name] = env.config["action_parameters"][parameter_name]
 
-        return env.controller.step(
-            action=self.ai2thor_action,
-            **action_parameters,
-        )
+        event: Event = env.controller.step(action=self.ai2thor_action, **action_parameters)  # type: ignore
+        return event
 
     def fail_perform(
         self,
         env: ITHOREnv,
         error_message: str,
-    ) -> EventLike:
+    ) -> Event:
         """
         Generate an event corresponding to the failure of the action.
 
@@ -256,9 +257,9 @@ class EnvironmentAction:
             error_message (str): Error message to log in the event.
 
         Returns:
-            event (EventLike): Event for the failed action.
+            event (Event): Event for the failed action.
         """
-        event = env.controller.step(action="Done")
+        event: Event = env.controller.step(action="Done")  # type: ignore
         event.metadata["lastAction"] = self.ai2thor_action
         event.metadata["lastActionSuccess"] = False
         event.metadata["errorMessage"] = error_message
@@ -333,24 +334,25 @@ class ConditionalExecutionAction(EnvironmentAction):
         self,
         env: ITHOREnv,
         action_parameter: float | None = None,
-        target_object_id: str | None = None,
-    ) -> EventLike:
+        target_object_id: SimObjId | None = None,
+    ) -> Event:
         """
         Perform the action in the environment.
 
         Args:
             env (ITHOREnv): Environment in which to perform the action.
             action_parameter (float, optional): Quantitative parameter of the action.
-            target_object_id (str, optional): ID of the target object for the action.
+            target_object_id (SimObjId, optional): ID of the target object for the action.
 
         Returns:
-            event (EventLike): Event returned by the controller.
+            event (Event): Event returned by the controller.
         """
-        return (
+        event = (
             super().perform(env, action_parameter, target_object_id)
             if self.action_condition(env)
             else self.fail_perform(env, error_message=self.action_condition.error_message(self))
         )
+        return event
 
     # We need to redefine the hash manually because of dataclass behavior
     def __hash__(self) -> int:
@@ -373,16 +375,17 @@ class VisibleWaterCondition(BaseActionCondition):
             env (ITHOREnv): Environment in which to check the condition.
 
         Returns:
-            bool: Whether the agent has visible running water in its field of view.
+            water_is_visible (bool): Whether the agent has visible running water in its field of view.
         """
-        return any(
+        water_is_visible = any(
             (
                 obj[SimObjVariableProp.VISIBLE]
                 and obj[SimObjVariableProp.IS_TOGGLED]
-                and obj[SimObjFixedProp.OBJECT_TYPE] in {"Faucet", "ShowerHead"}
+                and obj[SimObjFixedProp.OBJECT_TYPE] in WATER_SOURCES
             )
             for obj in env.last_event.metadata["objects"]
         )
+        return water_is_visible
 
     @staticmethod
     def _base_error_message(action: EnvironmentAction) -> str:
@@ -398,10 +401,10 @@ class HoldingObjectTypeCondition(BaseActionCondition):
     Used for SliceObject.
 
     Attributes:
-        object_type (str): Type of object that the agent needs to hold.
+        object_type (SimObjectType): Type of object that the agent needs to hold.
     """
 
-    object_type: str
+    object_type: SimObjectType
 
     def __call__(self, env: ITHOREnv) -> bool:
         """
@@ -411,12 +414,13 @@ class HoldingObjectTypeCondition(BaseActionCondition):
             env (ITHOREnv): Environment in which to check the condition.
 
         Returns:
-            bool: Whether the agent is holding an object of the required type.
+            object_is_held (bool): Whether the agent is holding an object of the required type.
         """
-        return (
+        object_is_held = (
             len(env.last_event.metadata["inventoryObjects"]) > 0
             and env.last_event.metadata["inventoryObjects"][0][SimObjFixedProp.OBJECT_TYPE] == self.object_type
         )
+        return object_is_held
 
     def _base_error_message(self, action: EnvironmentAction) -> str:
         """Return the default error message for the condition."""
@@ -430,7 +434,7 @@ clean_object_condition = VisibleWaterCondition(
     overriding_message="Agent needs to have visible running water to clean an object!"
 )
 slice_object_condition = HoldingObjectTypeCondition(
-    object_type="Knife",
+    object_type=SimObjectType.KNIFE,
     overriding_message="Agent needs to hold a knife to slice an object!",
 )
 
@@ -443,9 +447,9 @@ class MissingParameterRangeError(ValueError):
     Either the action should not require a parameter, or the action has been incorrectly defined in the environment.
     """
 
-    def __init__(self, ai2thor_action: str) -> None:
-        self.ai2thor_action = ai2thor_action
-        super().__init__(f"Action {self.ai2thor_action} requires a parameter but no parameter range is defined.")
+    def __init__(self, environment_action: EnvironmentAction) -> None:
+        self.environment_action = environment_action
+        super().__init__(f"Action {self.environment_action} requires a parameter but no parameter range is defined.")
 
 
 # %% == Actions definitions ==
