@@ -11,7 +11,11 @@ from numpy.typing import NDArray
 
 # %% === Callbacks ===
 class BaseCallback[ObsType]:
-    """Base class for callbacks."""
+    """
+    Base class for callbacks.
+
+    Does nothing by default.
+    """
 
     def __init__(self, verbose: int = 1) -> None:
         self.verbose = verbose
