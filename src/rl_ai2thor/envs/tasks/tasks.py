@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from rl_ai2thor.envs.scenes import SceneId
     from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
-    from rl_ai2thor.utils.ai2thor_types import EventLike
 
 
 # %% === Reward handlers ===
@@ -71,12 +70,12 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         self.last_step_advancement: float | int = 0
 
     # TODO: Add shortcut when the action failed or similar special cases
-    def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the reward, task completion and additional information about the task for the given event.
 
         Args:
-            event (Any): Event to calculate the reward for.
+            event (Event): Event to calculate the reward for.
 
         Returns:
             reward (float): Reward for the event.
@@ -119,21 +118,21 @@ class BaseTask(ABC):
         """Reset and initialize the task and the controller."""
 
     @abstractmethod
-    def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
 
     @staticmethod
     @abstractmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -154,14 +153,14 @@ class UndefinableTask(BaseTask):
         return 0.0, False, {}
 
     @staticmethod
-    def compute_task_advancement(event: EventLike) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
+    def compute_task_advancement(event: Event) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
 
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """Compute the compatible task arguments from the task blueprint and the event."""
         raise NotImplementedError
@@ -216,9 +215,9 @@ class GraphTask[T: Hashable](BaseTask):
             with overlapping candidates.
 
     Methods:
-        reset(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        reset(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
             Reset the task with the information of the event.
-        get_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+        get_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
             Return the task advancement and whether the task is completed.
         full_initialize_items_and_relations_from_dict(task_description_dict: TaskDict) -> list[TaskItem[T]]
             Create and initialize TaskItems for the graph task.
@@ -328,7 +327,7 @@ class GraphTask[T: Hashable](BaseTask):
         ]
 
     # TODO: Add trying only the top k interesting assignments according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
-    def compute_task_advancement(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -345,7 +344,7 @@ class GraphTask[T: Hashable](BaseTask):
         consider strictly satisfied relations and not semi satisfied relations).
 
         Args:
-            event (EventLike): Event corresponding to the state of the scene.
+            event (Event): Event corresponding to the state of the scene.
 
         Returns:
             task_advancement (float): Task advancement.
@@ -500,12 +499,12 @@ class TaskBlueprint:
     scenes: set[SceneId]
     task_args: Mapping[str, frozenset[PropValue]] = field(default_factory=dict)
 
-    def compute_compatible_task_args(self, event: EventLike) -> list[tuple[PropValue, ...]]:
+    def compute_compatible_task_args(self, event: Event) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the event.
 
         Args:
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -572,14 +571,14 @@ class PlaceIn(GraphTask[str]):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -665,14 +664,14 @@ class PlaceSameTwoIn(GraphTask[str]):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -688,7 +687,7 @@ class PlaceSameTwoIn(GraphTask[str]):
         # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
         args_blueprints = {
             "placed_object_type": task_blueprint.task_args["placed_object_type"]
-            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= 2},
+            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= 2},  # noqa: PLR2004
             "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
         }
         # Return a list with all the compatible combinations of placed_object_type and receptacle_types
@@ -767,14 +766,14 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -868,14 +867,14 @@ class PlaceCleanedIn(PlaceIn):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:  # sourcery skip: invert-any-all
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -951,14 +950,14 @@ class PlaceHeatedIn(PlaceIn):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -1031,14 +1030,14 @@ class PlaceCooledIn(PlaceIn):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:
@@ -1128,14 +1127,14 @@ class LookInLight(GraphTask[str]):
     @staticmethod
     def compute_compatible_args_from_blueprint(
         task_blueprint: TaskBlueprint,
-        event: EventLike,
+        event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
-            event (EventLike): Event corresponding to the state of the scene
+            event (Event): Event corresponding to the state of the scene
                 at the beginning of the episode.
 
         Returns:

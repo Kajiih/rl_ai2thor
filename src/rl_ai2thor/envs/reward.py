@@ -13,20 +13,19 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from ai2thor.controller import Controller
-
-    from rl_ai2thor.utils.ai2thor_types import EventLike
+    from ai2thor.server import Event
 
 
 class BaseRewardHandler(ABC):
     """Base class for reward handlers."""
 
     @abstractmethod
-    def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, Any]]:
+    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the reward, task completion and additional information for the given event.
 
         Args:
-            event (Any): Event to calculate the reward for.
+            event (Event): Event to calculate the reward for.
 
         Returns:
             reward (float): Reward for the event.
@@ -60,12 +59,12 @@ class MultiRewardHandler(BaseRewardHandler):
         """
         self.reward_handlers = reward_handlers
 
-    def get_reward(self, event: EventLike) -> tuple[float, bool, dict[str, dict[str, Any]]]:
+    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, dict[str, Any]]]:
         """
         Return the sum of the rewards from the reward handlers.
 
         Args:
-            event (Any): Event to calculate the reward for.
+            event (Event): Event to calculate the reward for.
 
         Returns:
             reward (float): Sum of the rewards from the reward handlers for the event.

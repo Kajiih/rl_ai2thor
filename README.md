@@ -91,7 +91,7 @@ Virtual env: `rl_thor_benchmark`
 - [] Check and remove ipdb traces
 - [] Check and remove asserts
 - [] Check remaining TODOs in code
-- [] Check and remove noqa
+- [] Check and remove `noqa`, `type: ignore` and `sourcery`
 - [] Check and remove unused code
 - [] Check and remove unused dependencies
 - [] Check and remove unused files

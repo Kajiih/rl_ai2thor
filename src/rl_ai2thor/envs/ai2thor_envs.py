@@ -26,7 +26,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS
+from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjId
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -329,7 +329,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
 
     def _identify_target_object(
         self, env_action: EnvironmentAction, target_object_coordinates: tuple[float, float] | None
-    ) -> tuple[str | None, Event | None]:
+    ) -> tuple[SimObjId | None, Event | None]:
         """
         Identify the target object the given action (if any) and a failed action event if their is no valid target object.
 
@@ -338,7 +338,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             target_object_coordinates (tuple[float, float] | None): Coordinates of the target object.
 
         Returns:
-            target_object_id (str | None): Id of the target object.
+            target_object_id (SimObjId | None): Id of the target object.
             failed_action_event (Event | None): Event corresponding to the failed action.
         """
         # No target object case
@@ -426,7 +426,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             # Instantiate the scene
             controller_parameters = self.config["controller_parameters"]
             controller_parameters["scene"] = sampled_scene
-            initial_event = self.controller.reset(sampled_scene)
+            initial_event: Event = self.controller.reset(sampled_scene)  # type: ignore
 
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
