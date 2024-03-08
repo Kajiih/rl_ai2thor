@@ -37,12 +37,8 @@ jobs:
           ruff check . --output-format=github # -v
         continue-on-error: true
 
-      - name: Install public interface package 📥
-        run: |
-          python -m pip install .
-
       # TODO: Make the output more readable
-      - name: Test with pytest + doctest 🧪
+      - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
           python -m pytest -rA --cov=. # --doctest-modules
@@ -63,6 +59,10 @@ jobs:
           stats: true
           # verbose: true
         continue-on-error: true
+
+      - name: Install public interface package 📥
+        run: |
+          python -m pip install .
 
       - name: Verify public API types with Pylance ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
