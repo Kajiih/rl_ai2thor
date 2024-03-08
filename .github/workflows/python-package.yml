@@ -66,8 +66,22 @@ jobs:
           pip install pytest pytest-cov
           python -m pytest -rA --cov=. # --doctest-modules
         continue-on-error: true
-        
+
       - name: Upload coverage to Codecov 📊
+        uses: codecov/codecov-action@v4
+        with:
+          # file: .coverage
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run pytest 🧪 @pavelzw
+        uses: pavelzw/pytest-action@v2
+        with:
+          custom-arguments: "--cov=."
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov 📊 again
         uses: codecov/codecov-action@v4
         with:
           # file: .coverage

@@ -128,12 +128,9 @@ preview = true
 docstring-code-format = true
 
 # == Pytest == #
-[tool.pytest] # https://docs.pytest.org/en/stable/customize.html
+# [tool.pytest] # https://docs.pytest.org/en/stable/customize.html
 # testpaths = ["tests"]
-pythonpath = ["src"]
-
-[tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
+# pythonpath = ["src"]
 
 # == Coverage == #
 [tool.coverage.report]
