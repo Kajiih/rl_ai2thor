@@ -45,8 +45,8 @@ Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
 [tool.hatch.build.targets.wheel]
 packages = ["src/rl_ai2thor"]
 
-# === Ruff === #
-[tool.ruff] # https://docs.astral.sh/ruff/settings
+# == Ruff == # https://docs.astral.sh/ruff/settings
+[tool.ruff]
 target-version = "py312"
 line-length = 120
 src = ["src"]
@@ -127,12 +127,10 @@ max-args = 6
 preview = true
 docstring-code-format = true
 
-# == Pytest == #
-# [tool.pytest] # https://docs.pytest.org/en/stable/customize.html
-# testpaths = ["tests"]
-# pythonpath = ["src"]
+[tool.pytest]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
-# == Coverage == #
 [tool.coverage.report]
 exclude_also = [
   "def __repr__",
