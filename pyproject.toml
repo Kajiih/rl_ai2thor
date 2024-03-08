@@ -129,7 +129,7 @@ docstring-code-format = true
 
 # == Pytest == #
 [tool.pytest] # https://docs.pytest.org/en/stable/customize.html
-testpaths = ["tests"]
+# testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.pytest.ini_options]
