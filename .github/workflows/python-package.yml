@@ -37,12 +37,30 @@ jobs:
           ruff check . --output-format=github # -v
         continue-on-error: true
 
+      - name: Install public interface package 📥
+        run: |
+          python -m pip install .
+
       # TODO: Make the output more readable
       - name: Test with pytest 🧪
         run: |
           pip install pytest pytest-cov
           python -m pytest -rA --cov=. # --doctest-modules
+
+      # TODO: Make the output more readable
+      - name: Test with pytest 🧪 with test
+        run: |
+          pip install pytest pytest-cov
+          python -m pytest test -rA --cov=. # --doctest-modules
         continue-on-error: true
+
+      - name: Test with pytest
+        run: |
+          coverage run -m pytest  -v -s
+
+      - name: Test with pytest
+        run: |
+          coverage run -m pytest test -v -s
 
       - name: Upload coverage to Codecov 📊
         uses: codecov/codecov-action@v4
@@ -52,6 +70,19 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Install pytest-action dependencies 📥
+        run: |
+          pip install pytest-md
+          pip install pytest-emoji
+
+      - name: Run pytest @pavelzw
+        uses: pavelzw/pytest-action@v2
+        with:
+          custom-arguments: "--cov=."
+
+      - name: Run pytest @pavelzw no cov
+        uses: pavelzw/pytest-action@v2
+
       - name: Pylance type checking ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
         with:
@@ -59,10 +90,6 @@ jobs:
           stats: true
           # verbose: true
         continue-on-error: true
-
-      - name: Install public interface package 📥
-        run: |
-          python -m pip install .
 
       - name: Verify public API types with Pylance ✅ @jakebailey
         uses: jakebailey/pyright-action@v2
