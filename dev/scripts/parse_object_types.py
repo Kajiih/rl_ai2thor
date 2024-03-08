@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 url = "https://ai2thor.allenai.org/ithor/documentation/objects/object-types/"
 object_types_data_path = Path("src/rl_ai2thor/data/object_types_data.json")
 
-with urllib.request.urlopen(url) as response:
+with urllib.request.urlopen(url) as response:  # noqa: S310
     data = response.read()
 
 soup = BeautifulSoup(data.decode("utf-8"), "html.parser")

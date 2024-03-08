@@ -45,28 +45,7 @@ jobs:
       - name: Test with pytest + doctest 🧪
         run: |
           pip install pytest pytest-cov
-          python -m pytest -rA --doctest-modules --cov=.
-        continue-on-error: true
-
-        # TODO: Make the output more readable
-      - name: Test with pytest + doctest 🧪
-        run: |
-          pip install pytest pytest-cov
-          python -m pytest -v -rA --doctest-modules --cov=.
-        continue-on-error: true
-
-      # TODO: Make the output more readable
-      - name: Test with pytest 🧪
-        run: |
-          pip install pytest pytest-cov
-          python -m pytest -rA --cov=.
-        continue-on-error: true
-
-      # TODO: Make the output more readable
-      - name: Test with pytest 🧪
-        run: |
-          pip install pytest pytest-cov
-          python -m pytest -v -rA --cov=.
+          python -m pytest -rA --cov=. # --doctest-modules
         continue-on-error: true
 
       - name: Upload coverage to Codecov 📊
