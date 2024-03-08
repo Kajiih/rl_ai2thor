@@ -132,8 +132,8 @@ docstring-code-format = true
 testpaths = ["tests"]
 pythonpath = ["src"]
 
-[tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
+# [tool.pytest.ini_options]
+# addopts = ["--import-mode=importlib"]
 
 # == Coverage == #
 [tool.coverage.report]
