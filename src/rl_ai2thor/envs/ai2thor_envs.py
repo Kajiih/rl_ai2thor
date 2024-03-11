@@ -284,7 +284,6 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         self.current_task_type = UndefinableTask
         self.task = UndefinableTask()
         self.step_count = 0
-        self.np_rng = np.random.default_rng(self.config["seed"])
         # Initialize gymnasium seed
         super().reset(seed=self.config["seed"])
 
@@ -393,11 +392,9 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         """
         print("Resetting environment.")
         super().reset(seed=seed)
-        if seed is not None:
-            self.np_rng = np.random.default_rng(seed)
 
         # Sample a task blueprint
-        task_blueprint = self.task_blueprints[self.np_rng.choice(len(self.task_blueprints))]
+        task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
         self.current_task_type = task_blueprint.task_type
 
         # Initialize controller and sample task
@@ -409,7 +406,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
 
         # TODO: Check if this is correct
         if task_completion:
-            self.reset(seed=seed)
+            self.reset()
 
         self.step_count = 0
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
@@ -437,7 +434,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         while not compatible_arguments:
             print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
             # Sample a scene from the task blueprint
-            sampled_scene = self.np_rng.choice(sorted_scenes)
+            sampled_scene = self.np_random.choice(sorted_scenes)
             print(f"Sampled scene: {sampled_scene}.")
             # Instantiate the scene
             controller_parameters = self.config["controller_parameters"]
@@ -447,9 +444,12 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
                 task_blueprint.scenes.remove(sampled_scene)
-        sampled_task_args = compatible_arguments[self.np_rng.choice(len(compatible_arguments))]
+        sorted_compatible_arguments = sorted(compatible_arguments)
+        sampled_task_args = sorted_compatible_arguments[self.np_random.choice(len(compatible_arguments))]
+        print(f"Sampled task arguments: {sampled_task_args}.")
 
         self.current_scene = sampled_scene
+        self.current_task_args = sampled_task_args
 
         return initial_event, task_blueprint.task_type(*sampled_task_args)
 

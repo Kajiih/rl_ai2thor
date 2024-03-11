@@ -32,7 +32,7 @@ def test_random_agent_n_ep() -> None:
     try:
         run_output = random_agent.run_episode(nb_episodes=NB_EPISODES, total_max_steps=MAX_STEPS * NB_EPISODES)
     except TimeoutError as e:
-        import pdb
+        import pdb  # noqa PLC0415
 
         pdb.set_trace()
     random_agent.close()

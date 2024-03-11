@@ -1,6 +1,6 @@
 """Tests for the ai2thor_envs module."""
 
-import pickle as pkl
+import pickle as pkl  # noqa: S403
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
@@ -8,7 +8,6 @@ from unittest.mock import call, patch
 
 import gymnasium as gym
 import pytest
-import yaml
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 from PIL import Image
 
@@ -375,8 +374,13 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
     obs2, info2 = ithor_env_2.reset(seed=seed)
+    assert ithor_env.current_task_type == ithor_env_2.current_task_type
+    assert ithor_env.current_task_args == ithor_env_2.current_task_args
+
     obs1_2, info1_2 = ithor_env.reset(seed=seed)
     obs2_2, info2_2 = ithor_env_2.reset(seed=seed)
+    assert ithor_env.current_task_type == ithor_env_2.current_task_type
+    assert ithor_env.current_task_args == ithor_env_2.current_task_args
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -405,10 +409,16 @@ def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHO
 
 def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
+    task_type = ithor_env.current_task_type
+    task_args = ithor_env.current_task_args
+    to_serialize_data = (obs1, info1, task_type, task_args)
     data_path = Path("tests/data/reset_separate_runs_reproducibility_obs_info.pkl")
     # with data_path.open("wb") as f:
-    #     pkl.dump((obs1, info1), f)
-    obs2, info2 = pkl.load(data_path.open("rb"))
+    #     pkl.dump(to_serialize_data, f)
+    obs2, info2, task_type2, task_args2 = pkl.load(data_path.open("rb"))  # noqa: S301
+
+    assert task_type == task_type2
+    assert task_args == task_args2
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)

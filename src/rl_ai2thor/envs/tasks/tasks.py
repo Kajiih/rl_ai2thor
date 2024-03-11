@@ -8,7 +8,7 @@ TODO: Finish module docstring.
 # -> Need to add a list of object types to the receptacle required properties (its object type has to be in this list)
 # -> Need to implement handling properties where the value is a list of possible values instead of a single value
 # -> Then compute_compatible_args_from_blueprint can be more simply implemented using the candidates of the items
-# TODO: Implement compute_compatible_args_from_blueprint for other tasks
+
 # %% === Imports ===
 from __future__ import annotations
 
@@ -583,6 +583,8 @@ class PlaceNSameIn(GraphTask[str]):
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
+        Note: The order of the returned list is not deterministic.
+
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
             event (Event): Event corresponding to the state of the scene
@@ -645,6 +647,8 @@ class PlaceNSameInSubclass(PlaceNSameIn, ABC):
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
@@ -762,6 +766,8 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
+        Note: The order of the returned list is not deterministic.
+
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
             event (Event): Event corresponding to the state of the scene
@@ -863,6 +869,8 @@ class PlaceCleanedIn(PlaceIn):
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
+        Note: The order of the returned list is not deterministic.
+
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
             event (Event): Event corresponding to the state of the scene
@@ -946,6 +954,8 @@ class PlaceHeatedIn(PlaceIn):
         """
         Compute the compatible task arguments from the task blueprint and the event.
 
+        Note: The order of the returned list is not deterministic.
+
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
             event (Event): Event corresponding to the state of the scene
@@ -1025,6 +1035,8 @@ class PlaceCooledIn(PlaceIn):
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
@@ -1122,6 +1134,8 @@ class LookInLight(GraphTask[str]):
     ) -> list[tuple[PropValue, ...]]:
         """
         Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint.
