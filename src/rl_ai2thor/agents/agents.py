@@ -36,6 +36,8 @@ class BaseAgent[ObsType, ActType](ABC):
         """
         Return the action to take given the current observation.
 
+        Note: It doesn't run the on_step callback.
+
         Args:
             obs (ObsType): Current observation.
 
@@ -146,21 +148,27 @@ class BaseAgent[ObsType, ActType](ABC):
             obs (ObsType): Initial observation.
             info (dict[str, Any]): Additional information about the initial state of the environment.
         """
-        return self.env.reset(seed=seed)
+        obs, info = self.env.reset(seed)
+        self.callback.on_reset()
+        return obs, info
 
 
 class RandomAgent[ObsType, ActType](BaseAgent[ObsType, ActType]):
     """A random agent."""
 
-    def __init__(self, env: BaseAI2THOREnv[ObsType, ActType], callback: BaseCallback | None = None) -> None:
+    def __init__(
+        self, env: BaseAI2THOREnv[ObsType, ActType], callback: BaseCallback | None = None, seed: int | None = None
+    ) -> None:
         """
         Initialize the agent.
 
         Args:
             env (BaseAI2THOREnv): Environment to interact with.
             callback (BaseCallback, optional): Callback to use. Defaults to None.
+            seed (int, optional): Seed to use for the environment's action space. Defaults to None.
         """
         super().__init__(env, callback)
+        self.env.action_space.seed(seed)
 
     def __call__(self, obs: ObsType | None = None) -> ActType:  # noqa: ARG002
         """

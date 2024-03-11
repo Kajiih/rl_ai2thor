@@ -6,8 +6,8 @@ TODO: Finish module docstring.
 
 from __future__ import annotations
 
-import pathlib
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import ai2thor.controller
@@ -57,13 +57,13 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
             info (dict): Additional information about the environment.
         """
 
-    @abstractmethod
-    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
+    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:  # type: ignore
         """
         Reset the environment.
 
-        New scene is sampled and new task and reward handlers are initialized.
+        Reinitialize the environment random number generator if a seed is given.
         """
+        super().reset(seed=seed)
 
     def close(self) -> None:
         """Close the environment."""
@@ -74,34 +74,38 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
 
     def __init__(
         self,
+        config_folder_path: str | Path = "config",
         override_config: dict | None = None,
     ) -> None:
         """
         Initialize the environment.
 
         Args:
+            config_folder_path (str | Path): Relative path to the folder containing the configs.
+                The folder should contain a general.yaml file and a folder named environment_modes containing the environment mode configs.
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
-        self.config = self._load_and_override_config(override_config)
+        self.config = self._load_and_override_config(config_folder_path, override_config)
         self._create_action_space()
         self._create_observation_space()
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
-
-        # Add task set
         self.task_blueprints = self._create_task_blueprints()
 
     @staticmethod
-    def _load_and_override_config(override_config: dict | None = None) -> dict[str, Any]:
+    def _load_and_override_config(
+        config_folder_path: str | Path, override_config: dict | None = None
+    ) -> dict[str, Any]:
         """
         Load and update the config of the environment according to the override config.
 
         The environment mode config is added to the base config and given keys are overridden.
 
         Args:
+            config_folder_path (str | Path): Relative path to the folder containing the configs.
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
-        config_dir = pathlib.Path(ROOT_DIR, "config")
+        config_dir = Path(ROOT_DIR, config_folder_path)
         general_config_path = config_dir / "general.yaml"
         config = yaml.safe_load(general_config_path.read_text(encoding="utf-8"))
 
@@ -281,6 +285,8 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         self.task = UndefinableTask()
         self.step_count = 0
         self.np_rng = np.random.default_rng(self.config["seed"])
+        # Initialize gymnasium seed
+        super().reset(seed=self.config["seed"])
 
     def step(self, action: dict[str, Any]) -> tuple[NDArray[np.int8], float, bool, bool, dict[str, Any]]:
         """
@@ -386,6 +392,10 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         New scene is sampled and new task and reward handlers are initialized.
         """
         print("Resetting environment.")
+        super().reset(seed=seed)
+        if seed is not None:
+            self.np_rng = np.random.default_rng(seed)
+
         # Sample a task blueprint
         task_blueprint = self.task_blueprints[self.np_rng.choice(len(self.task_blueprints))]
         self.current_task_type = task_blueprint.task_type
@@ -422,11 +432,13 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             BaseTask: Sampled task.
         """
         compatible_arguments = []
+        sorted_scenes = sorted(task_blueprint.scenes)
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
         while not compatible_arguments:
             print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
             # Sample a scene from the task blueprint
-            sampled_scene = self.np_rng.choice(list(task_blueprint.scenes))
+            sampled_scene = self.np_rng.choice(sorted_scenes)
+            print(f"Sampled scene: {sampled_scene}.")
             # Instantiate the scene
             controller_parameters = self.config["controller_parameters"]
             controller_parameters["scene"] = sampled_scene

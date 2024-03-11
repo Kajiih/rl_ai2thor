@@ -27,7 +27,7 @@ def main() -> None:
     env = ITHOREnv()
     env.reset(seed=SEED)
     callback = RecordVideoCallback(current_output_dir / "video.mp4")
-    random_agent = RandomAgent(env, callback)
+    random_agent = RandomAgent(env, callback, seed=SEED)
 
     # Run the agent
     for _ in range(NB_EPISODES):

@@ -8,13 +8,14 @@ from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 # %% === Constants ===
 MAX_STEPS = 200
 NB_EPISODES = 5
+random_agent_seed = 0
 
 
 # %% === Running with random agent ===
 def test_random_agent_1_ep() -> None:
     """Test running the environment with a random agent."""
     env = ITHOREnv()
-    random_agent = RandomAgent(env)
+    random_agent = RandomAgent(env, seed=random_agent_seed)
     episode_output = random_agent.run_episode(nb_episodes=1, total_max_steps=MAX_STEPS)
     random_agent.close()
     total_reward, total_nb_steps = episode_output[0], episode_output[1]
@@ -27,8 +28,13 @@ def test_random_agent_1_ep() -> None:
 def test_random_agent_n_ep() -> None:
     """Test running the environment with a random agent."""
     env = ITHOREnv()
-    random_agent = RandomAgent(env)
-    run_output = random_agent.run_episode(nb_episodes=NB_EPISODES, total_max_steps=MAX_STEPS * NB_EPISODES)
+    random_agent = RandomAgent(env, seed=random_agent_seed)
+    try:
+        run_output = random_agent.run_episode(nb_episodes=NB_EPISODES, total_max_steps=MAX_STEPS * NB_EPISODES)
+    except TimeoutError as e:
+        import pdb
+
+        pdb.set_trace()
     random_agent.close()
     total_reward, total_nb_steps = run_output[0], run_output[1]
 

@@ -1,7 +1,9 @@
 """Tests for the ai2thor_envs module."""
 
+import pickle as pkl
 from collections.abc import Mapping
 from copy import deepcopy
+from pathlib import Path
 from unittest.mock import call, patch
 
 import gymnasium as gym
@@ -63,7 +65,7 @@ def test__load_and_override_config():
         patch("pathlib.Path.is_file", return_value=True),
     ):
         # Call the _load_and_override_config method with the override config
-        config = ITHOREnv._load_and_override_config(override_config)
+        config = ITHOREnv._load_and_override_config("config", override_config)
 
         # Assert the expected configuration values
         assert config == {
@@ -373,6 +375,40 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
     obs2, info2 = ithor_env_2.reset(seed=seed)
+    obs1_2, info1_2 = ithor_env.reset(seed=seed)
+    obs2_2, info2_2 = ithor_env_2.reset(seed=seed)
+
+    # Check if the scene are identical
+    split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+    split_assert_dicts(info1_2["metadata"], info2_2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+
+    # Check if the observations are identical
+    try:
+        assert obs1 == pytest.approx(obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
+    except AssertionError:
+        Image.fromarray(obs1).save("obs1.png")
+        Image.fromarray(obs2).save("obs2.png")
+        Image.fromarray(obs1 - obs2).save("diff.png")
+        assert obs1 == pytest.approx(obs2, abs=0, rel=0)
+
+    try:
+        assert obs1_2 == pytest.approx(obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
+    except AssertionError:
+        Image.fromarray(obs1_2).save("obs1_2.png")
+        Image.fromarray(obs2_2).save("obs2_2.png")
+        Image.fromarray(obs1_2 - obs2_2).save("diff_2.png")
+        assert obs1_2 == pytest.approx(obs2_2, abs=0, rel=0)
+
+    assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+    assert are_close_dict(info1_2["metadata"], info2_2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+
+
+def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
+    obs1, info1 = ithor_env.reset(seed=seed)
+    data_path = Path("tests/data/reset_separate_runs_reproducibility_obs_info.pkl")
+    # with data_path.open("wb") as f:
+    #     pkl.dump((obs1, info1), f)
+    obs2, info2 = pkl.load(data_path.open("rb"))
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -391,7 +427,7 @@ def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHO
 
 def test_reset_not_same_scene(ithor_env: ITHOREnv):
     _, info1 = ithor_env.reset(seed=seed)
-    _, info2 = ithor_env.reset()
+    _, info2 = ithor_env.reset(seed=seed + 1)
 
     assert not are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
