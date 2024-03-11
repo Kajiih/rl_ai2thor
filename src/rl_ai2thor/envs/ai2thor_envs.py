@@ -57,13 +57,13 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
             info (dict): Additional information about the environment.
         """
 
-    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:  # type: ignore
+    @abstractmethod
+    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
         """
         Reset the environment.
 
         New scene is sampled and new task and reward handlers are initialized.
         """
-        # super().reset(seed=seed)
 
     def close(self) -> None:
         """Close the environment."""
@@ -280,9 +280,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         self.current_task_type = UndefinableTask
         self.task = UndefinableTask()
         self.step_count = 0
-        # Initialize seed
-        # super().reset(seed=self.config["seed"])
-        self.np_random = np.random.default_rng(self.config["seed"])
+        self.np_rng = np.random.default_rng(self.config["seed"])
 
     def step(self, action: dict[str, Any]) -> tuple[NDArray[np.int8], float, bool, bool, dict[str, Any]]:
         """
@@ -388,11 +386,8 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         New scene is sampled and new task and reward handlers are initialized.
         """
         print("Resetting environment.")
-        # TODO: Check that the seed is used correctly
-        # super().reset(seed=seed)
-
         # Sample a task blueprint
-        task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
+        task_blueprint = self.task_blueprints[self.np_rng.choice(len(self.task_blueprints))]
         self.current_task_type = task_blueprint.task_type
 
         # Initialize controller and sample task
@@ -431,7 +426,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         while not compatible_arguments:
             print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
             # Sample a scene from the task blueprint
-            sampled_scene = self.np_random.choice(list(task_blueprint.scenes))
+            sampled_scene = self.np_rng.choice(list(task_blueprint.scenes))
             # Instantiate the scene
             controller_parameters = self.config["controller_parameters"]
             controller_parameters["scene"] = sampled_scene
@@ -440,7 +435,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
                 task_blueprint.scenes.remove(sampled_scene)
-        sampled_task_args = compatible_arguments[self.np_random.choice(len(compatible_arguments))]
+        sampled_task_args = compatible_arguments[self.np_rng.choice(len(compatible_arguments))]
 
         self.current_scene = sampled_scene
 
