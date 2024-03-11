@@ -87,13 +87,16 @@ class Relation(ABC):
         Returns:
             set[SimObjId]: The ids of the related item's candidate's that satisfy the relation.
         """
-        return {
-            related_object_id
-            for related_object_id in self._extract_related_object_ids(
-                main_obj_metadata
-            )  # BUG: self._extract_related_object_ids(main_obj_metadata) is None?
-            if related_object_id in self.related_item.candidate_ids
-        }
+        # TODO: Delete try-except block
+        try:
+            satisfying_related_object_ids = {
+                related_object_id
+                for related_object_id in self._extract_related_object_ids(main_obj_metadata)
+                if related_object_id in self.related_item.candidate_ids
+            }
+        except TypeError:
+            print(f"main_obj_metadata: {main_obj_metadata}")
+        return satisfying_related_object_ids
 
     def __str__(self) -> str:
         return f"{self.main_item} is {self.type_id} {self.related_item}"
@@ -138,7 +141,8 @@ class ReceptacleOfRelation(Relation):
     @staticmethod
     def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
         """Return the ids of the objects contained in the main object."""
-        return main_obj_metadata["receptacleObjectIds"]
+        receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
+        return receptacle_object_ids if receptacle_object_ids is not None else []
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -165,7 +169,8 @@ class ContainedInRelation(Relation):
     @staticmethod
     def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
         """Return the ids of the objects containing the main object."""
-        return main_obj_metadata["parentReceptacles"]
+        parent_receptacles = main_obj_metadata["parentReceptacles"]
+        return parent_receptacles if parent_receptacles is not None else []
 
 
 # %% === Mappings ===

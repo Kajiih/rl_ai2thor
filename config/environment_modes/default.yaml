@@ -101,10 +101,11 @@ tasks:
       placed_object_type: [_PICKUPABLES] # Sim object type or sim object group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
       receptacle_type: [_RECEPTACLES]
     scenes: &ALL_SCENES [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
-  - type: PlaceSameTwoIn
+  - type: PlaceNSameIn
     args:
       placed_object_type: [_PICKUPABLES]
       receptacle_type: [_RECEPTACLES]
+      n: 2
     scenes: *ALL_SCENES
   - type: PlaceWithMoveableRecepIn
     args:

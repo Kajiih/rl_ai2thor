@@ -514,49 +514,56 @@ class TaskBlueprint:
 
 
 # %% == Alfred tasks ==
-class PlaceIn(GraphTask[str]):
+class PlaceNSameIn(GraphTask[str]):
     """
-    Task for placing a given object in a given receptacle.
+    Task for placing n objects of the same type in a receptacle.
 
-    This is equivalent to the pick_and_place_simple task from Alfred.
+    This is equivalent to the pick_two_obj_and_place task from Alfred with n=2 and
+    pick_and_place_simple with n=1.
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+    def __init__(self, placed_object_type: str, receptacle_type: str, n: int = 1) -> None:
         """
         Initialize the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
+            n (int): The number of objects to place.
         """
         self.placed_object_type = placed_object_type
         self.receptacle_type = receptacle_type
+        self.n = n
 
-        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type)
+        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type, n)
 
         super().__init__(task_description_dict)
 
     @staticmethod
-    def _create_task_description_dict(placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(placed_object_type: str, receptacle_type: str, n: int = 1) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
+            n (int): The number of objects to place.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
-        return {
+        task_description_dict: TaskDict[str] = {
             "receptacle": {
                 "properties": {"objectType": receptacle_type},
-            },
-            "placed_object": {
+            }
+        }
+        for i in range(n):
+            task_description_dict[f"placed_object_{i}"] = {
                 "properties": {"objectType": placed_object_type},
                 "relations": {"receptacle": ["contained_in"]},
-            },
-        }
+            }
+
+        return task_description_dict
 
     def text_description(self) -> str:
         """
@@ -565,7 +572,7 @@ class PlaceIn(GraphTask[str]):
         Returns:
             description (str): Text description of the task.
         """
-        return f"Place {self.placed_object_type} in {self.receptacle_type}"
+        return f"Place {self.n} {self.placed_object_type} in {self.receptacle_type}"
 
     # TODO: Create a generalized version of this that works for all tasks
     @staticmethod
@@ -592,77 +599,47 @@ class PlaceIn(GraphTask[str]):
             scene_object_types_count[obj_type] += 1
 
         # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
+        min_n = min(task_blueprint.task_args["n"])
         args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count.keys()),
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count.keys()),
+            "placed_object_type": task_blueprint.task_args["placed_object_type"]
+            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= min_n},
+            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
         }
-        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
-        return [
-            (placed_object_type, compatible_receptacle)
+
+        # Create a list with all the compatible combinations of placed_object_type and receptacle_types and with enough instances of placed_object_type in the scene
+        compatible_args = [
+            (placed_object_type, compatible_receptacle, n)
             for placed_object_type in args_blueprints["placed_object_type"]
             for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            for n in task_blueprint.task_args["n"]
             if compatible_receptacle in args_blueprints["receptacle_type"]
+            and scene_object_types_count[placed_object_type] >= n
         ]
 
+        return compatible_args
 
-class PlaceSameTwoIn(GraphTask[str]):
-    """
-    Task for placing two objects of the same given type in a given receptacle.
 
-    This is equivalent to the pick_two_obj_and_place task from Alfred.
-    """
+class PlaceNSameInSubclass(PlaceNSameIn, ABC):
+    """Abstract subclass of PlaceNSameIn for tasks with a specific number of objects to place."""
+
+    n: int
 
     def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
         """
         Initialize the task.
 
         Args:
-            placed_object_type (str): The type of objects to place.
-            receptacle_type (str): The type of receptacle to place the object in.
-        """
-        self.placed_object_type = placed_object_type
-        self.receptacle_type = receptacle_type
-
-        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type)
-        super().__init__(task_description_dict)
-
-    @staticmethod
-    def _create_task_description_dict(placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
-        """
-        Create the task description dictionary for the task.
-
-        Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
-
-        Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
         """
-        return {
-            "receptacle": {
-                "properties": {"objectType": receptacle_type},
-            },
-            "placed_object_1": {
-                "properties": {"objectType": placed_object_type},
-                "relations": {"receptacle": ["contained_in"]},
-            },
-            "placed_object_2": {
-                "properties": {"objectType": placed_object_type},
-                "relations": {"receptacle": ["contained_in"]},
-            },
-        }
+        super().__init__(placed_object_type, receptacle_type, self.n)
 
-    def text_description(self) -> str:
-        """
-        Return a text description of the task.
+        # Replace the instance attribute with the class attribute
+        del self.n
 
-        Returns:
-            description (str): Text description of the task.
-        """
-        return f"Place 2 {self.placed_object_type} in {self.receptacle_type}"
-
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -678,6 +655,7 @@ class PlaceSameTwoIn(GraphTask[str]):
             compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
         """
         scene_object_types_count = {}
+
         for obj_metadata in event.metadata["objects"]:
             obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
             if obj_type not in scene_object_types_count:
@@ -687,16 +665,29 @@ class PlaceSameTwoIn(GraphTask[str]):
         # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
         args_blueprints = {
             "placed_object_type": task_blueprint.task_args["placed_object_type"]
-            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= 2},  # noqa: PLR2004
+            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= cls.n},
             "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
         }
-        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
-        return [
+
+        # Create a list with all the compatible combinations of placed_object_type and receptacle_types and with enough instances of placed_object_type in the scene
+        compatible_args = [
             (placed_object_type, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
             for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
+
+        return compatible_args
+
+
+class PlaceIn(PlaceNSameInSubclass):
+    """
+    Task for placing a given object in a given receptacle.
+
+    This is equivalent to the pick_and_place_simple task from Alfred.
+    """
+
+    n = 1
 
 
 class PlaceWithMoveableRecepIn(GraphTask[str]):
@@ -1163,7 +1154,7 @@ class LookInLight(GraphTask[str]):
 # %% === Constants ===
 ALL_TASKS = {
     "PlaceIn": PlaceIn,
-    "PlaceSameTwoIn": PlaceSameTwoIn,
+    "PlaceNSameIn": PlaceNSameIn,
     "PlaceWithMoveableRecepIn": PlaceWithMoveableRecepIn,
     "PlaceCleanedIn": PlaceCleanedIn,
     "PlaceHeatedIn": PlaceHeatedIn,

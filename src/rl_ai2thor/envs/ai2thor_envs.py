@@ -57,13 +57,13 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
             info (dict): Additional information about the environment.
         """
 
-    @abstractmethod
-    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
+    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:  # type: ignore
         """
         Reset the environment.
 
         New scene is sampled and new task and reward handlers are initialized.
         """
+        # super().reset(seed=seed)
 
     def close(self) -> None:
         """Close the environment."""
@@ -276,8 +276,12 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         }
         self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
+        self.current_scene = None  # TODO: Replace with an undefined scene of type SceneId
+        self.current_task_type = UndefinableTask
         self.task = UndefinableTask()
         self.step_count = 0
+        # Initialize seed
+        # super().reset(seed=self.config["seed"])
         self.np_random = np.random.default_rng(self.config["seed"])
 
     def step(self, action: dict[str, Any]) -> tuple[NDArray[np.int8], float, bool, bool, dict[str, Any]]:
@@ -383,12 +387,13 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
 
         New scene is sampled and new task and reward handlers are initialized.
         """
-        print("Resetting environment and starting new episode")
+        print("Resetting environment.")
         # TODO: Check that the seed is used correctly
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
 
         # Sample a task blueprint
         task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
+        self.current_task_type = task_blueprint.task_type
 
         # Initialize controller and sample task
         self.last_event, self.task = self._initialize_controller_and_task(task_blueprint)
@@ -405,6 +410,9 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
         observation: NDArray = self.last_event.frame  # type: ignore
+        print(
+            f"Resetting environment and starting new episode in {self.current_scene} with task {self.current_task_type}."
+        )
         return observation, info
 
     def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
@@ -421,6 +429,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         compatible_arguments = []
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
         while not compatible_arguments:
+            print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
             # Sample a scene from the task blueprint
             sampled_scene = self.np_random.choice(list(task_blueprint.scenes))
             # Instantiate the scene
@@ -431,8 +440,9 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
                 task_blueprint.scenes.remove(sampled_scene)
+        sampled_task_args = compatible_arguments[self.np_random.choice(len(compatible_arguments))]
 
-        sampled_task_args = self.np_random.choice(compatible_arguments)
+        self.current_scene = sampled_scene
 
         return initial_event, task_blueprint.task_type(*sampled_task_args)
 
@@ -463,7 +473,9 @@ class UnknownTaskTypeError(ValueError):
     def __init__(self, task_type: str) -> None:
         self.task_type = task_type
         super().__init__(
-            f"Unknown task type {task_type} in environment mode config. Available tasks are {list(ALL_TASKS.keys())}."
+            f"Unknown task type {task_type} in environment mode config."
+            f"Available tasks are {list(ALL_TASKS.keys())}."
+            f"If you have defined a new task, make sure to add it to the ALL_TASKS dictionary of the envs.tasks.tasks module."
         )
 
 
