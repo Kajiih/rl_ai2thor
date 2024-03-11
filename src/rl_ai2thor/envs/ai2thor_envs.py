@@ -429,11 +429,11 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             BaseTask: Sampled task.
         """
         compatible_arguments = []
-        sorted_scenes = sorted(task_blueprint.scenes)
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
         while not compatible_arguments:
             print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
             # Sample a scene from the task blueprint
+            sorted_scenes = sorted(task_blueprint.scenes)
             sampled_scene = self.np_random.choice(sorted_scenes)
             print(f"Sampled scene: {sampled_scene}.")
             # Instantiate the scene
@@ -444,6 +444,8 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
                 task_blueprint.scenes.remove(sampled_scene)
+                if not task_blueprint.scenes:
+                    raise NoCompatibleSceneError(task_blueprint)
         sorted_compatible_arguments = sorted(compatible_arguments)
         sampled_task_args = sorted_compatible_arguments[self.np_random.choice(len(compatible_arguments))]
         print(f"Sampled task arguments: {sampled_task_args}.")
@@ -486,11 +488,26 @@ class UnknownTaskTypeError(ValueError):
         )
 
 
-class NoTaskBlueprintError(ValueError):
+class NoTaskBlueprintError(Exception):
     """Exception raised when no task blueprint is found in the environment mode config."""
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
-        super().__init__(
-            f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {config}."
-        )
+
+    def __str__(self) -> str:
+        return f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {self.config}."
+
+
+class NoCompatibleSceneError(ValueError):
+    """
+    Exception raised when no compatible scene is found to instantiate a task from a task blueprint.
+
+    Either the available scenes are not compatible with the task blueprint or the task is
+    simply impossible in the environment.
+    """
+
+    def __init__(self, task_blueprint: TaskBlueprint) -> None:
+        self.task_blueprint = task_blueprint
+
+    def __str__(self) -> str:
+        return f"No compatible scene found to instantiate a task from the task blueprint {self.task_blueprint}.\n Make sure that the task is possible in the environment and that the available scenes are compatible with the task blueprint."

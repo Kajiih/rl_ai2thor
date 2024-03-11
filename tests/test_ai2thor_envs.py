@@ -411,8 +411,8 @@ def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
     task_type = ithor_env.current_task_type
     task_args = ithor_env.current_task_args
-    to_serialize_data = (obs1, info1, task_type, task_args)
     data_path = Path("tests/data/reset_separate_runs_reproducibility_obs_info.pkl")
+    # to_serialize_data = (obs1, info1, task_type, task_args)
     # with data_path.open("wb") as f:
     #     pkl.dump(to_serialize_data, f)
     obs2, info2, task_type2, task_args2 = pkl.load(data_path.open("rb"))  # noqa: S301

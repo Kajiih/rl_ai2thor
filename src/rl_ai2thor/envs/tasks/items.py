@@ -633,7 +633,6 @@ class NoCandidateError(Exception):
     """
 
     def __init__(self, item: TaskItem) -> None:
-        """Initialize the NoCandidateError object."""
         self.item = item
 
     def __str__(self) -> str:
@@ -653,7 +652,6 @@ class NoValidAssignmentError(Exception):
     """
 
     def __init__(self, overlap_class: ItemOverlapClass) -> None:
-        """Initialize the NoValidAssignmentError object."""
         self.overlap_class = overlap_class
 
         # Check that the items have at least one valid candidate
