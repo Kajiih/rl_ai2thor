@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import imageio
+import numpy as np
 from numpy.typing import NDArray
 
 
@@ -37,7 +38,7 @@ class BaseCallback[ObsType]:
         """Triggered when the agent is reset."""
 
 
-class RecordVideoCallback(BaseCallback[NDArray]):
+class RecordVideoCallback(BaseCallback[dict[str, NDArray[np.int8] | str]]):
     """Callback to record a video of the environment."""
 
     def __init__(self, path_to_write: str | Path, frame_rate: int = 30) -> None:
@@ -48,14 +49,15 @@ class RecordVideoCallback(BaseCallback[NDArray]):
 
     def on_step(
         self,
-        obs: NDArray,
+        obs: dict[str, NDArray[np.int8] | str],
         reward: float = 0,  # noqa: ARG002
         terminated: bool = False,  # noqa: ARG002
         truncated: bool = False,  # noqa: ARG002
         info: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> None:
         """Record the observation."""
-        self.video_writer.append_data(obs)
+        frame = obs["env_obs"]
+        self.video_writer.append_data(frame)
 
     def on_close(self) -> None:
         """Close the video writer."""

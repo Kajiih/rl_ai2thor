@@ -143,6 +143,15 @@ class BaseTask(ABC):
         """Return the reward handler for the task."""
         return self._reward_handler_type(self)
 
+    @abstractmethod
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+
 
 class UndefinableTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
@@ -164,6 +173,11 @@ class UndefinableTask(BaseTask):
     ) -> list[tuple[PropValue, ...]]:
         """Compute the compatible task arguments from the task blueprint and the event."""
         raise NotImplementedError
+
+    @staticmethod
+    def text_description() -> str:
+        """Return a text description of the task."""
+        return ""
 
 
 type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], dict]]
@@ -1125,7 +1139,7 @@ class LookInLight(GraphTask[str]):
         Returns:
             description (str): Text description of the task.
         """
-        return f"Look st {self.looked_at_object_type} in light"
+        return f"Look at {self.looked_at_object_type} in light"
 
     @staticmethod
     def compute_compatible_args_from_blueprint(

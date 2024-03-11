@@ -69,8 +69,19 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
         """Close the environment."""
 
 
-class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
-    """Wrapper base class for iTHOR environment."""
+class ITHOREnv(
+    BaseAI2THOREnv[
+        dict[str, NDArray[np.int8] | str],
+        dict[str, Any],
+    ]
+):
+    """
+    Wrapper base class for iTHOR environment.
+
+    It is a multi-task environment that follows MTEnv interface with the observation
+    being returned as a dictionary with a env_obs and task_obs keys corresponding to
+    the environment observation and the task observation respectively.
+    """
 
     def __init__(
         self,
@@ -181,7 +192,11 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             controller_parameters["width"],
         )
         nb_channels = 1 if self.config["grayscale"] else 3
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
+        env_obs_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
+        task_obs_space = gym.spaces.Text(
+            max_length=1000, charset="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,. "
+        )
+        self.observation_space = gym.spaces.Dict({"env_obs": env_obs_space, "task_obs": task_obs_space})
 
     @staticmethod
     def _compute_available_scenes(scenes: Iterable[str], excluded_scenes: set[str] | None = None) -> set[SceneId]:
@@ -287,7 +302,9 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         # Initialize gymnasium seed
         super().reset(seed=self.config["seed"])
 
-    def step(self, action: dict[str, Any]) -> tuple[NDArray[np.int8], float, bool, bool, dict[str, Any]]:
+    def step(
+        self, action: dict[str, Any]
+    ) -> tuple[dict[str, NDArray[np.int8] | str], float, bool, bool, dict[str, Any]]:
         """
         Take a step in the environment.
 
@@ -295,7 +312,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
             action (dict): Action to take in the environment.
 
         Returns:
-            observation(NDArray[np.int8]): Observation of the environment.
+            observation(dict[str, NDArray[np.int8] | str]): Observation of the environment.
             reward (float): Reward of the action.
             terminated (bool): Whether the agent reaches a terminal state (realized the task).
             truncated (bool): Whether the limit of steps per episode has been reached.
@@ -324,7 +341,8 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
 
         self.step_count += 1
 
-        observation: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
+        environment_obs: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
+        observation = {"env_obs": environment_obs, "task_obs": self.task.text_description()}
         reward, terminated, task_info = self.reward_handler.get_reward(new_event)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
@@ -384,7 +402,7 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         )
 
     # TODO: Adapt this with general task and reward handling
-    def reset(self, seed: int | None = None) -> tuple[NDArray[np.int8], dict]:
+    def reset(self, seed: int | None = None) -> tuple[dict[str, NDArray[np.int8] | str], dict]:
         """
         Reset the environment.
 
@@ -411,10 +429,12 @@ class ITHOREnv(BaseAI2THOREnv[NDArray[np.int8], dict[str, Any]]):
         self.step_count = 0
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
-        observation: NDArray = self.last_event.frame  # type: ignore
+        obs_env: NDArray = self.last_event.frame  # type: ignore
+        observation = {"env_obs": obs_env, "task_obs": self.task.text_description()}
         print(
             f"Resetting environment and starting new episode in {self.current_scene} with task {self.current_task_type}."
         )
+
         return observation, info
 
     def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
