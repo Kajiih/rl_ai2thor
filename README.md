@@ -79,6 +79,8 @@ Virtual env: `rl_thor_benchmark`
   - [ ] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
   - [ ] Add parameters to relations and properties
   - [ ] Improve config (and environment mode config) handling
+  - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
+  - [ ] Change multitask setting to be a wrapper and make base env as single task
   - [ ] ManipulaTHOR env
   - [ ] RoboTHOR env
 

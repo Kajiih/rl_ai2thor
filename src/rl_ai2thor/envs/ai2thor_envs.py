@@ -184,6 +184,7 @@ class ITHOREnv(
             action_space_dict["target_object_position"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
         self.action_space = gym.spaces.Dict(action_space_dict)
+        
 
     def _create_observation_space(self) -> None:
         controller_parameters = self.config["controller_parameters"]

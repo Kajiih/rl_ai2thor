@@ -6,10 +6,12 @@ from copy import deepcopy
 from pathlib import Path
 from unittest.mock import call, patch
 
+from numpy.typing import NDArray
 import gymnasium as gym
 import pytest
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 from PIL import Image
+import yaml
 
 from rl_ai2thor.envs.actions import EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import (
@@ -185,8 +187,14 @@ def test__create_observation_space(ithor_env: ITHOREnv):
 
     ithor_env._create_observation_space()
 
-    assert isinstance(ithor_env.observation_space, gym.spaces.Box)
-    assert ithor_env.observation_space.shape == (84, 44, 3)
+    assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
+    env_observation = ithor_env.observation_space.spaces["env_obs"]
+    task_observation = ithor_env.observation_space.spaces["task_obs"]
+
+    assert isinstance(env_observation, gym.spaces.Box)
+    assert env_observation.shape == (84, 44, 3)
+    assert isinstance(task_observation, gym.spaces.Text)
+    # TODO: Need to change this when the task observation can change
 
 
 def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
@@ -200,8 +208,11 @@ def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
 
     ithor_env._create_observation_space()
 
-    assert isinstance(ithor_env.observation_space, gym.spaces.Box)
-    assert ithor_env.observation_space.shape == (84, 44, 1)
+    assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
+    env_observation = ithor_env.observation_space.spaces["env_obs"]
+
+    assert isinstance(env_observation, gym.spaces.Box)
+    assert env_observation.shape == (84, 44, 1)
 
 
 def test__compute_available_scenes():
@@ -371,16 +382,26 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 
 # This test fails sometimes because AI2THOR is not deterministic
 # ! Sometimes 'Pen' and 'Pencil' are switched...?
-def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):
+def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
     obs1, info1 = ithor_env.reset(seed=seed)
+    env_obs1: NDArray = obs1["env_obs"]  # type: ignore
+    task_obs1 = obs1["task_obs"]
     obs2, info2 = ithor_env_2.reset(seed=seed)
+    env_obs2: NDArray = obs2["env_obs"]  # type: ignore
+    task_obs2 = obs2["task_obs"]
     assert ithor_env.current_task_type == ithor_env_2.current_task_type
     assert ithor_env.current_task_args == ithor_env_2.current_task_args
+    assert task_obs1 == task_obs2
 
     obs1_2, info1_2 = ithor_env.reset(seed=seed)
+    env_obs1_2: NDArray = obs1_2["env_obs"]  # type: ignore
+    task_obs1_2 = obs1_2["task_obs"]
     obs2_2, info2_2 = ithor_env_2.reset(seed=seed)
+    env_obs2_2: NDArray = obs2_2["env_obs"]  # type: ignore
+    task_obs2_2 = obs2_2["task_obs"]
     assert ithor_env.current_task_type == ithor_env_2.current_task_type
     assert ithor_env.current_task_args == ithor_env_2.current_task_args
+    assert task_obs1_2 == task_obs2_2
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -388,20 +409,20 @@ def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHO
 
     # Check if the observations are identical
     try:
-        assert obs1 == pytest.approx(obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
+        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(obs1).save("obs1.png")
-        Image.fromarray(obs2).save("obs2.png")
-        Image.fromarray(obs1 - obs2).save("diff.png")
-        assert obs1 == pytest.approx(obs2, abs=0, rel=0)
+        Image.fromarray(env_obs1).save("obs1.png")
+        Image.fromarray(env_obs2).save("obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save("diff.png")
+        assert env_obs1 == pytest.approx(env_obs2, abs=0, rel=0)
 
     try:
-        assert obs1_2 == pytest.approx(obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
+        assert env_obs1_2 == pytest.approx(env_obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(obs1_2).save("obs1_2.png")
-        Image.fromarray(obs2_2).save("obs2_2.png")
-        Image.fromarray(obs1_2 - obs2_2).save("diff_2.png")
-        assert obs1_2 == pytest.approx(obs2_2, abs=0, rel=0)
+        Image.fromarray(env_obs1_2).save("env_obs1_2.png")
+        Image.fromarray(env_obs1_2).save("env_obs2_2.png")
+        Image.fromarray(env_obs1_2 - env_obs2_2).save("diff_2.png")
+        assert env_obs1_2 == pytest.approx(env_obs2_2, abs=0, rel=0)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
     assert are_close_dict(info1_2["metadata"], info2_2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -424,13 +445,18 @@ def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
     # Check if the observations are identical
+    env_obs1: NDArray = obs1["env_obs"]  # type: ignore
+    task_obs1 = obs1["task_obs"]
+    env_obs2: NDArray = obs2["env_obs"]  # type: ignore
+    task_obs2 = obs2["task_obs"]
+    assert task_obs1 == task_obs2
     try:
-        assert obs1 == pytest.approx(obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
+        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(obs1).save("obs1.png")
-        Image.fromarray(obs2).save("obs2.png")
-        Image.fromarray(obs1 - obs2).save("diff.png")
-        assert obs1 == pytest.approx(obs2, abs=0, rel=0)
+        Image.fromarray(env_obs1).save("obs1.png")
+        Image.fromarray(env_obs2).save("obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save("diff.png")
+        assert env_obs1 == pytest.approx(env_obs2, abs=0, rel=0)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
