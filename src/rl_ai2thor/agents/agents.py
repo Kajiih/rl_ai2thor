@@ -137,18 +137,19 @@ class BaseAgent[ObsType, ActType](ABC):
         self.env.close()
         self.callback.on_close()
 
-    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[ObsType, dict[str, Any]]:
         """
         Reset the environment and return the initial observation.
 
         Args:
             seed (int, optional): Seed to use for the environment. Defaults to None.
+            options (dict[str, Any], optional): Options to use for the environment's reset. Defaults to None.
 
         Returns:
             obs (ObsType): Initial observation.
             info (dict[str, Any]): Additional information about the initial state of the environment.
         """
-        obs, info = self.env.reset(seed)
+        obs, info = self.env.reset(seed=seed, options=options)
         self.callback.on_reset()
         return obs, info
 

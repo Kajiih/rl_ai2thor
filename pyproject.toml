@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rl_ai2thor"
-version = "0.4.0"
+version = "0.4.1"
 description = "RL environment for AI2THOR"
 readme = "README.md"
 license = "MIT" # TODO: Check this
@@ -128,7 +128,10 @@ preview = true
 docstring-code-format = true
 
 # == Pytest == #
-# [tool.pytest] # https://docs.pytest.org/en/stable/customize.html
+[tool.pytest] # https://docs.pytest.org/en/stable/customize.html
+[tool.pytest.ini_options]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+
 # testpaths = ["tests"]
 # pythonpath = ["src"]
 

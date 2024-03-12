@@ -38,7 +38,7 @@ class BaseCallback[ObsType]:
         """Triggered when the agent is reset."""
 
 
-class RecordVideoCallback(BaseCallback[dict[str, NDArray[np.int8] | str]]):
+class RecordVideoCallback(BaseCallback[dict[str, NDArray[np.uint8] | str]]):
     """Callback to record a video of the environment."""
 
     def __init__(self, path_to_write: str | Path, frame_rate: int = 30) -> None:
@@ -49,7 +49,7 @@ class RecordVideoCallback(BaseCallback[dict[str, NDArray[np.int8] | str]]):
 
     def on_step(
         self,
-        obs: dict[str, NDArray[np.int8] | str],
+        obs: dict[str, NDArray[np.uint8] | str],
         reward: float = 0,  # noqa: ARG002
         terminated: bool = False,  # noqa: ARG002
         truncated: bool = False,  # noqa: ARG002

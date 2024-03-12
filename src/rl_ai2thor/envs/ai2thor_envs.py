@@ -57,13 +57,13 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
             info (dict): Additional information about the environment.
         """
 
-    def reset(self, seed: int | None = None) -> tuple[ObsType, dict[str, Any]]:  # type: ignore
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[ObsType, dict[str, Any]]:  # type: ignore
         """
         Reset the environment.
 
         Reinitialize the environment random number generator if a seed is given.
         """
-        super().reset(seed=seed)
+        super().reset(seed=seed, options=options)
 
     def close(self) -> None:
         """Close the environment."""
@@ -71,7 +71,7 @@ class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
 
 class ITHOREnv(
     BaseAI2THOREnv[
-        dict[str, NDArray[np.int8] | str],
+        dict[str, NDArray[np.uint8] | str],
         dict[str, Any],
     ]
 ):
@@ -184,7 +184,6 @@ class ITHOREnv(
             action_space_dict["target_object_position"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
         self.action_space = gym.spaces.Dict(action_space_dict)
-        
 
     def _create_observation_space(self) -> None:
         controller_parameters = self.config["controller_parameters"]
@@ -193,11 +192,16 @@ class ITHOREnv(
             controller_parameters["width"],
         )
         nb_channels = 1 if self.config["grayscale"] else 3
-        env_obs_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], nb_channels))
+        env_obs_space = gym.spaces.Box(
+            low=0, high=255, shape=(resolution[0], resolution[1], nb_channels), dtype=np.uint8
+        )
         task_obs_space = gym.spaces.Text(
             max_length=1000, charset="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,. "
         )
-        self.observation_space = gym.spaces.Dict({"env_obs": env_obs_space, "task_obs": task_obs_space})
+        self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
+            "env_obs": env_obs_space,
+            "task_obs": task_obs_space,
+        })
 
     @staticmethod
     def _compute_available_scenes(scenes: Iterable[str], excluded_scenes: set[str] | None = None) -> set[SceneId]:
@@ -305,7 +309,7 @@ class ITHOREnv(
 
     def step(
         self, action: dict[str, Any]
-    ) -> tuple[dict[str, NDArray[np.int8] | str], float, bool, bool, dict[str, Any]]:
+    ) -> tuple[dict[str, NDArray[np.uint8] | str], float, bool, bool, dict[str, Any]]:
         """
         Take a step in the environment.
 
@@ -313,7 +317,7 @@ class ITHOREnv(
             action (dict): Action to take in the environment.
 
         Returns:
-            observation(dict[str, NDArray[np.int8] | str]): Observation of the environment.
+            observation(dict[str, NDArray[np.uint8] | str]): Observation of the environment.
             reward (float): Reward of the action.
             terminated (bool): Whether the agent reaches a terminal state (realized the task).
             truncated (bool): Whether the limit of steps per episode has been reached.
@@ -403,14 +407,16 @@ class ITHOREnv(
         )
 
     # TODO: Adapt this with general task and reward handling
-    def reset(self, seed: int | None = None) -> tuple[dict[str, NDArray[np.int8] | str], dict]:
+    def reset(
+        self, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[dict[str, NDArray[np.uint8] | str], dict]:
         """
         Reset the environment.
 
         New scene is sampled and new task and reward handlers are initialized.
         """
         print("Resetting environment.")
-        super().reset(seed=seed)
+        super().reset(seed=seed, options=options)
 
         # Sample a task blueprint
         task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]

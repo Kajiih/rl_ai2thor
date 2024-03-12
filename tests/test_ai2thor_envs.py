@@ -4,14 +4,14 @@ import pickle as pkl  # noqa: S403
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import call, patch
 
-from numpy.typing import NDArray
 import gymnasium as gym
 import pytest
+import yaml
 from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 from PIL import Image
-import yaml
 
 from rl_ai2thor.envs.actions import EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import (
@@ -22,6 +22,9 @@ from rl_ai2thor.envs.ai2thor_envs import (
 )
 from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjectType
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 # %% === Constants ===
 abs_tolerance = 4
@@ -36,7 +39,6 @@ seed = 42
 def ithor_env():
     env = ITHOREnv()
     yield env
-
     env.close()
 
 
@@ -44,7 +46,6 @@ def ithor_env():
 def ithor_env_2():
     env = ITHOREnv()
     yield env
-
     env.close()
 
 
@@ -446,6 +447,10 @@ def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
 
     # Check if the observations are identical
     env_obs1: NDArray = obs1["env_obs"]  # type: ignore
+    print(f"{env_obs1.shape = }")
+    print(f"{env_obs1.shape = }")
+    print(f"{env_obs1.shape = }")
+    print(f"{env_obs1.shape = }")
     task_obs1 = obs1["task_obs"]
     env_obs2: NDArray = obs2["env_obs"]  # type: ignore
     task_obs2 = obs2["task_obs"]

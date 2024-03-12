@@ -81,6 +81,14 @@ Virtual env: `rl_thor_benchmark`
   - [ ] Improve config (and environment mode config) handling
   - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
   - [ ] Change multitask setting to be a wrapper and make base env as single task
+    - [ ] Add Single task wrapper instead?
+  - [ ] Add normalize wrapper that normalizes observation (should not be needed) and actions: [-1, 1] for continuous
+    - [ ] Also make this wrapper change obs from channel last to channel first
+  - [ ] TODO: Improve environment registering (kwargs, wrappers..)
+  - [ ] Make automatic version handling for the package and the environment register
+  - [ ] Make Grayscale wrapper
+  - [ ] Make some wrapper being the default behavior
+  - [ ] Test wrappers
   - [ ] ManipulaTHOR env
   - [ ] RoboTHOR env
 

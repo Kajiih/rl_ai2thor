@@ -1,5 +1,6 @@
 """Integration tests for rl_ai2thor package."""
 
+import gymnasium as gym
 import pytest
 
 from rl_ai2thor.agents.agents import RandomAgent
@@ -9,6 +10,18 @@ from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 MAX_STEPS = 200
 NB_EPISODES = 5
 random_agent_seed = 0
+
+
+# %% === Test instantiating the environment with gym.make() ===
+def test_gym_make() -> None:
+    """Test instantiating the environment with gym.make()."""
+    made_env: ITHOREnv = gym.make("rl_ai2thor/ITHOREnv-v0.1")  # type: ignore
+    expected_env = ITHOREnv()
+    assert made_env.action_space == expected_env.action_space
+    assert made_env.observation_space == expected_env.observation_space
+    assert made_env.config == expected_env.config
+    made_env.close()
+    expected_env.close()
 
 
 # %% === Running with random agent ===

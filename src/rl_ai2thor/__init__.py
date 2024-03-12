@@ -3,7 +3,8 @@
 from gymnasium.envs.registration import register
 
 register(
-    id="gym_ai2thor/iTHOR-v0",
-    entry_point="rl_ai2thor.envs.ai2thor_envs:iTHOREnv",
-    max_episode_steps=300,  # TODO: Check if we keep this
+    id="rl_ai2thor/ITHOREnv-v0.1",
+    entry_point="rl_ai2thor.envs.ai2thor_envs:ITHOREnv",
+    # TODO: Check if we add kwargs
+    # TODO: Add additional_wrappers
 )
