@@ -1,13 +1,18 @@
 """Tests for the wrappers module."""
 
+import gymnasium as gym
 import numpy as np
 import pytest
 
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 from rl_ai2thor.envs.tasks.tasks import TaskBlueprint
 from rl_ai2thor.envs.wrappers import (
+    ChannelFirstObservationWrapper,
     MoreThanOneArgumentValueError,
     MoreThanOneTaskBlueprintError,
+    NormalizeActionWrapper,
+    NotSimpleActionEnvironmentMode,
+    SimpleActionSpaceWrapper,
     SingleTaskWrapper,
 )
 
@@ -91,7 +96,7 @@ def test_single_task_wrapper_reset(single_task_ithor_env):
 
 def test_single_task_wrapper_step(single_task_ithor_env):
     wrapped_env = SingleTaskWrapper(single_task_ithor_env)
-    action = {"action_index": 0, "action_parameter": 1, "target_object_position": [0.5, 0.5]}
+    action = {"action_index": 0, "action_parameter": 1, "target_object_coordinates": [0.5, 0.5]}
     wrapped_env.reset()
     observation, reward, terminated, truncated, info = wrapped_env.step(action)
     assert isinstance(observation, np.ndarray)
@@ -100,3 +105,93 @@ def test_single_task_wrapper_step(single_task_ithor_env):
     assert isinstance(terminated, bool)
     assert isinstance(truncated, bool)
     assert isinstance(info, dict)
+
+
+# %% === FirstChannelObservationWrapper tests ===
+@pytest.fixture()
+def channel_last_ithor_env():
+    override_config = {
+        "width": 300,
+        "height": 300,
+    }
+    env = ITHOREnv(override_config=override_config)
+    yield env
+    env.close()
+
+
+def test_channel_first_observation_wrapper_observation_space(channel_last_ithor_env):
+    wrapped_env = ChannelFirstObservationWrapper(channel_last_ithor_env)
+    env_obs_space = channel_last_ithor_env.observation_space.spaces["env_obs"]
+    assert env_obs_space == gym.spaces.Box(low=0, high=255, shape=(3, 300, 300), dtype=np.uint8)
+
+
+def test_channel_first_observation_wrapper_reset(channel_last_ithor_env):
+    wrapped_env = ChannelFirstObservationWrapper(channel_last_ithor_env)
+    observation, _ = wrapped_env.reset()
+    environment_obs = observation["env_obs"]
+    assert isinstance(environment_obs, np.ndarray)
+    assert environment_obs.shape == (3, 300, 300)
+
+
+def test_channel_first_observation_wrapper_step(channel_last_ithor_env):
+    wrapped_env = ChannelFirstObservationWrapper(channel_last_ithor_env)
+    action = {"action_index": 0, "action_parameter": 1, "target_object_coordinates": [0.5, 0.5]}
+    wrapped_env.reset()
+    observation, _, _, _, _ = wrapped_env.step(action)
+    environment_obs = observation["env_obs"]
+    assert isinstance(environment_obs, np.ndarray)
+    assert environment_obs.shape == (3, 300, 300)
+
+
+# %% === NormalizeActionWrapper tests ===# %% === NormalizeActionWrapper tests ===
+def test_normalize_action_wrapper_action_space():
+    env = ITHOREnv()
+    wrapped_env = NormalizeActionWrapper(env)
+    assert wrapped_env.action_space.spaces["target_closest_object"] == gym.spaces.Box(low=-1, high=1, shape=(2,))
+
+
+def test_normalize_action_wrapper_action():
+    env = ITHOREnv()
+    wrapped_env = NormalizeActionWrapper(env)
+    action = {
+        "action_index": 0,
+        "action_parameter": 1,
+        "target_object_coordinates": [0.5, 0.5],
+    }
+    normalized_action = wrapped_env.action(action)
+    assert normalized_action["target_object_coordinates"] == [0.75, 0.75]
+
+
+# %% === SimpleActionSpaceWrapper tests ===
+@pytest.fixture()
+def simple_action_space_ithor_env():
+    override_config = {
+        "discrete_actions": True,
+        "target_closest_object": True,
+    }
+    env = ITHOREnv(override_config=override_config)
+    yield env
+    env.close()
+
+
+def test_simple_action_space_wrapper_not_simple_action_space_error():
+    override_config = {
+        "discrete_actions": False,
+        "target_closest_object": True,
+    }
+    env = ITHOREnv(override_config=override_config)
+    with pytest.raises(NotSimpleActionEnvironmentMode) as exc_info:
+        SimpleActionSpaceWrapper(env)
+    assert exc_info.value.config == env.config
+
+
+def test_simple_action_space_wrapper_action_space(simple_action_space_ithor_env):
+    wrapped_env = SimpleActionSpaceWrapper(simple_action_space_ithor_env)
+    assert wrapped_env.action_space == simple_action_space_ithor_env.action_space.spaces["action_index"]
+
+
+def test_simple_action_space_wrapper_action(simple_action_space_ithor_env):
+    wrapped_env = SimpleActionSpaceWrapper(simple_action_space_ithor_env)
+    action = 0
+    converted_action = wrapped_env.action(action)
+    assert converted_action == {"action_index": action}

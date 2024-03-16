@@ -173,8 +173,8 @@ def test__action_space(ithor_env: ITHOREnv):
     assert isinstance(ithor_env.action_space.spaces["action_index"], gym.spaces.Discrete)
     assert "action_parameter" in ithor_env.action_space.spaces
     assert isinstance(ithor_env.action_space.spaces["action_parameter"], gym.spaces.Box)
-    assert "target_object_position" in ithor_env.action_space.spaces
-    assert isinstance(ithor_env.action_space.spaces["target_object_position"], gym.spaces.Box)
+    assert "target_object_coordinates" in ithor_env.action_space.spaces
+    assert isinstance(ithor_env.action_space.spaces["target_object_coordinates"], gym.spaces.Box)
 
 
 def test__create_observation_space(ithor_env: ITHOREnv):

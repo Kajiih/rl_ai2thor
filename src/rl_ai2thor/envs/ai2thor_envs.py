@@ -181,7 +181,7 @@ class ITHOREnv(
             action_space_dict["action_parameter"] = gym.spaces.Box(low=0, high=1, shape=())
 
         if not self.config["target_closest_object"]:
-            action_space_dict["target_object_position"] = gym.spaces.Box(low=0, high=1, shape=(2,))
+            action_space_dict["target_object_coordinates"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
         self.action_space = gym.spaces.Dict(action_space_dict)
 
@@ -326,7 +326,7 @@ class ITHOREnv(
         # === Get action name, parameters and ai2thor action ===
         action_name = self.action_idx_to_name[action["action_index"]]
         env_action = ACTIONS_BY_NAME[action_name]
-        target_object_coordinates: tuple[float, float] | None = action.get("target_object_position")
+        target_object_coordinates: tuple[float, float] | None = action.get("target_object_coordinates")
         action_parameter: float | None = action.get("action_parameter")
 
         # === Identify the target object if needed for the action ===
