@@ -179,7 +179,7 @@ class RandomAgent[ObsType, ActType](BaseAgent[ObsType, ActType]):
             obs (ObsType, optional): Current observation. Defaults to None.
 
         Returns:
-            ActType: Random action.
+            action (ActType): A random action.
         """
         action = self.env.action_space.sample()
         return action

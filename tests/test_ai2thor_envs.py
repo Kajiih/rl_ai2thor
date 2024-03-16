@@ -383,7 +383,7 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 
 # This test fails sometimes because AI2THOR is not deterministic
 # ! Sometimes 'Pen' and 'Pencil' are switched...?
-def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
+def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
     obs1, info1 = ithor_env.reset(seed=seed)
     env_obs1: NDArray = obs1["env_obs"]  # type: ignore
     task_obs1 = obs1["task_obs"]
@@ -429,15 +429,16 @@ def test_reset_same_scene_reproducibility(ithor_env: ITHOREnv, ithor_env_2: ITHO
     assert are_close_dict(info1_2["metadata"], info2_2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
 
-def test_reset_separate_runs_reproducibility(ithor_env: ITHOREnv):
+def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
     task_type = ithor_env.current_task_type
     task_args = ithor_env.current_task_args
-    data_path = Path("tests/data/reset_separate_runs_reproducibility_obs_info.pkl")
+    data_path = Path("tests/data/test_reset_different_runtime_reproducible_obs_info.pkl")
     # to_serialize_data = (obs1, info1, task_type, task_args)
     # with data_path.open("wb") as f:
     #     pkl.dump(to_serialize_data, f)
-    obs2, info2, task_type2, task_args2 = pkl.load(data_path.open("rb"))  # noqa: S301
+    with data_path.open("rb") as f:
+        obs2, info2, task_type2, task_args2 = pkl.load(f)  # noqa: S301
 
     assert task_type == task_type2
     assert task_args == task_args2
