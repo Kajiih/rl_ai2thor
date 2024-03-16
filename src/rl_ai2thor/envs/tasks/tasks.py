@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 
 # %% === Reward handlers ===
 # TODO: Add more options
+# TODO: Make the rewards more customizable
 class GraphTaskRewardHandler(BaseRewardHandler):
     """
     Reward handler for graph tasks.
@@ -69,7 +70,6 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         self.task = task
         self.last_step_advancement: float | int = 0
 
-    # TODO: Add shortcut when the action failed or similar special cases
     def get_reward(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the reward, task completion and additional information about the task for the given event.
@@ -90,6 +90,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 
         if task_completion:
             print("Task completed!!")
+            reward += 10
 
         return reward, task_completion, info
 

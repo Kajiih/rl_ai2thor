@@ -66,7 +66,7 @@ Virtual env: `rl_thor_benchmark`
 
   - [ ] Handle done actions
   - [x] Add reward
-  - [ ] Add reward for task completion
+  - [x] Add reward for task completion
   - [ ] Handle episode termination (task success/failure)
   - [x] Handle truncation (timeout)
   - [ ] Handle depth frame and instance segmentation frame
