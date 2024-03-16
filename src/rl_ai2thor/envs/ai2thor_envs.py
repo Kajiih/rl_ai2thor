@@ -498,7 +498,7 @@ class UnknownActionCategoryError(ValueError):
     def __init__(self, action_category: str) -> None:
         self.action_category = action_category
         super().__init__(
-            f"Unknown action category {action_category} in environment mode config. "
+            f"Unknown action category '{action_category}' in environment mode config. "
             f"Available action categories are {[category.value for category in ActionCategory]}."
         )
 
@@ -509,7 +509,7 @@ class UnknownTaskTypeError(ValueError):
     def __init__(self, task_type: str) -> None:
         self.task_type = task_type
         super().__init__(
-            f"Unknown task type {task_type} in environment mode config."
+            f"Unknown task type '{task_type}' in environment mode config."
             f"Available tasks are {list(ALL_TASKS.keys())}."
             f"If you have defined a new task, make sure to add it to the ALL_TASKS dictionary of the envs.tasks.tasks module."
         )

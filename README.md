@@ -65,14 +65,15 @@ Virtual env: `rl_thor_benchmark`
     - [`ToTest`] Handle changing default parameter value from config
 
   - [ ] Handle done actions
-  - [ ] Add reward
+  - [x] Add reward
+  - [ ] Add reward for task completion
   - [ ] Handle episode termination (task success/failure)
-  - [`ToTest`] Handle truncation (timeout)
+  - [x] Handle truncation (timeout)
   - [ ] Handle depth frame and instance segmentation frame
   - [ ] Handle data saving from config
   - [ ] Handle step info better
-  - [ ] Check seed, randomization and reproducibility
-  - [ ] Handle reset at the end of the episode
+  - [x] Check seed, randomization and reproducibility
+  - [x] Handle reset at the end of the episode
   - [ ] Update docstring and documentation
   - [ ] Make `gridsize` and `moveMagnitude` parameters coherent (for `MoveAhead`-type actions)
   - [ ] Make the whole framework split-aware ('train', 'test' splits, ...)
@@ -88,7 +89,9 @@ Virtual env: `rl_thor_benchmark`
   - [ ] Make automatic version handling for the package and the environment register
   - [ ] Make Grayscale wrapper
   - [ ] Make some wrapper being the default behavior
-  - [ ] Test wrappers
+  - [ ] Test combined wrappers
+  - [ ] Add frame stacking
+  - [ ] Add more SB3 algorithms
   - [ ] ManipulaTHOR env
   - [ ] RoboTHOR env
 

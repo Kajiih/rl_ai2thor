@@ -1184,8 +1184,84 @@ class LookInLight(GraphTask[str]):
         return [(looked_at_object_type,) for looked_at_object_type in args_blueprints["looked_at_object_type"]]
 
 
+# %% === Custom tasks ===
+class Pickup(GraphTask[str]):
+    """Task for picking up a given object."""
+
+    def __init__(self, picked_object_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            picked_object_type (str): The type of object to pick up.
+        """
+        self.picked_object_type = picked_object_type
+
+        task_description_dict = self._create_task_description_dict(picked_object_type)
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(picked_object_type: str) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            picked_object_type (str): The type of object to pick up.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
+            "picked_object": {
+                "properties": {"objectType": picked_object_type, "isPickedUp": True},
+            }
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Pick up {self.picked_object_type}"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: Event,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (Event): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Keep only the object types that are present in the scene for the blueprint of 'picked_object_type'
+        args_blueprints = {
+            "picked_object_type": task_blueprint.task_args["picked_object_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of picked_object_type
+        return [(picked_object_type,) for picked_object_type in args_blueprints["picked_object_type"]]
+
+
 # %% === Constants ===
 ALL_TASKS = {
+    # === Alfred tasks ===
     "PlaceIn": PlaceIn,
     "PlaceNSameIn": PlaceNSameIn,
     "PlaceWithMoveableRecepIn": PlaceWithMoveableRecepIn,
@@ -1193,4 +1269,6 @@ ALL_TASKS = {
     "PlaceHeatedIn": PlaceHeatedIn,
     "PlaceCooledIn": PlaceCooledIn,
     "LookInLight": LookInLight,
+    # === Custom tasks ===
+    "Pickup": Pickup,
 }
