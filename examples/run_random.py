@@ -32,6 +32,7 @@ def main() -> None:
     # Run the agent
     for _ in range(NB_EPISODES):
         obs, info = random_agent.reset()
+        print(env.task.text_description())
         random_agent.continue_episode(obs, max_steps=NB_STEPS)
 
     # Close the agent

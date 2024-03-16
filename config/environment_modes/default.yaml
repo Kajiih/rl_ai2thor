@@ -103,9 +103,9 @@ tasks:
     scenes: &ALL_SCENES [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
   - type: PlaceNSameIn
     args:
+      n: 2
       placed_object_type: [_PICKUPABLES]
       receptacle_type: [_RECEPTACLES]
-      n: 2
     scenes: *ALL_SCENES
   - type: PlaceWithMoveableRecepIn
     args:

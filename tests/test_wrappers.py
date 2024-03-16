@@ -9,7 +9,6 @@ from rl_ai2thor.envs.wrappers import (
     MoreThanOneArgumentValueError,
     MoreThanOneTaskBlueprintError,
     SingleTaskWrapper,
-    SingleTaskWrapperOld,
 )
 
 
