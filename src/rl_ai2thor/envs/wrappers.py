@@ -4,14 +4,14 @@ from typing import Any
 
 import gymnasium as gym
 import numpy as np
-from gymnasium import ActionWrapper, ObservationWrapper, Wrapper
+from gymnasium import ActionWrapper, ObservationWrapper
 from numpy.typing import NDArray
 
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 
 
 # %% === Wrappers ===
-class SingleTaskWrapper(ObservationWrapper):
+class SingleTaskWrapper(ObservationWrapper, ITHOREnv):
     """
     Wrapper for single task AI2THOR environment.
 
@@ -24,12 +24,13 @@ class SingleTaskWrapper(ObservationWrapper):
     def __init__(self, env: ITHOREnv) -> None:
         """Initialize the wrapper."""
         super().__init__(env)
-        # Check that there is only one task
-        if len(self.task_blueprints) > 1:
-            raise MoreThanOneTaskBlueprintError(self.config)
-        if max(len(arg_values) for arg_values in self.task_blueprints[0].task_args.values()) > 1:
-            raise MoreThanOneArgumentValueError(self.config)
         self.env: ITHOREnv  # Only for type hinting
+        unwrapped_env: ITHOREnv = self.unwrapped  # type: ignore
+        # Check that there is only one task
+        if len(unwrapped_env.task_blueprints) > 1:
+            raise MoreThanOneTaskBlueprintError(unwrapped_env.config)
+        if max(len(arg_values) for arg_values in unwrapped_env.task_blueprints[0].task_args.values()) > 1:
+            raise MoreThanOneArgumentValueError(unwrapped_env.config)
 
         self.observation_space = self.env.observation_space.spaces["env_obs"]
 
@@ -39,7 +40,7 @@ class SingleTaskWrapper(ObservationWrapper):
         return observation["env_obs"]
 
 
-class ChannelFirstObservationWrapper(ObservationWrapper):
+class ChannelFirstObservationWrapper(ObservationWrapper, ITHOREnv):
     """
     Wrapper for changing the observation space from channel last to channel first.
 
@@ -68,7 +69,7 @@ class ChannelFirstObservationWrapper(ObservationWrapper):
         return observation
 
 
-class NormalizeActionWrapper(ActionWrapper):
+class NormalizeActionWrapper(ActionWrapper, ITHOREnv):
     """
     Wrapper for normalizing the action space.
 
@@ -92,7 +93,7 @@ class NormalizeActionWrapper(ActionWrapper):
 
 
 # TODO: Rewrite this wrapper and remove the part in the main code that handles the different environment modes discrete_actions/target_closest_object
-class SimpleActionSpaceWrapper(ActionWrapper):
+class SimpleActionSpaceWrapper(ActionWrapper, ITHOREnv):
     """
     Wrapper to use when the environment is in discrete_actions and target_closest_object mode.
 
@@ -103,9 +104,10 @@ class SimpleActionSpaceWrapper(ActionWrapper):
         """Initialize the wrapper."""
         super().__init__(env)
         self.env: ITHOREnv  # Only for type hinting
+        self.unwrapped: ITHOREnv  # Only for type hinting
         self.action_space = self.unwrapped.action_space.spaces["action_index"]  # type: ignore
-        if not (self.config["discrete_actions"] and self.config["target_closest_object"]):
-            raise NotSimpleActionEnvironmentMode(self.config)
+        if not (self.unwrapped.config["discrete_actions"] and self.unwrapped.config["target_closest_object"]):
+            raise NotSimpleActionEnvironmentMode(self.unwrapped.config)
 
     @staticmethod
     def action(action: int) -> dict[str, Any]:

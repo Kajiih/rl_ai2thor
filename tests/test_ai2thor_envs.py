@@ -306,7 +306,7 @@ def test__create_task_blueprints(ithor_env: ITHOREnv):
             {
                 "type": "PlaceNSameIn",
                 "args": {"placed_object_type": "Apple", "receptacle_type": "Plate", "n": 2},
-                "scenes": ["FloorPlan3", "FloorPlan4"],
+                "scenes": "FloorPlan3",
             },
         ],
     }
@@ -331,7 +331,7 @@ def test__create_task_blueprints(ithor_env: ITHOREnv):
     # Check task blueprint 2
     task_blueprint_2 = task_blueprints[1]
     assert task_blueprint_2.task_type == ALL_TASKS["PlaceNSameIn"]
-    assert task_blueprint_2.scenes == {"FloorPlan3", "FloorPlan4"}
+    assert task_blueprint_2.scenes == {"FloorPlan3"}
     assert task_blueprint_2.task_args == {
         "placed_object_type": frozenset([SimObjectType("Apple")]),
         "receptacle_type": frozenset([SimObjectType("Plate")]),

@@ -30,9 +30,6 @@ from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjId
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
 
 # %% Environment definitions
 class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
@@ -204,17 +201,19 @@ class ITHOREnv(
         })
 
     @staticmethod
-    def _compute_available_scenes(scenes: Iterable[str], excluded_scenes: set[str] | None = None) -> set[SceneId]:
+    def _compute_available_scenes(scenes: list[str] | str, excluded_scenes: set[str] | None = None) -> set[SceneId]:
         """
         Compute the available scenes based on the environment mode config.
 
         Args:
-            scenes (Iterable[str]): Scene names to consider.
+            scenes (list[str] | str): Scene names to consider.
             excluded_scenes (set[str], Optional): Set of scene names to exclude.
 
         Returns:
             set[SceneId]: Set of available scene names.
         """
+        if not isinstance(scenes, list):
+            scenes = [scenes]
         available_scenes = set()
         for scene in scenes:
             if scene in SceneGroup:
@@ -470,6 +469,7 @@ class ITHOREnv(
 
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
             if not compatible_arguments:
+                print(f"No compatible arguments found for scene {sampled_scene}. Removing it from the task blueprint.")
                 task_blueprint.scenes.remove(sampled_scene)
                 if not task_blueprint.scenes:
                     raise NoCompatibleSceneError(task_blueprint)

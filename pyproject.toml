@@ -17,7 +17,11 @@ keywords = [
   "gymnasium",
 ]
 authors = [{ name = "Julian Paquerot", email = "julian_p@snu.ac.kr" }]
-dependencies = ["ai2thor>=5.0.0", "gymnasium"]
+dependencies = [
+  "ai2thor>=5.0.0",
+  "gymnasium",
+  "networkx",       # TODO: Delete networkx
+]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Science/Research",

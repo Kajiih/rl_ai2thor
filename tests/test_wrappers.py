@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
-from rl_ai2thor.envs.tasks.tasks import TaskBlueprint
 from rl_ai2thor.envs.wrappers import (
     ChannelFirstObservationWrapper,
     MoreThanOneArgumentValueError,
@@ -143,11 +142,11 @@ def test_channel_first_observation_wrapper_step(channel_last_ithor_env):
     assert environment_obs.shape == (3, 300, 300)
 
 
-# %% === NormalizeActionWrapper tests ===# %% === NormalizeActionWrapper tests ===
+# %% === NormalizeActionWrapper tests ===#
 def test_normalize_action_wrapper_action_space():
     env = ITHOREnv()
     wrapped_env = NormalizeActionWrapper(env)
-    assert wrapped_env.action_space.spaces["target_closest_object"] == gym.spaces.Box(low=-1, high=1, shape=(2,))
+    assert wrapped_env.action_space.spaces["target_object_coordinates"] == gym.spaces.Box(low=-1, high=1, shape=(2,))
 
 
 def test_normalize_action_wrapper_action():
@@ -195,3 +194,6 @@ def test_simple_action_space_wrapper_action(simple_action_space_ithor_env):
     action = 0
     converted_action = wrapped_env.action(action)
     assert converted_action == {"action_index": action}
+
+
+# TODO: Add tests for combined wrappers

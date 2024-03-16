@@ -79,12 +79,17 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 
         Returns:
             reward (float): Reward for the event.
-            terminated (bool, Optional): Whether the episode has terminated.
+            terminated (bool | None): Whether the episode has terminated.
             info (dict[str, Any]): Additional information about the state of the task.
         """
+        if not event.metadata["lastActionSuccess"]:
+            return 0.0, False, {}
         task_advancement, task_completion, info = self.task.compute_task_advancement(event)
         reward = task_advancement - self.last_step_advancement
         self.last_step_advancement = task_advancement
+
+        if task_completion:
+            print("Task completed!!")
 
         return reward, task_completion, info
 

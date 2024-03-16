@@ -3,7 +3,6 @@
 seed: 1
 max_episode_steps: 1000
 environment_mode: default # navigation_only, cups_like, alfred_like, default, full_with_hand_movement
-multi_task_mode: True # If True, the text description of the task will be included in the observation # !! Not implemented yet !!
 
 discrete_actions: True # If True, all actions requiring a parameter will be discretized
 target_closest_object: True # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
