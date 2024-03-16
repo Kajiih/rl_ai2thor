@@ -1,9 +1,10 @@
-from pathlib import Path
 import pickle as pkl  # noqa: S403
+from pathlib import Path
 
 import pytest
 
 from rl_ai2thor.agents.agents import RandomAgent
+from rl_ai2thor.agents.callbacks import BaseCallback
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 
 SEED = 0
@@ -15,6 +16,62 @@ def ithor_env():
     env = ITHOREnv()
     yield env
     env.close()
+
+
+# %% === Test BaseAgent ===
+NB_STEPS_1 = 10
+NB_STEPS_2 = 20
+
+
+class CountTriggeredCallback(BaseCallback):
+    def __init__(self):
+        self.nb_on_reset_triggered = 0
+        self.nb_on_step_triggered = 0
+        self.nb_on_close_triggered = 0
+
+    def on_step(self, *args):  # noqa: ARG002
+        self.nb_on_step_triggered += 1
+
+    def on_reset(self):
+        self.nb_on_reset_triggered += 1
+
+    def on_close(self):
+        self.nb_on_close_triggered += 1
+
+
+def test_base_agent_callbacks(ithor_env):
+    """Test that the callbacks are triggered."""
+    callback = CountTriggeredCallback()
+    agent = RandomAgent(env=ithor_env, callback=callback)
+    assert callback.nb_on_reset_triggered == 0
+    assert callback.nb_on_step_triggered == 0
+    assert callback.nb_on_close_triggered == 0
+
+    obs, _ = agent.reset()
+    assert callback.nb_on_reset_triggered == 1
+
+    _ = agent(obs)
+    assert callback.nb_on_step_triggered == 0
+
+    _, obs, _, _, _, _ = agent.step(obs)
+    assert callback.nb_on_step_triggered == 1
+
+    callback.nb_on_step_triggered = 0
+    _, nb_steps, obs, _, _, _, _ = agent.continue_episode(obs, NB_STEPS_1)
+    assert nb_steps == NB_STEPS_1
+    assert callback.nb_on_step_triggered == nb_steps
+
+    callback.nb_on_step_triggered = 0
+    callback.nb_on_reset_triggered = 0
+    _, total_nb_steps, obs, _, _, _, _ = agent.run_episode(1, total_max_steps=NB_STEPS_2)
+    assert total_nb_steps == NB_STEPS_2
+    assert callback.nb_on_step_triggered == total_nb_steps
+    assert callback.nb_on_reset_triggered == 1
+
+    agent.close()
+    assert callback.nb_on_reset_triggered == 1
+    assert callback.nb_on_step_triggered == total_nb_steps
+    assert callback.nb_on_close_triggered == 1
 
 
 # %% === Test random agent ===
