@@ -132,7 +132,7 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
-testpaths = ["tests"]
+# testpaths = ["tests"]
 # pythonpath = ["src"]
 
 # == Coverage == #
