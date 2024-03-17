@@ -32,6 +32,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# TODO: Update this
 graph = [
   "networkx",
   "matplotlib",
@@ -137,7 +138,7 @@ docstring-code-format = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
 # testpaths = ["tests"]
-# pythonpath = ["src"]
+pythonpath = ["src"]
 
 # == Coverage == #
 [tool.coverage.report]
