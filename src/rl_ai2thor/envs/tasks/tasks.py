@@ -1260,6 +1260,140 @@ class Pickup(GraphTask[str]):
         return [(picked_object_type,) for picked_object_type in args_blueprints["picked_object_type"]]
 
 
+# TODO: Fix this because you can't load tasks without arguments
+class OpenAny(GraphTask[str]):
+    """Task for opening any object."""
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict() -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
+            "opened_object": {
+                "properties": {"isOpen": True},
+            }
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Open any object"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: Event,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (Event): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        for obj_metadata in event.metadata["objects"]:
+            if obj_metadata[SimObjFixedProp.OPENABLE]:
+                return [
+                    (obj_metadata[SimObjFixedProp.OBJECT_TYPE],)
+                ]  # TODO: Fix this because you can't load tasks without arguments
+
+        # Return a list with all the object types in the scene
+        return []
+
+
+class Open(GraphTask[str]):
+    """Task for opening a given object."""
+
+    def __init__(self, opened_object_type: str) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            opened_object_type (str): The type of object to open.
+        """
+        self.opened_object_type = opened_object_type
+
+        task_description_dict = self._create_task_description_dict(opened_object_type)
+        super().__init__(task_description_dict)
+
+    @staticmethod
+    def _create_task_description_dict(opened_object_type: str) -> TaskDict[str]:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            opened_object_type (str): The type of object to open.
+
+        Returns:
+            task_description_dict (TaskDict[str]): Task description dictionary.
+        """
+        return {
+            "opened_object": {
+                "properties": {"objectType": opened_object_type, "isOpen": True},
+            }
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Open {self.opened_object_type}"
+
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: Event,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Note: The order of the returned list is not deterministic.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (Event): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        scene_object_types_count = {}
+        for obj_metadata in event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            if obj_type not in scene_object_types_count:
+                scene_object_types_count[obj_type] = 0
+            scene_object_types_count[obj_type] += 1
+
+        # Keep only the object types that are present in the scene for the blueprint of 'opened_object_type'
+        args_blueprints = {
+            "opened_object_type": task_blueprint.task_args["opened_object_type"] & set(scene_object_types_count),
+        }
+        # Return a list with all the compatible combinations of opened_object_type
+        return [(opened_object_type,) for opened_object_type in args_blueprints["opened_object_type"]]
+
+
 # %% === Constants ===
 ALL_TASKS = {
     # === Alfred tasks ===
@@ -1272,4 +1406,5 @@ ALL_TASKS = {
     "LookInLight": LookInLight,
     # === Custom tasks ===
     "Pickup": Pickup,
+    "Open": Open,
 }

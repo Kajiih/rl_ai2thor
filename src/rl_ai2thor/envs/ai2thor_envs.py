@@ -468,7 +468,7 @@ class ITHOREnv(
             initial_event: Event = self.controller.reset(sampled_scene)  # type: ignore
 
             compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
-            if not compatible_arguments:
+            if not compatible_arguments:  # TODO: Fix this for tasks with 0 arguments to work
                 print(f"No compatible arguments found for scene {sampled_scene}. Removing it from the task blueprint.")
                 task_blueprint.scenes.remove(sampled_scene)
                 if not task_blueprint.scenes:

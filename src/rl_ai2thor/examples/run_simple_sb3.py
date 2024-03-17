@@ -13,18 +13,34 @@ from rl_ai2thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
 if TYPE_CHECKING:
     from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 
+
+model_name = "PPO"  # "PPO", "A2C", "DQN"
+if model_name == "PPO":
+    sb3_model = sb3.PPO
+elif model_name == "A2C":
+    sb3_model = sb3.A2C
+elif model_name == "DQN":
+    sb3_model = sb3.DQN
+else:
+    raise ValueError(f"Model name '{model_name}' not recognized.")
+
+scenes = ["FloorPlan7", "FloorPlan8"]  # "FloorPlan7", "FloorPlan8", "Kitchen"
+
 config = {
     "policy_type": "CnnPolicy",
     "total_timesteps": 25_000,
     "env_name": "rl_ai2thor/ITHOREnv-v0.1_sb3_ready",
-    "gradient_save_freq": 100,
+    "gradient_save_freq": 10,
 }
 run: Run = wandb.init(  # type: ignore
     project="rl_ai2thor",
     config=config,
-    sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-    monitor_gym=True,  # auto-upload the videos of agents playing the game
-    save_code=True,  # optional
+    sync_tensorboard=True,
+    # monitor_gym=True,
+    save_code=True,
+    tags=[model_name, "sb3", "simple_action", "single_task"],
+    notes=f"Simple {model_name} agent",
+    name=f"{model_name}_simple_single_task_[{",".join(scenes)}]",
 )
 
 action_categories = {
@@ -44,9 +60,9 @@ action_categories = {
 task_config = {
     "type": "Pickup",
     "args": {
-        "picked_object_type": "Mug",
+        "picked_object_type": "Tomato",  # Mug
     },
-    "scenes": "FloorPlan7",
+    "scenes": scenes,
 }
 override_config = {
     "discrete_actions": True,
@@ -64,7 +80,7 @@ def main() -> None:
 
     env = SingleTaskWrapper(SimpleActionSpaceWrapper(env))
 
-    model = sb3.DQN(config["policy_type"], env, verbose=1, tensorboard_log=f"runs/{run.id}")
+    model = sb3_model(config["policy_type"], env, verbose=1, tensorboard_log=f"runs/{run.id}")
     model.learn(
         total_timesteps=config["total_timesteps"],
         callback=WandbCallback(

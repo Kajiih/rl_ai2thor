@@ -64,6 +64,8 @@ Virtual env: `rl_thor_benchmark`
 
     - [`ToTest`] Handle changing default parameter value from config
 
+  - [ ] Handle actions without arguments (in compute_compatible_task_args)
+  - [ ] Create context manager to automatically close AI2THOR window
   - [ ] Handle done actions
   - [x] Add reward
   - [x] Add reward for task completion
@@ -81,15 +83,15 @@ Virtual env: `rl_thor_benchmark`
   - [ ] Add parameters to relations and properties
   - [ ] Improve config (and environment mode config) handling
   - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
-  - [ ] Change multitask setting to be a wrapper and make base env as single task
-    - [ ] Add Single task wrapper instead?
-  - [ ] Add normalize wrapper that normalizes observation (should not be needed) and actions: [-1, 1] for continuous
-    - [ ] Also make this wrapper change obs from channel last to channel first
+  - [x] Add Single task wrapper instead?
+  - [x] Add normalize wrapper that normalizes observation (should not be needed) and actions: [-1, 1] for continuous
+  - [x] Make wrapper to change obs from channel last to channel first
   - [ ] TODO: Improve environment registering (kwargs, wrappers..)
   - [ ] Make automatic version handling for the package and the environment register
   - [ ] Make Grayscale wrapper
   - [ ] Make some wrapper being the default behavior
   - [ ] Test combined wrappers
+  - [ ] Change example scripts to jupyter notebooks
   - [ ] Add frame stacking
   - [ ] Add more SB3 algorithms
   - [ ] ManipulaTHOR env
