@@ -43,7 +43,7 @@ jobs:
       - name: Run pytest @pavelzw 🧪
         uses: pavelzw/pytest-action@v2
         with:
-          custom-arguments: "-rA --doctest-modules --cov=."
+          custom-arguments: "tests -rA --doctest-modules --cov=."
         continue-on-error: true
 
       - name: Upload coverage to Codecov 📊
