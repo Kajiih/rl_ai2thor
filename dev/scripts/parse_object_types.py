@@ -1,4 +1,4 @@
-"""Parse the data about object types from the AI2THOR documentation."""
+"""Parse the data about object types from the AI2-THOR documentation."""
 
 import json
 import urllib.request

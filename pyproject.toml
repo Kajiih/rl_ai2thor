@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "rl_ai2thor"
 version = "0.4.1"
-description = "RL environment for AI2THOR"
+description = "RL environment for AI2-THOR"
 readme = "README.md"
 license = "MIT" # TODO: Check this
 requires-python = ">=3.12"

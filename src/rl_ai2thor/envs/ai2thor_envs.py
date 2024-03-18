@@ -1,5 +1,5 @@
 """
-Gymnasium interface for AI2THOR RL environment.
+Gymnasium interface for AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """
@@ -33,7 +33,7 @@ from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 # %% Environment definitions
 class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
-    """Base class for AI2THOR environment."""
+    """Base class for AI2-THOR environment."""
 
     def __init__(self) -> None:
         """Initialize the environment."""

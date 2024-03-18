@@ -1,4 +1,4 @@
-"""Run a stable-baselines3 DQN agent in the AI2THOR RL environment."""
+"""Run a stable-baselines3 DQN agent in the AI2-THOR RL environment."""
 
 from typing import TYPE_CHECKING
 
@@ -22,13 +22,13 @@ elif model_name == "A2C":
 elif model_name == "DQN":
     sb3_model = sb3.DQN
 else:
-    raise ValueError(f"Model name '{model_name}' not recognized.")
+    raise ValueError(f"Model name '{model_name}' not supported.")
 
-scenes = ["FloorPlan7", "FloorPlan8"]  # "FloorPlan7", "FloorPlan8", "Kitchen"
+scenes = ["FloorPlan7"]  # "FloorPlan7", "FloorPlan8", "Kitchen"
 
 config = {
     "policy_type": "CnnPolicy",
-    "total_timesteps": 25_000,
+    "total_timesteps": 20_000,
     "env_name": "rl_ai2thor/ITHOREnv-v0.1_sb3_ready",
     "gradient_save_freq": 10,
 }
@@ -75,7 +75,7 @@ override_config = {
 
 
 def main() -> None:
-    """Run the DQN agent in the AI2THOR environment."""
+    """Run the DQN agent in the AI2-THOR environment."""
     env: ITHOREnv = gym.make(config["env_name"], override_config=override_config)  # type: ignore
 
     env = SingleTaskWrapper(SimpleActionSpaceWrapper(env))

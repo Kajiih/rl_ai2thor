@@ -1,4 +1,4 @@
-"""Callbacks for RL AI2THOR agents."""
+"""Callbacks for RL AI2-THOR agents."""
 
 from __future__ import annotations
 

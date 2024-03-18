@@ -1,7 +1,7 @@
 """
-Module for actions for AI2THOR RL Environment, interfaces between the agent and the ai2thor controller.
+Module for actions for AI2-THOR RL Environment, interfaces between the agent and the ai2thor controller.
 
-This module provides classes and definitions for handling actions, conditions, and interactions within the AI2THOR simulated environment
+This module provides classes and definitions for handling actions, conditions, and interactions within the AI2-THOR simulated environment
 
 Classes:
 - EnvironmentAction: Base class for complex environment actions.

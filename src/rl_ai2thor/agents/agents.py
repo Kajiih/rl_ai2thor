@@ -1,4 +1,4 @@
-"""Agents in AI2THOR RL environment."""
+"""Agents in AI2-THOR RL environment."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 # TODO: Improve type hints with more specific types
 # %% === Agents ===
 class BaseAgent[ObsType, ActType](ABC):
-    """Base class for agents in the AI2THOR RL environment."""
+    """Base class for agents in the AI2-THOR RL environment."""
 
     def __init__(self, env: BaseAI2THOREnv[ObsType, ActType], callback: BaseCallback | None = None) -> None:
         """

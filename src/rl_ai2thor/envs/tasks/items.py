@@ -1,5 +1,5 @@
 """
-Task items in AI2THOR RL environment.
+Task items in AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """

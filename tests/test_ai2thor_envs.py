@@ -381,7 +381,7 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
     assert info1 == info2
 
 
-# This test fails sometimes because AI2THOR is not deterministic
+# This test fails sometimes because AI2-THOR is not deterministic
 # ! Sometimes 'Pen' and 'Pencil' are switched...?
 def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
     obs1, info1 = ithor_env.reset(seed=seed)
@@ -475,40 +475,6 @@ def test_reset_not_same_scene(ithor_env: ITHOREnv):
 
 
 # %% Utils
-def nested_dict_approx(expected, rel=None, abs=None, nan_ok=False):  # noqa: A002
-    if isinstance(expected, Mapping):
-        return ApproxNestedMapping(expected, rel, abs, nan_ok)
-    return pytest.approx(expected, rel, abs, nan_ok)
-
-
-# ** Broken
-class ApproxNestedMapping(ApproxMapping):
-    def _yield_comparisons(self, actual):
-        for k in self.expected:
-            if isinstance(actual[k], type(self.expected)):
-                yield from ApproxNestedMapping(
-                    self.expected[k],
-                    rel=self.rel,
-                    abs=self.abs,
-                    nan_ok=self.nan_ok,
-                )._yield_comparisons(actual[k])
-            else:
-                yield actual[k], self.expected[k]
-
-    def _check_type(self):
-        for value in self.expected.values():
-            if not isinstance(value, type(self.expected)) and not isinstance(self.expected, Mapping):
-                super()._check_type()
-
-
-def nested_list_to_dict(nested_dict):
-    if isinstance(nested_dict, list):
-        return {i: nested_list_to_dict(nested_dict[i]) for i in range(len(nested_dict))}
-    if isinstance(nested_dict, dict):
-        return {key: nested_list_to_dict(nested_dict[key]) for key in nested_dict}
-    return nested_dict
-
-
 def split_assert_dicts(d1, d2, abs_tol=None, rel_tol=None, nan_ok=False):
     keys_or_indices = range(len(d1)) if isinstance(d1, list) else d1.keys()
     for k in keys_or_indices:

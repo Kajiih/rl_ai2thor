@@ -1,5 +1,5 @@
 """
-Task relations in AI2THOR RL environment.
+Task relations in AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """

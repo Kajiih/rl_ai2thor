@@ -1,5 +1,5 @@
 """
-Scenes in AI2THOR RL environment.
+Scenes in AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """
@@ -12,7 +12,7 @@ SceneId = NewType("SceneId", str)
 
 
 class SceneGroup(StrEnum):
-    """Scene groups in AI2THOR environment."""
+    """Scene groups in AI2-THOR environment."""
 
     KITCHEN = "Kitchen"
     LIVING_ROOM = "LivingRoom"

@@ -1,4 +1,4 @@
-"""Utility functions specific to AI2THOR."""
+"""Utility functions specific to AI2-THOR."""
 
 from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjId, SimObjMetadata
 

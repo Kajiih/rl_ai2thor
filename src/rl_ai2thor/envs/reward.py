@@ -1,5 +1,5 @@
 """
-Module for defining reward functions for AI2THOR RL environments.
+Module for defining reward functions for AI2-THOR RL environments.
 
 TODO: Finish module docstring.
 """
@@ -39,7 +39,7 @@ class BaseRewardHandler(ABC):
         Reset the reward handler.
 
         Args:
-            controller (Controller): AI2THOR controller at the beginning of the episode.
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether the episode has terminated.
@@ -84,7 +84,7 @@ class MultiRewardHandler(BaseRewardHandler):
         Reset the reward handlers.
 
         Args:
-            controller (Controller): AI2THOR controller at the beginning of the episode.
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether one of the reward handlers has terminated the episode.

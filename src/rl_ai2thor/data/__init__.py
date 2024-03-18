@@ -1,4 +1,4 @@
-"""Data for the RL AI2THOR package."""
+"""Data for the RL AI2-THOR package."""
 
 import json
 from pathlib import Path

@@ -44,9 +44,9 @@ Virtual env: `rl_thor_benchmark`
 -[`Started`] Create iTHOR environment class
 
 - [ ] Refactor envs.tasks.tasks.py by using only item ids as dictionary key instead of sometimes the ids and sometimes the item itself
-- [ ] Refactor results and scores in envs.tasks.tasks.py to use 2 different dicts for relations and properties instead of 1 common dict to simplify types
+- [x] Refactor results and scores in envs.tasks.tasks.py to use 2 different dicts for relations and properties instead of 1 common dict to simplify types
 - [ ] Add checking if actions are compatible with each other
-- [ ] Can't be 100% accurate, but we can do some checks (e.g.`hand_movements` implies `pickup`, ...)
+  - [ ] Can't be 100% accurate, but we can do some checks (e.g.`hand_movements` implies `pickup`, ...)
 
   - [ ] Handle sliced items in tasks
 
@@ -65,9 +65,10 @@ Virtual env: `rl_thor_benchmark`
     - [`ToTest`] Handle changing default parameter value from config
 
   - [ ] Handle actions without arguments (in compute_compatible_task_args)
-  - [ ] Create context manager to automatically close AI2THOR window
+  - [ ] Create context manager to automatically close AI2-THOR window
   - [ ] Handle done actions
   - [x] Add reward
+  - [ ] Find a way to add dense reward meaningfully
   - [x] Add reward for task completion
   - [ ] Handle episode termination (task success/failure)
   - [x] Handle truncation (timeout)

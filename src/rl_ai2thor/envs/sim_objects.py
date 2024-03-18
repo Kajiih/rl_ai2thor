@@ -1,5 +1,5 @@
 """
-Sim objects and sim objects properties in AI2THOR RL environment.
+Sim objects and sim objects properties in AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """
@@ -12,7 +12,7 @@ from rl_ai2thor.data import OBJECT_TYPES_DATA
 
 # %% === Sim Object Types ===
 class SimObjectType(StrEnum):
-    """All object types in AI2THOR."""
+    """All object types in AI2-THOR."""
 
     ALARM_CLOCK = "AlarmClock"
     ALUMINUM_FOIL = "AluminumFoil"
@@ -144,7 +144,7 @@ class SimObjectType(StrEnum):
 # === Sim Object Properties ===
 # TODO: Add support for more mass and salient materials.
 class SimObjFixedProp(StrEnum):
-    """Fixed properties of sim objects in AI2THOR."""
+    """Fixed properties of sim objects in AI2-THOR."""
 
     OBJECT_ID = "objectId"
     OBJECT_TYPE = "objectType"
@@ -168,7 +168,7 @@ class SimObjFixedProp(StrEnum):
 
 # TODO: Add support for position, rotation and distance.
 class SimObjVariableProp(StrEnum):
-    """Variable properties of sim objects in AI2THOR."""
+    """Variable properties of sim objects in AI2-THOR."""
 
     VISIBLE = "visible"
     IS_TOGGLED = "isToggled"

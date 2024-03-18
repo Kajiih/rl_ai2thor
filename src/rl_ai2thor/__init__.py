@@ -1,4 +1,4 @@
-"""Main module for AI2THOR RL environment."""
+"""Main module for AI2-THOR RL environment."""
 
 from gymnasium.envs.registration import WrapperSpec, register
 

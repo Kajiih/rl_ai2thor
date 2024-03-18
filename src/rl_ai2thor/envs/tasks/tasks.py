@@ -1,5 +1,5 @@
 """
-Tasks in AI2THOR RL environment.
+Tasks in AI2-THOR RL environment.
 
 TODO: Finish module docstring.
 """
@@ -99,7 +99,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         Reset the reward handler.
 
         Args:
-            controller (Controller): AI2THOR controller at the beginning of the episode.
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
             terminated (bool): Whether the episode has terminated.
@@ -276,7 +276,7 @@ class GraphTask[T: Hashable](BaseTask):
         in the scene and compute the overlap classes.
 
         Args:
-            controller (Controller): AI2THOR controller at the beginning of the episode.
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
             initial_task_advancement (float): Initial task advancement.
@@ -853,7 +853,7 @@ class PlaceCleanedIn(PlaceIn):
         All instances of placed_object_type are made dirty during the reset of the task.
 
         Args:
-            controller (Controller): AI2THOR controller at the beginning of the episode.
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
             initial_task_advancement (float): Initial task advancement.

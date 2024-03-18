@@ -1,4 +1,4 @@
-"""Wrappers for AI2THOR RL environments."""
+"""Wrappers for AI2-THOR RL environments."""
 
 from typing import Any
 
@@ -13,7 +13,7 @@ from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 # %% === Wrappers ===
 class SingleTaskWrapper(ObservationWrapper, ITHOREnv):
     """
-    Wrapper for single task AI2THOR environment.
+    Wrapper for single task AI2-THOR environment.
 
     It simply replaces the dictionary form observation with only environment's observation (frames) to simplify the observation space.
     It also checks that there is only one task.
