@@ -18,8 +18,6 @@ from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
-import networkx as nx
-
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
@@ -230,7 +228,6 @@ class GraphTask[T: Hashable](BaseTask):
 
     Attributes:
         items (List[T]): List of items representing unique objects in the scene.
-        task_graph (nx.DiGraph): Directed graph representing the relations between items.
         overlap_classes (List[ItemOverlapClass]): List of overlap classes containing items
             with overlapping candidates.
 
@@ -260,10 +257,6 @@ class GraphTask[T: Hashable](BaseTask):
         self.task_description_dict = task_description_dict
         self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
         self._items_by_id = {item.id: item for item in self.items}
-
-        # Initialize the task graph
-        self.task_graph = nx.DiGraph()
-        # TODO: Check if we keep the graph (unused for now)
 
         self.overlap_classes: list[ItemOverlapClass] = []
 

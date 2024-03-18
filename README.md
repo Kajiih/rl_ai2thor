@@ -95,6 +95,8 @@ Virtual env: `rl_thor_benchmark`
   - [ ] Change example scripts to jupyter notebooks
   - [ ] Add frame stacking
   - [ ] Add more SB3 algorithms
+  - [ ] Add graph visualization with pygraphiz (does it need networkx?)
+
   - [ ] ManipulaTHOR env
   - [ ] RoboTHOR env
 
@@ -119,6 +121,7 @@ Virtual env: `rl_thor_benchmark`
 - [ ] Add documentation
 - [ ] Add Pre-commit hooks
 - [ ] Write changelog (<https://keepachangelog.com/en/1.0.0/>)
+- [ ] Double check pyproject.toml file, especially dependencies
 
 ## Interesting Github Issues
 
