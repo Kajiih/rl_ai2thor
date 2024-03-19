@@ -4,7 +4,11 @@ AI2-THOR RL is a lightweight and widely customizable reinforcement learning envi
 
 AI2-THOR is a photorealistic interactive 3D environment for training AI agents to understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
 
-![ithor_kitchen](media/ithor_kitchen.jpg)
+<p align="center">
+  <img src="media/ithor_kitchen_square.jpg" width="256" alt="Ithor Kitchen">
+  <img src="media/ithor_wine_square.png" width="256" alt="Ithor Wine">
+  <img src="media/ithor_living_room_square.png" width="256" alt="Ithor Wine">
+</p>
 
 **[Continue with more details]** -
 **[Add gif of agent training]** -
