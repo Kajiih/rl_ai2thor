@@ -1,135 +1,144 @@
-# RL THOR Benchmark
+# AI2-THOR RL Benchmark
 
-## How to use
+AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and settings for the environment. The environment supports both continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
-## Install requirement
+AI2-THOR is a photorealistic interactive 3D environment for training AI agents that understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
 
-```bash
-pip install -r requirements/base.txt
+**[Continue with more details]** -
+**[Add gif of agent training]** -
 
+## Contents <!-- omit from toc -->
+
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [Running Headless](#running-headless)
+- [Configuring the environment](#configuring-the-environment)
+- [Creating new tasks](#creating-new-tasks)
+- [Reproducing benchmark results](#reproducing-benchmark-results)
+- [Citation](#citation)
+- [License](#license)
+
+## Installation
+
+1. **Create virtual environment**
+    We recommend you use a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) virtual environment:
+
+    ```bash
+      #  We require python>=3.12 
+      conda create -n rl_ai2thor python=3.12
+      conda activate rl_ai2thor
+    ```
+
+2. **Install AI2-THOR RL and its dependencies**
+    To install and customize the environment locally:
+
+    ```bash
+    git clone https://github.com/Kajiih/rl_ai2thor.git
+    pip install -r requirements/dev.txt
+    ```
+
+    **[!! Not supported yet !!]**
+    Alternatively, if you only want to use predefined settings and task, you can install the PyPI package:
+
+    ```bash
+    pip install rl-ai2thor
+    ```
+
+## Getting Started
+
+AI2-THOR RL uses [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API, so you can use it as simply as any other Gym/Gymnasium environment.
+
+This short script runs an ITHOR environment with the basic configuration and random actions:
+
+```python
+import gymnasium as gym
+
+env = gym.make("rl_ai2thor/ITHOREnv-v0.1")
+obs, info = env.reset()
+
+terminated, truncated = False, False
+while not terminated or truncated:
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(action)
+env.close()
 ```
 
-or
+Note that the first time that you instantiate the environment, AI2-THOR will download the simulator resources.
 
-```bash
+Follow Jupyter Notebooks in `examples` for more complex examples and use cases, like using AI2-THOR RL with Stable Baselines3 or recording videos of the agent's view.
 
-pip install -r requirements/base.txt
+To go further, we recommend you to get familiar with the [concepts of the ITHOR simulation environment](https://ai2thor.allenai.org/ithor/documentation/concepts) and [our documentation](https://github.com/Kajiih/rl_ai2thor) **[create actual documentation]** to understand how tasks are defined.
 
+## Running Headless
+
+Not available yet
+
+## Configuring the environment
+
+The general environment configuration, like the maximum number of steps by episode or the parameters of the AI2-THOR controller can be found and edited in `config/general.yaml`.
+
+To change which actions can the agent use or the set of tasks and scenes it is trained on, you can create a new environment mode config file in `config/environment_modes/` or use one of the preset and change the `environment_mode` value in the general config.
+
+**Example:**
+After creating your custom environment mode config file in `config/environment_modes/custom_env_mode.yaml`, you will need to write:
+
+```yaml
+environment_mode: custom_env_mode
 ```
 
-### Create custom environment mode
+You can also set your own config folder containing `general.yaml` and `environment_modes` when instantiating the environment with the `config_folder_path` argument. It is especially useful when you use the PyPI package.
+Additionally, you can override only certain values of the general or environment mode config with the `override_config` argument.
 
-- Create a new mode config in `config/environment_modes/` folder and change `environment_mode` in `config/general.yaml` to the new mode name.
+**Example:**
+If you only want to change the maximum number of steps per episode to 500 and exclude all `Kitchen` scenes from all task, you can write:
 
-## Dev info
+```python
+override_config = {
+    "max_episode_steps": 500,
+    "globally_excluded_scenes": ["Kitchen"],
+}
+env = gym.make(
+    "rl_ai2thor/ITHOREnv-v0.1",
+    config_folder_path="config",  # Default value
+    override_config=override_config,
+)
+```
 
-Virtual env: `rl_thor_benchmark`
+For more details about the configuration, see the [dedicated part of the documentation](https://github.com/Kajiih/rl_ai2thor) **[create actual documentation]**.
 
-## Possible features
+## Creating new tasks
 
-- Add falling back on closest object to the agent if no object at the target coordinates
-- Add falling back on closest object in the agent's field of view if no object at the target coordinates
-- If no object is at the target object coordinates, add range around the coordinates to search for the object
-- Add continuous/discrete dichotomy for some action groups only
-- Add 3rd party/external camera
-- Add enabling or disabling object properties from config (`openable`, `pickupable`, `receptacle`, ...)
-- Add switching from on and off toggle actions to single toggle action from config
+In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_ai2thor) **[link to documentation]**.
 
-## TODOs
+Thanks to graph tasks, defining new tasks is as simple as creating a python dictionary describing the task items, their properties and their relations:
 
-### Dev TODOs
+```python
+task_description_dict = {
+    "hot_apple": {
+        "properties": {"objectType": "Apple", "temperature": "Hot"},
+    },
+    "plate_receptacle": {
+        "properties": {"objectType": "Plate"},
+        "relations": {"hot_apple": ["contains"]},
+    },
+}
+```
 
--[`Started`] Add Gymnasium interface
+This code lets you define a new task consisting of putting a hot apple in a plate. `hot_apple` and `plate_receptacle` are identifiers of the items used to defined relations and each property and relation can be found [here](.) **[link to documentation]**. This is enough to automatically create the reward function associated to the graph task.
 
--[`Started`] Create iTHOR environment class
+For more details about how to define new tasks, item properties or relations, see the [dedicated part of the documentation](.) **[create actual documentation]**.
 
-- [ ] Refactor envs.tasks.tasks.py by using only item ids as dictionary key instead of sometimes the ids and sometimes the item itself
-- [x] Refactor results and scores in envs.tasks.tasks.py to use 2 different dicts for relations and properties instead of 1 common dict to simplify types
-- [ ] Add checking if actions are compatible with each other
-  - [ ] Can't be 100% accurate, but we can do some checks (e.g.`hand_movements` implies `pickup`, ...)
+## Reproducing benchmark results
 
-  - [ ] Handle sliced items in tasks
+Not available yet
 
-    - [ ] In candidate objects
+## Citation
 
-  - [ ] Add FlattenActionWrappers
+Not available yet
 
-    - [ ] Handle render modes
+## License
 
-  - [`ToTest`] Implement target object through position
-  - [ ] Add scene id handling at reset
-  - [ ] Implement gray scale image mode
-  - [`ToTest`] Implement variable openness
-  - [`ToTest`] Handle default parameter value for actions
-
-    - [`ToTest`] Handle changing default parameter value from config
-
-  - [ ] Handle actions without arguments (in compute_compatible_task_args)
-  - [ ] Create context manager to automatically close AI2-THOR window
-  - [ ] Handle done actions
-  - [x] Add reward
-  - [ ] Find a way to add dense reward meaningfully
-  - [x] Add reward for task completion
-  - [ ] Handle episode termination (task success/failure)
-  - [x] Handle truncation (timeout)
-  - [ ] Handle depth frame and instance segmentation frame
-  - [ ] Handle data saving from config
-  - [ ] Handle step info better
-  - [x] Check seed, randomization and reproducibility
-  - [x] Handle reset at the end of the episode
-  - [ ] Update docstring and documentation
-  - [ ] Make `gridsize` and `moveMagnitude` parameters coherent (for `MoveAhead`-type actions)
-  - [ ] Make the whole framework split-aware ('train', 'test' splits, ...)
-  - [ ] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
-  - [ ] Add parameters to relations and properties
-  - [ ] Improve config (and environment mode config) handling
-  - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
-  - [x] Add Single task wrapper instead?
-  - [x] Add normalize wrapper that normalizes observation (should not be needed) and actions: [-1, 1] for continuous
-  - [x] Make wrapper to change obs from channel last to channel first
-  - [ ] TODO: Improve environment registering (kwargs, wrappers..)
-  - [ ] Make automatic version handling for the package and the environment register
-  - [ ] Make Grayscale wrapper
-  - [ ] Make some wrapper being the default behavior
-  - [ ] Test combined wrappers
-  - [ ] Change example scripts to jupyter notebooks
-  - [ ] Add frame stacking
-  - [ ] Add more SB3 algorithms
-  - [ ] Add graph visualization with pygraphiz (does it need networkx?)
-
-  - [ ] ManipulaTHOR env
-  - [ ] RoboTHOR env
-
-- [ ] Add RL algorithms
-
-  - [ ] Support Stable Baselines3
-  - [ ] Support RLlib..?
-  - [ ] Support CleanRL
-
-### Final TODOs
-
-- [ ] Check the different config files
-- [ ] Check and remove ipdb traces
-- [ ] Check and remove asserts
-- [ ] Check remaining TODOs in code
-- [ ] Check and remove `noqa`, `type: ignore` and `sourcery`
-- [ ] Check and remove unused code
-- [ ] Check and remove unused dependencies
-- [ ] Check and remove unused files
-- [ ] Test the framework with clean install
-- [ ] Double check docstrings and comments
-- [ ] Add documentation
-- [ ] Add Pre-commit hooks
-- [ ] Write changelog (<https://keepachangelog.com/en/1.0.0/>)
-- [ ] Double check pyproject.toml file, especially dependencies
-
-## Interesting Github Issues
-
-- <https://github.com/allenai/ai2thor/issues/993>
-- <https://github.com/allenai/ai2thor/issues/1144>
-- <https://github.com/allenai/ai2thor/issues/21>
-- <https://github.com/allenai/ai2thor/issues/851>
-- <https://github.com/allenai/ai2thor-docker/issues/3>
-- <https://github.com/allenai/ai2thor-docker/issues/2>
-- <https://github.com/allenai/ai2thor-docker/issues/14>
-- <https://github.com/allenai/ai2thor-docker/issues/9>
+| Component            | License                                                                  |
+| -------------------- | -------------------------------------------------------------------------|
+| Codebase (this repo) | [MIT License](LICENSE)                                                   |
+| AI2-THOR             | [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)|

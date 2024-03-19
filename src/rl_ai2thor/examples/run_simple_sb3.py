@@ -1,4 +1,4 @@
-"""Run a stable-baselines3 DQN agent in the AI2-THOR RL environment."""
+"""Run a stable-baselines3 agent in the AI2-THOR RL environment."""
 
 from typing import TYPE_CHECKING
 
