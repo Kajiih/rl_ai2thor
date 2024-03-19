@@ -1,24 +1,26 @@
-# AI2-THOR RL Benchmark
+# 🤖 AI2-THOR RL Benchmark
 
 AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and settings for the environment. The environment supports both continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
-AI2-THOR is a photorealistic interactive 3D environment for training AI agents that understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
+AI2-THOR is a photorealistic interactive 3D environment for training AI agents to understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
+
+![ithor_kitchen](media/ithor_kitchen.jpg)
 
 **[Continue with more details]** -
 **[Add gif of agent training]** -
 
 ## Contents <!-- omit from toc -->
 
-- [Installation](#installation)
-- [Getting Started](#getting-started)
-- [Running Headless](#running-headless)
-- [Configuring the environment](#configuring-the-environment)
-- [Creating new tasks](#creating-new-tasks)
-- [Reproducing benchmark results](#reproducing-benchmark-results)
-- [Citation](#citation)
-- [License](#license)
+- [💻 Installation](#-installation)
+- [🏃 Getting Started](#-getting-started)
+- [☁️ Running Headless](#️-running-headless)
+- [✏️ Configuring the environment](#️-configuring-the-environment)
+- [➕ Creating new tasks](#-creating-new-tasks)
+- [🧮 Reproducing benchmark results](#-reproducing-benchmark-results)
+- [📔 Citation](#-citation)
+- [🧾 License](#-license)
 
-## Installation
+## 💻 Installation
 
 1. **Create virtual environment**
     We recommend you use a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) virtual environment:
@@ -44,7 +46,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
     pip install rl-ai2thor
     ```
 
-## Getting Started
+## 🏃 Getting Started
 
 AI2-THOR RL uses [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API, so you can use it as simply as any other Gym/Gymnasium environment.
 
@@ -69,11 +71,11 @@ Follow Jupyter Notebooks in `examples` for more complex examples and use cases, 
 
 To go further, we recommend you to get familiar with the [concepts of the ITHOR simulation environment](https://ai2thor.allenai.org/ithor/documentation/concepts) and [our documentation](https://github.com/Kajiih/rl_ai2thor) **[create actual documentation]** to understand how tasks are defined.
 
-## Running Headless
+## ☁️ Running Headless
 
 Not available yet
 
-## Configuring the environment
+## ✏️ Configuring the environment
 
 The general environment configuration, like the maximum number of steps by episode or the parameters of the AI2-THOR controller can be found and edited in `config/general.yaml`.
 
@@ -106,7 +108,7 @@ env = gym.make(
 
 For more details about the configuration, see the [dedicated part of the documentation](https://github.com/Kajiih/rl_ai2thor) **[create actual documentation]**.
 
-## Creating new tasks
+## ➕ Creating new tasks
 
 In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_ai2thor) **[link to documentation]**.
 
@@ -128,15 +130,15 @@ This code lets you define a new task consisting of putting a hot apple in a plat
 
 For more details about how to define new tasks, item properties or relations, see the [dedicated part of the documentation](.) **[create actual documentation]**.
 
-## Reproducing benchmark results
+## 🧮 Reproducing benchmark results
 
 Not available yet
 
-## Citation
+## 📔 Citation
 
 Not available yet
 
-## License
+## 🧾 License
 
 | Component            | License                                                                  |
 | -------------------- | -------------------------------------------------------------------------|
