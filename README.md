@@ -1,6 +1,6 @@
 # 🤖 AI2-THOR RL Benchmark
 
-AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and settings for the environment. The environment supports both continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
+AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and presets for the environment. The environment supports various continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
 AI2-THOR is a photorealistic interactive 3D environment for training AI agents to understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
 
@@ -24,7 +24,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 
 ## 💻 Installation
 
-1. **Create virtual environment**
+1. **Create virtual environment**\
     We recommend you use a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) virtual environment:
 
     ```bash
@@ -33,7 +33,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
       conda activate rl_ai2thor
     ```
 
-2. **Install AI2-THOR RL and its dependencies**
+2. **Install AI2-THOR RL and its dependencies**\
     To install and customize the environment locally:
 
     ```bash
