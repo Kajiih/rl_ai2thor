@@ -1,6 +1,6 @@
-# 🤖 AI2-THOR RL Benchmark
+# 🤖 AI2-THOR RL
 
-AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and presets for the environment. The environment supports various continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
+AI2-THOR RL is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and presets for the environment, designed for embodied meta reinforcement learning. The environment supports various continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
 AI2-THOR is a photorealistic interactive 3D environment for training AI agents to understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
 
@@ -8,8 +8,11 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
   <img src="media/ITHOR_illustration.png" alt="Ithor Illustration">
 </p>
 
-**[Continue with more details]** -
-**[Add gif of agent training]** -
+-> **[Chose images that illustrate the different tasks and key characteristics of the environment/benchmark better]**
+
+-> **[Continue with more details]**
+
+-> **[Add gif of agent training]**
 
 ## Contents <!-- omit from toc -->
 
@@ -18,9 +21,13 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 - [☁️ Running Headless](#️-running-headless)
 - [✏️ Configuring the environment](#️-configuring-the-environment)
 - [➕ Creating new tasks](#-creating-new-tasks)
-- [🧮 Reproducing benchmark results](#-reproducing-benchmark-results)
+- [🧮 The Benchmark](#-the-benchmark)
+  - [Reproducing baselines results](#reproducing-baselines-results)
 - [📔 Citation](#-citation)
 - [🧾 License](#-license)
+
+**[Add features section?]**
+**[Clearer separation between environemnt and benchmark?]**
 
 ## 💻 Installation
 
@@ -130,9 +137,15 @@ task_description_dict = {
 
 This code lets you define a new task consisting of putting a hot apple in a plate. `hot_apple` and `plate_receptacle` are identifiers of the items used to defined relations and each property and relation can be found [here](.) **[link to documentation]**. This is enough to automatically create the reward function associated to the graph task.
 
+-> **[Add explanation how to define task blueprints in the configuration]**
+
+-> **[If automatic task creation from dict is not implemented, also add how to create the class corresponding to the task]**
+
 For more details about how to define new tasks, item properties or relations, see the [dedicated part of the documentation](.) **[create actual documentation]**.
 
-## 🧮 Reproducing benchmark results
+## 🧮 The Benchmark
+
+### Reproducing baselines results
 
 Not available yet
 
