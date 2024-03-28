@@ -31,7 +31,7 @@ def test_random_agent_1_ep() -> None:
     random_agent = RandomAgent(env, seed=random_agent_seed)
     episode_output = random_agent.run_episode(nb_episodes=1, total_max_steps=MAX_STEPS)
     random_agent.close()
-    total_reward, total_nb_steps = episode_output[0], episode_output[1]
+    _, total_nb_steps = episode_output[0], episode_output[1]
 
     assert total_nb_steps == MAX_STEPS
     # TODO: Use better assertions
@@ -42,13 +42,8 @@ def test_random_agent_n_ep() -> None:
     """Test running the environment with a random agent."""
     env = ITHOREnv()
     random_agent = RandomAgent(env, seed=random_agent_seed)
-    try:
-        run_output = random_agent.run_episode(nb_episodes=NB_EPISODES, total_max_steps=MAX_STEPS * NB_EPISODES)
-    except TimeoutError as e:
-        import pdb  # noqa PLC0415
-
-        pdb.set_trace()
+    run_output = random_agent.run_episode(nb_episodes=NB_EPISODES, total_max_steps=MAX_STEPS * NB_EPISODES)
     random_agent.close()
-    total_reward, total_nb_steps = run_output[0], run_output[1]
+    _, total_nb_steps = run_output[0], run_output[1]
 
     assert total_nb_steps == MAX_STEPS * NB_EPISODES

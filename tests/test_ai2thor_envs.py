@@ -10,7 +10,6 @@ from unittest.mock import call, patch
 import gymnasium as gym
 import pytest
 import yaml
-from _pytest.python_api import ApproxMapping  # noqa: PLC2701
 from PIL import Image
 
 from rl_ai2thor.envs.actions import EnvActionName
