@@ -16,6 +16,8 @@ action_parameters: # ** Not supposed to be modified **
   forceVisible: True # If True, hand movement actions will fail if the target object is not visible
 
 controller_parameters:
+  platform: null # set to "CloudRendering" for headless cloud rendering
+
   visibilityDistance: 1.5
 
   # Step sizes

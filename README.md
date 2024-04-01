@@ -19,6 +19,8 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 - [💻 Installation](#-installation)
 - [🏃 Getting Started](#-getting-started)
 - [☁️ Running Headless](#️-running-headless)
+  - [Cloud rendering](#cloud-rendering)
+  - [Starting X-Server](#starting-x-server)
 - [✏️ Configuring the environment](#️-configuring-the-environment)
 - [➕ Creating new tasks](#-creating-new-tasks)
 - [🧮 The Benchmark](#-the-benchmark)
@@ -82,7 +84,34 @@ To go further, we recommend you to get familiar with the [concepts of the ITHOR 
 
 ## ☁️ Running Headless
 
-Not available yet
+By default AI2-THOR opens up a Unity window each time a Controller is instantiated, but there are several ways to run AI2-THOR in headless mode, which is useful for training agents on a remote server or in a cloud environment. Depending on your needs, you can use one of the following methods:
+
+### Cloud rendering
+
+AI2-THOR supports cloud rendering. You can enable it by setting the `platform` parameter under `controller_parameters` in the configuration file to `CloudRendering`:
+
+```yaml
+controller_parameters:
+  platform: CloudRendering
+```
+
+Note that you will need the appropriate Vulkan drivers installed on your machine to use cloud rendering.
+
+You can refer to the [official AI2-THOR documentation](https://ai2thor.allenai.org/ithor/documentation/#headless-setup) for more direct information.
+
+### Starting X-Server
+
+If you are using NVIDIA GPUs, an alternative solution is to start an X-Server on your machine. You can use the [script](https://github.com/allenai/ai2thor/blob/main/scripts/ai2thor-xorg) provided by AI2-THOR after installing the package in your environment:
+
+```bash
+ai2thor-xorg start
+```
+
+You should now be able to instantiate AI2-THOR controllers.
+
+If you prefer using docker, we have a [Dockerfile](.) **[link to Dockerfile]** that you can use to build an image with the necessary dependencies.
+
+**[Add more details about the X-Server setup and the Dockerfile]** -
 
 ## ✏️ Configuring the environment
 

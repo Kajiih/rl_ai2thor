@@ -14,6 +14,11 @@
 
 ### Dev TODOs
 
+- [ ] Test enabling cloud rendering from config
+- [ ] Test with the `startx.py` script and add it to the README if necessary
+- [ ] Create a docker image to simplify the Xorg setup
+
+- [ ] Replace fixed/variable properties with innate/adaptive?? (or Inherent, Intrinsic vs Dynamic, Adjustable)
 - [ ] Change name of the project and package to RL THOR or THORRL?
 - [ ] Make compatible with python 3.11 (and 3.10?) and update README installation part
 - [x] Add Gymnasium interface
