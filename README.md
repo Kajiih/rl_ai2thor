@@ -150,7 +150,7 @@ For more details about the configuration, see the [dedicated part of the documen
 
 In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_ai2thor) **[link to documentation]**.
 
-Thanks to graph tasks, defining new tasks is as simple as creating a python dictionary describing the task items, their properties and their relations:
+Thanks to graph tasks, you can define a new task by describing its agency list. In practice, it is as simple as creating a python dictionary describing the task items, their properties and their relations:
 
 ```python
 task_description_dict = {
