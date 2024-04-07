@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rl_ai2thor"
-version = "0.4.2"
+version = "0.4.3"
 description = "RL environment for AI2-THOR"
 readme = "README.md"
 license = "MIT"
@@ -17,11 +17,7 @@ keywords = [
   "gymnasium",
 ]
 authors = [{ name = "Julian Paquerot", email = "julian_p@snu.ac.kr" }]
-dependencies = [
-  "ai2thor>=5.0.0",
-  "gymnasium",
-  "networkx",       # TODO: Delete networkx
-]
+dependencies = ["ai2thor>=5.0.0", "gymnasium"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Science/Research",

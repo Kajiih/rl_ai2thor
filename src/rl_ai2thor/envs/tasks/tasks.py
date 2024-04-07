@@ -188,7 +188,6 @@ type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], di
 
 # TODO: Add support for weighted properties and relations
 # TODO: Add support for agent properties
-# TODO: Remove networkx dependency
 class GraphTask[T: Hashable](BaseTask):
     """
     Base class for graph tasks.
