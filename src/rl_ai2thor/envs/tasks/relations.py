@@ -138,8 +138,7 @@ class ReceptacleOfRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
 
-    @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
+    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:  # noqa: PLR6301
         """Return the ids of the objects contained in the main object."""
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
@@ -166,8 +165,7 @@ class ContainedInRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
 
-    @staticmethod
-    def _extract_related_object_ids(main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
+    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:  # noqa: PLR6301
         """Return the ids of the objects containing the main object."""
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []

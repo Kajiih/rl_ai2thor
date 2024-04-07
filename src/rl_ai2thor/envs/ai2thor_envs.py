@@ -233,9 +233,12 @@ class ITHOREnv(
         Returns:
             list[TaskBlueprint]: List of task blueprints.
         """
+        tasks_config = self.config["tasks"]
+        if not isinstance(tasks_config, list):
+            tasks_config = [tasks_config]
         task_blueprints = []
         globally_excluded_scenes = set(self.config["globally_excluded_scenes"])
-        for task_description in self.config["tasks"]:
+        for task_description in tasks_config:
             task_type = task_description["type"]
             if task_type not in ALL_TASKS:
                 raise UnknownTaskTypeError(task_type)

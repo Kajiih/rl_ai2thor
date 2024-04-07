@@ -60,7 +60,7 @@ action_categories = {
 task_config = {
     "type": "Pickup",
     "args": {
-        "picked_object_type": "Tomato",  # Mug
+        "picked_up_object_type": "Tomato",  # Mug
     },
     "scenes": scenes,
 }

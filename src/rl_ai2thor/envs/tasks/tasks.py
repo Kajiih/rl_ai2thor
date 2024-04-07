@@ -37,7 +37,7 @@ from rl_ai2thor.envs.tasks.items import (
     TemperatureValue,
     obj_prop_id_to_item_prop,
 )
-from rl_ai2thor.envs.tasks.relations import relation_type_id_to_relation
+from rl_ai2thor.envs.tasks.relations import RelationTypeId, relation_type_id_to_relation
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from rl_ai2thor.envs.scenes import SceneId
     from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
-    from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
+    from rl_ai2thor.envs.tasks.relations import Relation
 
 
 # %% === Reward handlers ===
@@ -125,9 +125,10 @@ class BaseTask(ABC):
     def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
 
-    @staticmethod
+    @classmethod
     @abstractmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -160,26 +161,24 @@ class BaseTask(ABC):
 class UndefinableTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
 
-    @staticmethod
-    def reset(controller: Controller) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:  #   # noqa: ARG002, PLR6301
         """Reset and initialize the task and the controller."""
         return 0.0, False, {}
 
-    @staticmethod
-    def compute_task_advancement(event: Event) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG004
+    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG002, PLR6301
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """Compute the compatible task arguments from the task blueprint and the event."""
         raise NotImplementedError
 
-    @staticmethod
-    def text_description() -> str:
+    def text_description(self) -> str:  # noqa: PLR6301
         """Return a text description of the task."""
         return ""
 
@@ -548,12 +547,12 @@ class PlaceNSameIn(GraphTask[str]):
         self.receptacle_type = receptacle_type
         self.n = n
 
-        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type, n)
+        task_description_dict = PlaceNSameIn._create_task_description_dict(placed_object_type, receptacle_type, n)
 
         super().__init__(task_description_dict)
 
-    @staticmethod
-    def _create_task_description_dict(placed_object_type: str, receptacle_type: str, n: int = 1) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int = 1) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -567,13 +566,13 @@ class PlaceNSameIn(GraphTask[str]):
         """
         task_description_dict: TaskDict[str] = {
             "receptacle": {
-                "properties": {"objectType": receptacle_type},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: receptacle_type},
             }
         }
         for i in range(n):
             task_description_dict[f"placed_object_{i}"] = {
-                "properties": {"objectType": placed_object_type},
-                "relations": {"receptacle": ["contained_in"]},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                "relations": {"receptacle": [RelationTypeId.CONTAINED_IN]},
             }
 
         return task_description_dict
@@ -588,8 +587,9 @@ class PlaceNSameIn(GraphTask[str]):
         return f"Place {self.n} {self.placed_object_type} in {self.receptacle_type}"
 
     # TODO: Create a generalized version of this that works for all tasks
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -727,15 +727,15 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         self.pickupable_receptacle_type = pickupable_receptacle_type
         self.receptacle_type = receptacle_type
 
-        task_description_dict = self._create_task_description_dict(
+        task_description_dict = PlaceWithMoveableRecepIn._create_task_description_dict(
             placed_object_type, pickupable_receptacle_type, receptacle_type
         )
 
         super().__init__(task_description_dict)
 
-    @staticmethod
+    @classmethod
     def _create_task_description_dict(
-        placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str
+        cls, placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str
     ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
@@ -750,15 +750,15 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         return {
             "receptacle": {
-                "properties": {"objectType": receptacle_type},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: receptacle_type},
             },
             "pickupable_receptacle": {
-                "properties": {"objectType": pickupable_receptacle_type},
-                "relations": {"receptacle": ["contained_in"]},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: pickupable_receptacle_type},
+                "relations": {"receptacle": [RelationTypeId.CONTAINED_IN]},
             },
             "placed_object": {
-                "properties": {"objectType": placed_object_type},
-                "relations": {"pickupable_receptacle": ["contained_in"]},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                "relations": {"pickupable_receptacle": [RelationTypeId.CONTAINED_IN]},
             },
         }
 
@@ -771,8 +771,9 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         return f"Place {self.placed_object_type} in {self.pickupable_receptacle_type} in {self.receptacle_type}"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -823,7 +824,8 @@ class PlaceCleanedIn(PlaceIn):
     All instance of placed_object_type are made dirty during the reset of the task.
     """
 
-    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -874,8 +876,9 @@ class PlaceCleanedIn(PlaceIn):
         """
         return f"Place cleaned {self.placed_object_type} in {self.receptacle_type}"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:  # sourcery skip: invert-any-all
@@ -933,7 +936,8 @@ class PlaceHeatedIn(PlaceIn):
         receptacle_type (str): The type of receptacle to place the object in.
     """
 
-    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -959,8 +963,9 @@ class PlaceHeatedIn(PlaceIn):
         return f"Place heated {self.placed_object_type} in {self.receptacle_type}"
 
     # TODO: Change this to avoid duplicating code with PlaceIn
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -1016,7 +1021,8 @@ class PlaceCooledIn(PlaceIn):
         receptacle_type (str): The type of receptacle to place the object in.
     """
 
-    def _create_task_description_dict(self, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -1041,8 +1047,9 @@ class PlaceCooledIn(PlaceIn):
         """
         return f"Place cooled {self.placed_object_type} in {self.receptacle_type}"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -1090,6 +1097,8 @@ class LookInLight(GraphTask[str]):
     """
     Task for looking at a given object in light.
 
+    More precisely, the agent has have a toggled light source visible while holding the object to look at.
+
     This is equivalent to the look_at_obj_in_light task from Alfred.
 
     The light sources are listed in the LightSourcesType enum.
@@ -1104,11 +1113,11 @@ class LookInLight(GraphTask[str]):
         """
         self.looked_at_object_type = looked_at_object_type
 
-        task_description_dict = self._create_task_description_dict(looked_at_object_type)
+        task_description_dict = LookInLight._create_task_description_dict(looked_at_object_type)
         super().__init__(task_description_dict)
 
-    @staticmethod
-    def _create_task_description_dict(looked_at_object_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, looked_at_object_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -1121,13 +1130,16 @@ class LookInLight(GraphTask[str]):
         return {
             "light_source": {
                 "properties": {
-                    "objectType": SimObjectType.DESK_LAMP,  # TODO: Add support for other light sources
-                    "isToggled": True,
-                    "visible": True,
+                    SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,  # TODO: Add support for other light sources
+                    SimObjVariableProp.IS_TOGGLED: True,
+                    SimObjVariableProp.VISIBLE: True,
                 },
             },
             "looked_at_object": {
-                "properties": {"objectType": looked_at_object_type, "visible": True},
+                "properties": {
+                    SimObjFixedProp.OBJECT_TYPE: looked_at_object_type,
+                    SimObjVariableProp.IS_PICKED_UP: True,
+                },
             },
         }
 
@@ -1140,8 +1152,9 @@ class LookInLight(GraphTask[str]):
         """
         return f"Look at {self.looked_at_object_type} in light"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -1182,32 +1195,32 @@ class LookInLight(GraphTask[str]):
 class Pickup(GraphTask[str]):
     """Task for picking up a given object."""
 
-    def __init__(self, picked_object_type: str) -> None:
+    def __init__(self, picked_up_object_type: str) -> None:
         """
         Initialize the task.
 
         Args:
-            picked_object_type (str): The type of object to pick up.
+            picked_up_object_type (str): The type of object to pick up.
         """
-        self.picked_object_type = picked_object_type
+        self.picked_up_object_type = picked_up_object_type
 
-        task_description_dict = self._create_task_description_dict(picked_object_type)
+        task_description_dict = Pickup._create_task_description_dict(picked_up_object_type)
         super().__init__(task_description_dict)
 
-    @staticmethod
-    def _create_task_description_dict(picked_object_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, picked_up_object_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            picked_object_type (str): The type of object to pick up.
+            picked_up_object_type (str): The type of object to pick up.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "picked_object": {
-                "properties": {"objectType": picked_object_type, "isPickedUp": True},
+            "picked_up_object": {
+                "properties": {SimObjFixedProp.OBJECT_TYPE: picked_up_object_type, "isPickedUp": True},
             }
         }
 
@@ -1218,10 +1231,11 @@ class Pickup(GraphTask[str]):
         Returns:
             description (str): Text description of the task.
         """
-        return f"Pick up {self.picked_object_type}"
+        return f"Pick up {self.picked_up_object_type}"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -1245,12 +1259,12 @@ class Pickup(GraphTask[str]):
                 scene_object_types_count[obj_type] = 0
             scene_object_types_count[obj_type] += 1
 
-        # Keep only the object types that are present in the scene for the blueprint of 'picked_object_type'
+        # Keep only the object types that are present in the scene for the blueprint of 'picked_up_object_type'
         args_blueprints = {
-            "picked_object_type": task_blueprint.task_args["picked_object_type"] & set(scene_object_types_count),
+            "picked_up_object_type": task_blueprint.task_args["picked_up_object_type"] & set(scene_object_types_count),
         }
-        # Return a list with all the compatible combinations of picked_object_type
-        return [(picked_object_type,) for picked_object_type in args_blueprints["picked_object_type"]]
+        # Return a list with all the compatible combinations of picked_up_object_type
+        return [(picked_up_object_type,) for picked_up_object_type in args_blueprints["picked_up_object_type"]]
 
 
 # TODO: Fix this because you can't load tasks without arguments
@@ -1259,11 +1273,11 @@ class OpenAny(GraphTask[str]):
 
     def __init__(self) -> None:
         """Initialize the task."""
-        task_description_dict = self._create_task_description_dict()
+        task_description_dict = OpenAny._create_task_description_dict()
         super().__init__(task_description_dict)
 
-    @staticmethod
-    def _create_task_description_dict() -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -1272,11 +1286,11 @@ class OpenAny(GraphTask[str]):
         """
         return {
             "opened_object": {
-                "properties": {"isOpen": True},
+                "properties": {SimObjVariableProp.IS_OPEN: True},
             }
         }
 
-    def text_description(self) -> str:
+    def text_description(self) -> str:  # noqa: PLR6301
         """
         Return a text description of the task.
 
@@ -1285,8 +1299,9 @@ class OpenAny(GraphTask[str]):
         """
         return "Open any object"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
@@ -1325,11 +1340,11 @@ class Open(GraphTask[str]):
         """
         self.opened_object_type = opened_object_type
 
-        task_description_dict = self._create_task_description_dict(opened_object_type)
+        task_description_dict = Open._create_task_description_dict(opened_object_type)
         super().__init__(task_description_dict)
 
-    @staticmethod
-    def _create_task_description_dict(opened_object_type: str) -> TaskDict[str]:
+    @classmethod
+    def _create_task_description_dict(cls, opened_object_type: str) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
@@ -1341,7 +1356,7 @@ class Open(GraphTask[str]):
         """
         return {
             "opened_object": {
-                "properties": {"objectType": opened_object_type, "isOpen": True},
+                "properties": {SimObjFixedProp.OBJECT_TYPE: opened_object_type, SimObjVariableProp.IS_OPEN: True},
             }
         }
 
@@ -1354,8 +1369,9 @@ class Open(GraphTask[str]):
         """
         return f"Open {self.opened_object_type}"
 
-    @staticmethod
+    @classmethod
     def compute_compatible_args_from_blueprint(
+        cls,
         task_blueprint: TaskBlueprint,
         event: Event,
     ) -> list[tuple[PropValue, ...]]:

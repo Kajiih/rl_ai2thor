@@ -387,8 +387,7 @@ class VisibleWaterCondition(BaseActionCondition):
         )
         return water_is_visible
 
-    @staticmethod
-    def _base_error_message(action: EnvironmentAction) -> str:
+    def _base_error_message(self, action: EnvironmentAction) -> str:  # noqa: PLR6301
         """Return the default error message for the condition."""
         return f"Agent needs to have visible running water to perform action {action.ai2thor_action}!"
 

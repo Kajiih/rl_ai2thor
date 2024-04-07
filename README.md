@@ -76,7 +76,7 @@ while not terminated or truncated:
 env.close()
 ```
 
-Note that the first time that you instantiate the environment, AI2-THOR will download the simulator resources.
+Note that the first time that you instantiate the environment, AI2-THOR will download locally the 3D simulator resources to `~/.ai2thor` (~500MB).
 
 Follow Jupyter Notebooks in `examples` for more complex examples and use cases, like using AI2-THOR RL with Stable Baselines3 or recording videos of the agent's view.
 

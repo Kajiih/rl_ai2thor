@@ -34,8 +34,7 @@ class SingleTaskWrapper(ObservationWrapper, ITHOREnv):
 
         self.observation_space = self.env.observation_space.spaces["env_obs"]
 
-    @staticmethod
-    def observation(observation: dict[str, Any]) -> NDArray[np.uint8]:
+    def observation(self, observation: dict[str, Any]) -> NDArray[np.uint8]:  # noqa: PLR6301
         """Return only the environment's observation."""
         return observation["env_obs"]
 
@@ -61,8 +60,7 @@ class ChannelFirstObservationWrapper(ObservationWrapper, ITHOREnv):
             dtype=env_obs_space.dtype,  # type: ignore
         )
 
-    @staticmethod
-    def observation(observation: dict[str, NDArray[np.uint8] | str]) -> dict[str, NDArray[np.uint8] | str]:
+    def observation(self, observation: dict[str, NDArray[np.uint8] | str]) -> dict[str, NDArray[np.uint8] | str]:  # noqa: PLR6301
         """Return only the first channel of the observation."""
         env_obs = np.moveaxis(observation["env_obs"], -1, 0)  # type: ignore
         observation["env_obs"] = env_obs
@@ -85,8 +83,7 @@ class NormalizeActionWrapper(ActionWrapper, ITHOREnv):
         self.action_space: gym.spaces.Dict
         self.action_space.spaces["target_object_coordinates"] = gym.spaces.Box(low=-1, high=1, shape=(2,))
 
-    @staticmethod
-    def action(action: dict[str, Any]) -> dict[str, Any]:
+    def action(self, action: dict[str, Any]) -> dict[str, Any]:  # noqa: PLR6301
         """Convert from [-1, 1] to [0, 1] for target_object_coordinates."""
         action["target_object_coordinates"] = [(coord + 1) / 2 for coord in action["target_object_coordinates"]]
         return action
@@ -109,8 +106,7 @@ class SimpleActionSpaceWrapper(ActionWrapper, ITHOREnv):
         if not (self.unwrapped.config["discrete_actions"] and self.unwrapped.config["target_closest_object"]):
             raise NotSimpleActionEnvironmentMode(self.unwrapped.config)
 
-    @staticmethod
-    def action(action: int) -> dict[str, Any]:
+    def action(self, action: int) -> dict[str, Any]:  # noqa: PLR6301
         """Convert from action index to dictionary."""
         return {"action_index": action}
 

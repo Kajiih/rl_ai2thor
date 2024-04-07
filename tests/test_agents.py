@@ -1,3 +1,5 @@
+"""Tests for the agents module."""
+
 import pickle as pkl  # noqa: S403
 from pathlib import Path
 
