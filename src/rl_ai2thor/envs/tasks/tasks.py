@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from ai2thor.server import Event
 
     from rl_ai2thor.envs.scenes import SceneId
-    from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
+    from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata, SimObjProp
     from rl_ai2thor.envs.tasks.relations import Relation
 
 
@@ -283,7 +283,6 @@ class GraphTask[T: Hashable](BaseTask):
                     item.candidate_ids.add(obj_metadata["objectId"])
 
         self.overlap_classes = self._compute_overlap_classes(self.items)
-
         # Compute max task advancement = Total number of properties and relations of the items
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
@@ -371,15 +370,15 @@ class GraphTask[T: Hashable](BaseTask):
         # Extract the interesting assignments, results and scores
         interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
         # Merge the results and scores of the items
-        relation_results = {
-            item: item_score
+        all_relation_results: dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]] = {
+            item: item_relation_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_score in overlap_class_assignment_data[2].items()
+            for item, item_relation_results in overlap_class_assignment_data[2].items()
         }
-        properties_scores = {
-            item: item_score
+        all_properties_scores: dict[TaskItem[T], dict[SimObjId, int]] = {
+            item: item_property_score
             for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_score in overlap_class_assignment_data[3].items()
+            for item, item_property_score in overlap_class_assignment_data[3].items()
         }
 
         # Construct a generator of the cartesian product of the interesting assignments
@@ -391,40 +390,92 @@ class GraphTask[T: Hashable](BaseTask):
 
         # Compute the task advancement for each global assignment
         for assignment_product in assignment_products:
-            task_advancement = 0
             # Merge the assignments of the overlap classes
-            global_assignment: dict[TaskItem[T], Any] = {
+            global_assignment: dict[TaskItem[T], SimObjId] = {
                 item: obj_id
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
-            # Add property scores
-            task_advancement += sum(properties_scores[item][obj_id] for item, obj_id in global_assignment.items())
-            # Add strictly satisfied relation scores
-            for item, obj_id in global_assignment.items():
-                item_relations_results = relation_results[item]
-                for related_item_id, relations in item_relations_results.items():
-                    related_item_assigned_obj_id = global_assignment[self._items_by_id[related_item_id]]
-                    for relations_by_obj_id in relations.values():
-                        satisfying_obj_ids = relations_by_obj_id[obj_id]
-                        if related_item_assigned_obj_id in satisfying_obj_ids:
-                            task_advancement += 1
-            if task_advancement > max_task_advancement:
-                max_task_advancement = task_advancement
+            assignment_advancement = self.compute_assignment_advancement(
+                global_assignment, all_relation_results, all_properties_scores
+            )
+
+            if assignment_advancement > max_task_advancement:
+                max_task_advancement = assignment_advancement
                 best_assignment = global_assignment
                 if max_task_advancement == self.max_task_advancement:
                     is_terminated = True
                     break
 
+        # === Construct the results dictionary ===
+        all_properties_results: dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]] = {
+            item: item_properties_results
+            for overlap_class_assignment_data in overlap_classes_assignment_data
+            for item, item_properties_results in overlap_class_assignment_data[1].items()
+        }
+        # Retrieve the score of each property and relation for each item in the best assignment
+        results_dict = {
+            item.id: {
+                "properties": {
+                    prop_id: prop_results[obj_id] for prop_id, prop_results in all_properties_results[item].items()
+                },
+                "relations": {
+                    related_item_id: {
+                        relation_type_id: relations_by_obj_id[obj_id]
+                        for relation_type_id, relations_by_obj_id in relations.items()
+                    }
+                    for related_item_id, relations in all_relation_results[item].items()
+                },
+            }
+            for item, obj_id in best_assignment.items()
+        }
+
         # Add info about the task advancement
         info = {
             # Add best assignment, mapping between item ids and the assigned object ids
             "best_assignment": {item.id: obj_id for item, obj_id in best_assignment.items()},
+            "results": results_dict,
             "task_advancement": max_task_advancement,
         }
         # TODO: Add other info
 
         return max_task_advancement, is_terminated, info
+
+    def compute_assignment_advancement(
+        self,
+        global_assignment: dict[TaskItem[T], SimObjId],
+        all_relation_results: dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]],
+        all_properties_scores: dict[TaskItem[T], dict[SimObjId, int]],
+    ) -> float:
+        """
+        Compute the task advancement for a given assignment.
+
+        Args:
+            global_assignment (dict[TaskItem[T], SimObjId]): Assignment of objects to the items.
+            all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]]):
+                Results of each object for the relation of each item.
+            all_properties_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+                Property scores of each object for each item.
+
+        Returns:
+            task_advancement (float): Task advancement.
+        """
+        task_advancement = 0
+
+        # Add property scores
+        task_advancement += sum(all_properties_scores[item][obj_id] for item, obj_id in global_assignment.items())
+
+        # Add strictly satisfied relation scores
+        for item, obj_id in global_assignment.items():
+            item_relations_results = all_relation_results[item]
+            for related_item_id, relations in item_relations_results.items():
+                related_item_assigned_obj_id = global_assignment[self._items_by_id[related_item_id]]
+                for relations_by_obj_id in relations.values():
+                    satisfying_obj_ids = relations_by_obj_id[obj_id]
+                    if related_item_assigned_obj_id in satisfying_obj_ids:
+                        task_advancement += 1
+
+        return task_advancement
 
     # TODO: Check if we keep the relation set too (might not be necessary)
     # TODO: Change to only return a plain list of items
@@ -547,7 +598,7 @@ class PlaceNSameIn(GraphTask[str]):
         self.receptacle_type = receptacle_type
         self.n = n
 
-        task_description_dict = PlaceNSameIn._create_task_description_dict(placed_object_type, receptacle_type, n)
+        task_description_dict = self._create_task_description_dict(placed_object_type, receptacle_type, n)
 
         super().__init__(task_description_dict)
 
@@ -727,7 +778,7 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         self.pickupable_receptacle_type = pickupable_receptacle_type
         self.receptacle_type = receptacle_type
 
-        task_description_dict = PlaceWithMoveableRecepIn._create_task_description_dict(
+        task_description_dict = self._create_task_description_dict(
             placed_object_type, pickupable_receptacle_type, receptacle_type
         )
 
@@ -825,19 +876,21 @@ class PlaceCleanedIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
+            n (int): The number of objects to place.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
-        task_description_dict["placed_object"]["properties"][SimObjVariableProp.IS_DIRTY] = False
+        for i in range(n):
+            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.IS_DIRTY] = False
 
         return task_description_dict
 
@@ -937,19 +990,23 @@ class PlaceHeatedIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
+            n (int): The number of objects to place.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
-        task_description_dict["placed_object"]["properties"][SimObjVariableProp.TEMPERATURE] = TemperatureValue.HOT
+        for i in range(n):
+            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.TEMPERATURE] = (
+                TemperatureValue.HOT
+            )
 
         return task_description_dict
 
@@ -1022,19 +1079,23 @@ class PlaceCooledIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
             placed_object_type (str): The type of object to place.
             receptacle_type (str): The type of receptacle to place the object in.
+            n (int): The number of objects to place.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
-        task_description_dict["placed_object"]["properties"][SimObjVariableProp.TEMPERATURE] = TemperatureValue.COLD
+        for i in range(n):
+            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.TEMPERATURE] = (
+                TemperatureValue.COLD
+            )
 
         return task_description_dict
 
@@ -1113,7 +1174,7 @@ class LookInLight(GraphTask[str]):
         """
         self.looked_at_object_type = looked_at_object_type
 
-        task_description_dict = LookInLight._create_task_description_dict(looked_at_object_type)
+        task_description_dict = self._create_task_description_dict(looked_at_object_type)
         super().__init__(task_description_dict)
 
     @classmethod
@@ -1204,7 +1265,7 @@ class Pickup(GraphTask[str]):
         """
         self.picked_up_object_type = picked_up_object_type
 
-        task_description_dict = Pickup._create_task_description_dict(picked_up_object_type)
+        task_description_dict = self._create_task_description_dict(picked_up_object_type)
         super().__init__(task_description_dict)
 
     @classmethod
@@ -1273,7 +1334,7 @@ class OpenAny(GraphTask[str]):
 
     def __init__(self) -> None:
         """Initialize the task."""
-        task_description_dict = OpenAny._create_task_description_dict()
+        task_description_dict = self._create_task_description_dict()
         super().__init__(task_description_dict)
 
     @classmethod
@@ -1340,7 +1401,7 @@ class Open(GraphTask[str]):
         """
         self.opened_object_type = opened_object_type
 
-        task_description_dict = Open._create_task_description_dict(opened_object_type)
+        task_description_dict = self._create_task_description_dict(opened_object_type)
         super().__init__(task_description_dict)
 
     @classmethod

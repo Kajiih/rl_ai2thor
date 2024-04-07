@@ -1,11 +1,88 @@
-"""
-Tests for the tasks module.
+"""Tests for the tasks module."""
 
-TODO: Add test for full_initialize_items_and_relations_from_dict with
-- a relation with a non-existent item
-- a non-existent relation
-- a non-existent property
-- an item without relation
-- an item without property
-- every predefined task
-"""
+import pickle as pkl  # noqa: S403
+from pathlib import Path
+
+import pytest
+from ai2thor.controller import Controller
+from ai2thor.server import Event
+
+from rl_ai2thor.envs.tasks.items import SimObjFixedProp, SimObjVariableProp
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, Open, Pickup, PlaceCooledIn, TaskBlueprint
+
+data_dir = Path(__file__).parent / "data"
+
+
+def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> None:
+    """Generate tests for a task from saved data."""
+    event_list_path = task_data_dir / "event_list.pkl"
+    advancement_list_path = task_data_dir / "advancement_list.pkl"
+    terminated_list_path = task_data_dir / "terminated_list.pkl"
+    with event_list_path.open("rb") as f, advancement_list_path.open("rb") as g, terminated_list_path.open("rb") as h:
+        event_list = pkl.load(f)  # noqa: S301
+        advancement_list = pkl.load(g)  # noqa: S301
+        terminated_list = pkl.load(h)  # noqa: S301
+
+    mock_controller = MockController(last_event=event_list[0])
+    task_advancement, is_terminated, _ = task.reset(mock_controller)
+    assert task_advancement == advancement_list[0]
+    assert is_terminated == terminated_list[0]
+
+    for i in range(1, len(event_list)):
+        event = event_list[i]
+        advancement = advancement_list[i]
+        terminated = terminated_list[i]
+        task_advancement, is_terminated, _ = task.compute_task_advancement(event)
+        assert task_advancement == advancement
+        assert is_terminated == terminated
+
+
+# Mock ai2thor controller
+@pytest.fixture()
+def ai2thor_controller():
+    """Create a mock ai2thor controller."""
+    controller = Controller()
+    yield controller
+    controller.stop()
+
+
+class MockController(Controller):
+    """Mock controller for testing, with a last_event attribute."""
+
+    def __init__(self, last_event: Event):
+        """Initialize the MockController."""
+        self.last_event = last_event
+
+
+def create_mock_event(object_list: list | None = None) -> Event:
+    """Create a mock event for testing."""
+    if object_list is None:
+        object_list = []
+    dummy_metadata = {
+        "screenWidth": 300,
+        "screenHeight": 300,
+        "objects": object_list,
+    }
+    event = Event(dummy_metadata)
+
+    return event
+
+
+def test_pickup_task() -> None:
+    """Test the Pickup task with a Mug object."""
+    task = Pickup(picked_up_object_type="Mug")
+    task_data_dir = data_dir / "test_pickup_mug"
+
+
+def test_open_task() -> None:
+    """Test the Open task with a Fridge object."""
+    task = Open(opened_object_type="Fridge")
+    task_data_dir = data_dir / "test_open_fridge"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_test_place_cooled_in() -> None:
+    """Test the PlaceCooledIn task with a Fridge object."""
+    task = PlaceCooledIn(placed_object_type="Apple", receptacle_type="CounterTop")
+    task_data_dir = data_dir / "test_place_cooled_in_apple_counter_top"
+    generate_task_tests_from_saved_data(task, task_data_dir)

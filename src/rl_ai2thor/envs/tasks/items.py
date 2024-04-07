@@ -582,14 +582,14 @@ class ItemOverlapClass[T: Hashable]:
         Returns:
             interesting_assignments (list[dict[TaskItem[T], SimObjId]]):
                 List of the interesting assignments of objects to the items in the overlap class.
-            all_properties_results (dict[TaskItem[T], dict[SimObjProp, bool]]):
-                Results of each object for the item properties.
-            all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, set[SimObjId]]]]):
-                Results of each object for the item relations.
-            all_properties_scores (dict[TaskItem[T], dict[SimObjProp, int]]):
-                Property scores of each object for the item.
-            all_relations_scores (dict[TaskItem[T], dict[T, int]]):
-                Relation scores of each object for the item.
+            all_properties_results (dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]]):
+                Results of each object for each property of each item in the overlap class.
+            all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]]):
+                Results of each object for the relation of each item in the overlap class.
+            all_properties_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+                Property scores of each object for each item in the overlap class.
+            all_relations_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+                Relation scores of each object for each item in the overlap class.
         """
         interesting_candidates_data = {
             item: item.compute_interesting_candidates(scene_objects_dict) for item in self.items
