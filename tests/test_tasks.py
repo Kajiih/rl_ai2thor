@@ -6,9 +6,10 @@ from pathlib import Path
 import pytest
 from ai2thor.controller import Controller
 from ai2thor.server import Event
+from PIL import Image
 
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.tasks import BaseTask, Open, Pickup, PlaceCooledIn
+from rl_ai2thor.envs.tasks.tasks import BaseTask, LookInLight, Open, Pickup, PlaceCooledIn
 
 data_dir = Path(__file__).parent / "data"
 
@@ -30,11 +31,15 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
 
     for i in range(1, len(event_list)):
         event = event_list[i]
-        advancement = advancement_list[i]
-        terminated = terminated_list[i]
+        expected_advancement = advancement_list[i]
+        expected_terminated = terminated_list[i]
         task_advancement, is_terminated, _ = task.compute_task_advancement(event)
-        assert task_advancement == advancement
-        assert is_terminated == terminated
+        try:
+            assert task_advancement == expected_advancement
+            assert is_terminated == expected_terminated
+        except AssertionError as e:
+            Image.fromarray(event.frame).save("tests/last_frame.png")
+            raise e from None
 
 
 # Mock ai2thor controller
@@ -81,8 +86,15 @@ def test_open_task() -> None:
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 
-def test_test_place_cooled_in() -> None:
+def test_place_cooled_in() -> None:
     """Test the PlaceCooledIn task with a Fridge object."""
     task = PlaceCooledIn(placed_object_type=SimObjectType.APPLE, receptacle_type=SimObjectType.COUNTER_TOP)
     task_data_dir = data_dir / "test_place_cooled_in_apple_counter_top"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_look_in_light_book() -> None:
+    """Test the LookIn task with a Book object."""
+    task = LookInLight(looked_at_object_type=SimObjectType.BOOK)
+    task_data_dir = data_dir / "test_look_in_light_book"
     generate_task_tests_from_saved_data(task, task_data_dir)

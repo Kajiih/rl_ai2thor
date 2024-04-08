@@ -12,10 +12,11 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjId, SimObjMetadata
-from rl_ai2thor.utils.ai2thor_utils import compute_objects_3d_distance
+from rl_ai2thor.envs.tasks.items import SingleValuePSF
+from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.items import PropValue, TaskItem
+    from rl_ai2thor.envs.tasks.items import PropSatFunction, PropValue, TaskItem
 
 
 # %% === Enums ===
@@ -47,7 +48,7 @@ class Relation(ABC):
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: SimObjFixedProp | None = None
-    candidate_required_prop_value: PropValue | None = None
+    candidate_required_prop_sat_function: PropSatFunction | None = None
 
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
@@ -176,7 +177,7 @@ class ReceptacleOfRelation(Relation):
     type_id: RelationTypeId = field(default=RelationTypeId.RECEPTACLE_OF, init=False)
     inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.CONTAINED_IN, init=False)
     candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.RECEPTACLE, init=False)
-    candidate_required_prop_value: PropValue = field(default=True, init=False)
+    candidate_required_prop_sat_function: PropSatFunction = field(default=SingleValuePSF(True), init=False)
     main_item: TaskItem
     related_item: TaskItem
 
@@ -211,7 +212,7 @@ class ContainedInRelation(Relation):
     type_id: RelationTypeId = field(default=RelationTypeId.CONTAINED_IN, init=False)
     inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.RECEPTACLE_OF, init=False)
     candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.PICKUPABLE, init=False)
-    candidate_required_prop_value: PropValue = field(default=True, init=False)
+    candidate_required_prop_sat_function: PropSatFunction = field(default=SingleValuePSF(True), init=False)
     main_item: TaskItem
     related_item: TaskItem
 
@@ -245,8 +246,8 @@ class CloseToRelation(Relation):
 
     type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
     inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
-    candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.PICKUPABLE, init=False)
-    candidate_required_prop_value: PropValue = field(default=True, init=False)
+    candidate_required_prop = None
+    candidate_required_prop_sat_function = None
     main_item: TaskItem
     related_item: TaskItem
     distance: float = 1.0
@@ -265,7 +266,7 @@ class CloseToRelation(Relation):
         for scene_object_id, scene_object_metadata in scene_objects_dict.items():
             if (
                 scene_object_id != main_obj_metadata["objectId"]
-                and compute_objects_3d_distance(main_obj_metadata, scene_object_metadata) <= self.distance
+                and compute_objects_2d_distance(main_obj_metadata, scene_object_metadata) <= self.distance
             ):
                 close_object_ids.append(scene_object_id)
 

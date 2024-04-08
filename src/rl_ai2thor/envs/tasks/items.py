@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Hashable
+from collections.abc import Callable, Container, Hashable
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal, NewType
+from typing import TYPE_CHECKING, Any, Literal
 
 from rl_ai2thor.envs.sim_objects import (
     SimObjectType,
@@ -47,7 +47,7 @@ type PropValue = int | float | bool | TemperatureValue | SimObjectType
 
 
 # %% === Property satisfaction functions ===
-class PSF(ABC):
+class BasePSF(ABC):
     """
     Base class for functions used to define the set of acceptable values for a property to be satisfied.
 
@@ -59,7 +59,7 @@ class PSF(ABC):
         """Return True if the value satisfies the property."""
 
 
-class SingleValuePSF(PSF):
+class SingleValuePSF(BasePSF):
     """Defines a property satisfaction function that only accepts a single value."""
 
     def __init__(self, target_value: PropValue) -> None:
@@ -70,11 +70,14 @@ class SingleValuePSF(PSF):
         """Return True if the value is equal to the target value."""
         return prop_value == self.target_value
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.target_value})"
 
-class MultiValuePSF(PSF):
+
+class MultiValuePSF(BasePSF):
     """Defines a property satisfaction function that accepts a set of values."""
 
-    def __init__(self, target_values: set[PropValue]) -> None:
+    def __init__(self, target_values: Container[PropValue]) -> None:
         """Initialize the target values."""
         self.target_values = target_values
 
@@ -82,8 +85,11 @@ class MultiValuePSF(PSF):
         """Return True if the value is in the target values."""
         return prop_value in self.target_values
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.target_values})"
 
-class RangePSF(PSF):
+
+class RangePSF(BasePSF):
     """Defines a property satisfaction function that accepts a range of values."""
 
     def __init__(self, min_value: float | int, max_value: float | int) -> None:
@@ -95,8 +101,11 @@ class RangePSF(PSF):
         """Return True if the value is in the range."""
         return self.min_value <= prop_value <= self.max_value
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.min_value}, {self.max_value})"
 
-class GenericPSF(PSF):
+
+class GenericPSF(BasePSF):
     """Defines a property satisfaction function with a custom function."""
 
     def __init__(self, func: Callable[[PropValue], bool]) -> None:
@@ -108,7 +117,7 @@ class GenericPSF(PSF):
         return self.func(prop_value)
 
 
-type PropSatisfactionFunction = PSF | Callable[[PropValue], bool]
+type PropSatFunction = BasePSF | Callable[[PropValue], bool]
 
 
 # %% === Properties  ===
@@ -116,7 +125,13 @@ type PropSatisfactionFunction = PSF | Callable[[PropValue], bool]
 # TODO: Add support for allowing property checking with other ways than equality.
 # TODO: Check if we need to add a hash
 class ItemProp:
-    """Property of an item in the definition of a task."""
+    """
+    Property of an item in the definition of a task.
+
+    If the property is fixed (cannot be changed by the agent), the candidate_required_property
+    attribute is set to the property itself and the candidate_required_property_value is set to
+    the value of the property.
+    """
 
     def __init__(
         self,
@@ -124,14 +139,14 @@ class ItemProp:
         value_type: type,
         is_fixed: bool = False,
         candidate_required_property: SimObjFixedProp | None = None,
-        candidate_required_property_value: Any | None = None,
+        candidate_required_prop_sat_function: PropSatFunction | None = None,
     ) -> None:
         """Initialize the Property object."""
         self.target_ai2thor_property = target_ai2thor_property
         self.value_type = value_type
         self.is_fixed = is_fixed
-        self.candidate_required_property = target_ai2thor_property if is_fixed else candidate_required_property
-        self.candidate_required_property_value = candidate_required_property_value
+        self.candidate_required_prop = target_ai2thor_property if is_fixed else candidate_required_property
+        self.candidate_required_prop_sat_function = candidate_required_prop_sat_function
 
     def __str__(self) -> str:
         return f"{self.target_ai2thor_property}"
@@ -154,27 +169,29 @@ class TaskItem[T: Hashable]:
     def __init__(
         self,
         t_id: T,
-        properties: dict[ItemProp, PropValue],
+        properties: dict[ItemProp, PropSatFunction],
     ) -> None:
         """
         Initialize the TaskItem object.
 
         Args:
             t_id (T): The ID of the item as defined in the task description.
-            properties (dict[ItemProp, PropValue]): The properties of the item.
+            properties (dict[ItemProp, PropSatFunction]): The properties of the item.
         """
         self.id = t_id
         self.properties = properties
 
         # Infer the candidate required properties from the item properties
-        self._candidate_required_properties_prop = {
-            prop.candidate_required_property: (value if prop.is_fixed else prop.candidate_required_property_value)
-            for prop, value in self.properties.items()
-            if prop.candidate_required_property is not None
+        self._prop_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {
+            prop.candidate_required_prop: (
+                prop_satisfaction_function if prop.is_fixed else prop.candidate_required_prop_sat_function
+            )
+            for prop, prop_satisfaction_function in self.properties.items()
+            if prop.candidate_required_prop is not None
         }
 
         # Other attributes
-        self._candidate_required_properties_rel: dict[SimObjFixedProp, PropValue] = {}
+        self._rel_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {}
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
         self.candidate_ids: set[SimObjId] = set()
 
@@ -202,8 +219,8 @@ class TaskItem[T: Hashable]:
             }
             for relation in relations
         })
-        self._candidate_required_properties_rel.update({
-            relation.candidate_required_prop: relation.candidate_required_prop_value
+        self._rel_candidate_required_properties.update({
+            relation.candidate_required_prop: relation.candidate_required_prop_sat_function
             for relation in relations
             if relation.candidate_required_prop is not None
         })
@@ -214,16 +231,16 @@ class TaskItem[T: Hashable]:
         }
 
     @property
-    def candidate_required_properties(self) -> dict[SimObjProp, Any]:
+    def candidate_required_properties(self) -> dict[SimObjProp, PropSatFunction]:
         """
         Return a dictionary containing the properties required for an object to be a candidate for the item.
 
         Returns:
-            candidate_properties (dict[ObjPropId, Any]): Dictionary containing the candidate required properties.
+            candidate_properties (dict[ObjPropId, PropSatFunction]): Dictionary containing the candidate required properties.
         """
         return {
-            **self._candidate_required_properties_prop,
-            **self._candidate_required_properties_rel,
+            **self._prop_candidate_required_properties,
+            **self._rel_candidate_required_properties,
         }
 
     def is_candidate(self, obj_metadata: SimObjMetadata) -> bool:
@@ -237,7 +254,8 @@ class TaskItem[T: Hashable]:
             is_candidate (bool): True if the given object is a valid candidate for the item.
         """
         return all(
-            obj_metadata[prop_id] == prop_value for prop_id, prop_value in self.candidate_required_properties.items()
+            prop_sat_function(obj_metadata[prop_id])
+            for prop_id, prop_sat_function in self.candidate_required_properties.items()
         )
 
     def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
@@ -251,8 +269,8 @@ class TaskItem[T: Hashable]:
             prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are satisfied by the given object.
         """
         return {
-            prop.target_ai2thor_property: obj_metadata[prop.target_ai2thor_property] == prop_value
-            for prop, prop_value in self.properties.items()
+            prop.target_ai2thor_property: prop_sat_function(obj_metadata[prop.target_ai2thor_property])
+            for prop, prop_sat_function in self.properties.items()
         }
 
     def _get_relations_semi_satisfying_objects(
@@ -313,7 +331,7 @@ class TaskItem[T: Hashable]:
         }
         return results
 
-    def _compute_all_obj_results(
+    def _compute_all_candidates_results(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         dict[SimObjProp, dict[SimObjId, bool]],
@@ -327,20 +345,20 @@ class TaskItem[T: Hashable]:
             of the objects in the scene to their metadata.
 
         Returns:
-            properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
+            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
                 Results of each object for the item properties.
-            relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
         """
-        properties_results = {
+        candidates_properties_results = {
             prop.target_ai2thor_property: {
-                obj_id: scene_objects_dict[obj_id][prop.target_ai2thor_property] == prop_value
+                obj_id: prop_sat_function(scene_objects_dict[obj_id][prop.target_ai2thor_property])
                 for obj_id in self.candidate_ids
             }
-            for prop, prop_value in self.properties.items()
+            for prop, prop_sat_function in self.properties.items()
         }
 
-        relations_results = {
+        candidates_relations_results = {
             related_item_id: {
                 relation.type_id: {
                     obj_id: relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id], scene_objects_dict)
@@ -351,12 +369,12 @@ class TaskItem[T: Hashable]:
             for related_item_id in self.organized_relations
         }
 
-        return properties_results, relations_results
+        return candidates_properties_results, candidates_relations_results
 
-    def _compute_all_obj_scores(
+    def _compute_all_candidates_scores(
         self,
-        properties_results: dict[SimObjProp, dict[SimObjId, bool]],
-        relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
+        candidates_properties_results: dict[SimObjProp, dict[SimObjId, bool]],
+        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
     ) -> tuple[
         dict[SimObjId, int],
         dict[SimObjId, int],
@@ -365,32 +383,34 @@ class TaskItem[T: Hashable]:
         Return the property and relation scores of each candidate of the item.
 
         Args:
-            properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
+            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
                 Results of each object for the item properties.
-            relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
 
         Returns:
-            properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, int]):
                 Property scores of each object for the item.
-            relations_scores (dict[SimObjId, int]):
+            candidates_relations_scores (dict[SimObjId, int]):
                 Relation scores of each object for the item.
         """
-        properties_scores: dict[SimObjId, int] = {
-            obj_id: sum(bool(properties_results[prop_id][obj_id]) for prop_id in properties_results)
+        candidates_properties_scores: dict[SimObjId, int] = {
+            obj_id: sum(
+                bool(candidates_properties_results[prop_id][obj_id]) for prop_id in candidates_properties_results
+            )
             for obj_id in self.candidate_ids
         }
-        relations_scores = {
+        candidates_relations_scores = {
             obj_id: sum(
                 1
-                for related_item_id in relations_results
-                for relation_type_id in relations_results[related_item_id]
-                if relations_results[related_item_id][relation_type_id][obj_id]
+                for related_item_id in candidates_relations_results
+                for relation_type_id in candidates_relations_results[related_item_id]
+                if candidates_relations_results[related_item_id][relation_type_id][obj_id]
             )
             for obj_id in self.candidate_ids
         }
 
-        return properties_scores, relations_scores
+        return candidates_properties_scores, candidates_relations_scores
 
     def compute_interesting_candidates(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
@@ -423,27 +443,35 @@ class TaskItem[T: Hashable]:
 
         Returns:
             interesting_candidates (set[SimObjId]): Set of interesting candidates for the item.
-            properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
+            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
                 Results of each object for the item properties.
-            relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, int]):
                 Property scores of each object for the item.
-            relations_scores (dict[SimObjId, int]):
+            candidates_relations_scores (dict[SimObjId, int]):
                 Relation scores of each object for the item.
         """
         # Compute the results of each object for the item
-        properties_results, relations_results = self._compute_all_obj_results(scene_objects_dict)
+        candidates_properties_results, candidates_relations_results = self._compute_all_candidates_results(
+            scene_objects_dict
+        )
 
         # Compute the scores of each object for the item
-        properties_scores, relations_scores = self._compute_all_obj_scores(properties_results, relations_results)
+        candidates_properties_scores, candidates_relations_scores = self._compute_all_candidates_scores(
+            candidates_properties_results, candidates_relations_results
+        )
 
         # Remove the candidates that have a stronger alternative
         interesting_candidates = list(self.candidate_ids)
         for i, candidate_id in enumerate(interesting_candidates):
             for j, other_candidate_id in enumerate(interesting_candidates[i + 1 :]):
                 stronger_candidate = self._get_stronger_candidate(
-                    candidate_id, other_candidate_id, relations_results, properties_scores, relations_scores
+                    candidate_id,
+                    other_candidate_id,
+                    candidates_relations_results,
+                    candidates_properties_scores,
+                    candidates_relations_scores,
                 )
                 if stronger_candidate in {candidate_id, "equal"}:
                     # In the equal case, we can keep any of the two candidates
@@ -455,24 +483,32 @@ class TaskItem[T: Hashable]:
                     break
 
         # Add a candidate with the highest property score if none of those are already added
-        max_prop_score = max(properties_scores[candidate_id] for candidate_id in interesting_candidates)
+        max_prop_score = max(candidates_properties_scores[candidate_id] for candidate_id in interesting_candidates)
         # Check if there is a candidate with the highest property score
-        if max_prop_score not in [properties_scores[candidate_id] for candidate_id in interesting_candidates]:
+        if max_prop_score not in [
+            candidates_properties_scores[candidate_id] for candidate_id in interesting_candidates
+        ]:
             # Add the candidate with the highest property score
             for candidate_id in self.candidate_ids:
-                if properties_scores[candidate_id] == max_prop_score:
+                if candidates_properties_scores[candidate_id] == max_prop_score:
                     interesting_candidates.append(candidate_id)
                     break
 
-        return set(interesting_candidates), properties_results, relations_results, properties_scores, relations_scores
+        return (
+            set(interesting_candidates),
+            candidates_properties_results,
+            candidates_relations_results,
+            candidates_properties_scores,
+            candidates_relations_scores,
+        )
 
     def _get_stronger_candidate(
         self,
         obj_1_id: SimObjId,
         obj_2_id: SimObjId,
-        relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-        properties_scores: dict[SimObjId, int],
-        relations_scores: dict[SimObjId, int],
+        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
+        candidates_properties_scores: dict[SimObjId, int],
+        candidates_relations_scores: dict[SimObjId, int],
     ) -> SimObjId | Literal["equal", "incomparable"]:
         """
         Return the stronger candidate between the two given candidates.
@@ -496,11 +532,11 @@ class TaskItem[T: Hashable]:
         Args:
             obj_1_id (SimObjId): First candidate object id.
             obj_2_id (SimObjId): Second candidate object id.
-            relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, int]):
                 Property scores of each object for the item.
-            relations_scores (dict[SimObjId, int]):
+            candidates_relations_scores (dict[SimObjId, int]):
                 Relation scores of each object for the item.
 
         Returns:
@@ -513,21 +549,25 @@ class TaskItem[T: Hashable]:
         obj2_stronger = True
         # Pre check: Sp(obj_1_id) + Sr(obj_1_id) < Sp(obj_2_id) + Sr(obj_2_id)
         if (
-            properties_scores[obj_1_id] + relations_scores[obj_1_id]
-            < properties_scores[obj_2_id] + relations_scores[obj_2_id]
+            candidates_properties_scores[obj_1_id] + candidates_relations_scores[obj_1_id]
+            < candidates_properties_scores[obj_2_id] + candidates_relations_scores[obj_2_id]
         ):
             obj1_stronger = False
         else:
-            obj1_stronger = self._is_stronger_candidate_than(obj_1_id, obj_2_id, relations_results, properties_scores)
+            obj1_stronger = self._is_stronger_candidate_than(
+                obj_1_id, obj_2_id, candidates_relations_results, candidates_properties_scores
+            )
 
         # Pre check: Sp(obj_1_id) + Sr(obj_1_id) > Sp(obj_2_id) + Sr(obj_2_id)
         if (
-            properties_scores[obj_1_id] + relations_scores[obj_1_id]
-            > properties_scores[obj_2_id] + relations_scores[obj_2_id]
+            candidates_properties_scores[obj_1_id] + candidates_relations_scores[obj_1_id]
+            > candidates_properties_scores[obj_2_id] + candidates_relations_scores[obj_2_id]
         ):
             obj2_stronger = False
         else:
-            obj2_stronger = self._is_stronger_candidate_than(obj_2_id, obj_1_id, relations_results, properties_scores)
+            obj2_stronger = self._is_stronger_candidate_than(
+                obj_2_id, obj_1_id, candidates_relations_results, candidates_properties_scores
+            )
 
         if obj1_stronger:
             return "equal" if obj2_stronger else obj_1_id
@@ -537,8 +577,8 @@ class TaskItem[T: Hashable]:
     def _is_stronger_candidate_than(
         obj_1_id: SimObjId,
         obj_2_id: SimObjId,
-        relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-        properties_scores: dict[SimObjId, int],
+        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
+        candidates_properties_scores: dict[SimObjId, int],
     ) -> bool:
         """
         Return True if the first candidate is stronger than the second candidate.
@@ -556,24 +596,24 @@ class TaskItem[T: Hashable]:
         Args:
             obj_1_id (SimObjId): First candidate object id.
             obj_2_id (SimObjId): Second candidate object id.
-            relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, int]):
                 Property scores of each object for the item.
 
         Returns:
             is_stronger (bool): True if the first candidate is stronger than the second candidate.
         """
-        sp_x = properties_scores[obj_1_id]
-        sp_y = properties_scores[obj_2_id]
-        sr_y = properties_scores[obj_2_id]
+        sp_x = candidates_properties_scores[obj_1_id]
+        sp_y = candidates_properties_scores[obj_2_id]
+        sr_y = candidates_properties_scores[obj_2_id]
 
         # Calculate d[x,y]
         d_xy = 0
-        for related_item_id in relations_results:
-            for relation_type_id in relations_results[related_item_id]:
-                x_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_1_id]
-                y_sat_obj_ids = relations_results[related_item_id][relation_type_id][obj_2_id]
+        for related_item_id in candidates_relations_results:
+            for relation_type_id in candidates_relations_results[related_item_id]:
+                x_sat_obj_ids = candidates_relations_results[related_item_id][relation_type_id][obj_1_id]
+                y_sat_obj_ids = candidates_relations_results[related_item_id][relation_type_id][obj_2_id]
                 if y_sat_obj_ids.issubset(x_sat_obj_ids):
                     d_xy += 1
 
@@ -821,43 +861,43 @@ is_toggled_prop = ItemProp(
     SimObjVariableProp.IS_TOGGLED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.TOGGLEABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_broken_prop = ItemProp(
     SimObjVariableProp.IS_BROKEN,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.BREAKABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_filled_with_liquid_prop = ItemProp(
     SimObjVariableProp.IS_FILLED_WITH_LIQUID,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 fill_liquid_prop = ItemProp(
     SimObjVariableProp.FILL_LIQUID,
     value_type=FillableLiquid,
     candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_dirty_prop = ItemProp(
     SimObjVariableProp.IS_DIRTY,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.DIRTYABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_used_up_prop = ItemProp(
     SimObjVariableProp.IS_USED_UP,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.CAN_BE_USED_UP,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_cooked_prop = ItemProp(
     SimObjVariableProp.IS_COOKED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.COOKABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 temperature_prop = ItemProp(
     SimObjVariableProp.TEMPERATURE,
@@ -867,25 +907,25 @@ is_sliced_prop = ItemProp(
     SimObjVariableProp.IS_SLICED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.SLICEABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_open_prop = ItemProp(
     SimObjVariableProp.IS_OPEN,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.OPENABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 openness_prop = ItemProp(
     SimObjVariableProp.OPENNESS,
     value_type=float,
     candidate_required_property=SimObjFixedProp.OPENABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 is_picked_up_prop = ItemProp(
     SimObjVariableProp.IS_PICKED_UP,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.PICKUPABLE,
-    candidate_required_property_value=True,
+    candidate_required_prop_sat_function=SingleValuePSF(True),
 )
 
 # %% === Mappings ===

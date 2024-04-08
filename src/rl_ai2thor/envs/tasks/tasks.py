@@ -25,6 +25,7 @@ from rl_ai2thor.envs.sim_objects import (
     COLD_SOURCES,
     DIRTYABLES,
     HEAT_SOURCES,
+    LIGHT_SOURCES,
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
@@ -32,7 +33,10 @@ from rl_ai2thor.envs.sim_objects import (
 )
 from rl_ai2thor.envs.tasks.items import (
     ItemOverlapClass,
+    MultiValuePSF,
+    PropSatFunction,
     PropValue,
+    SingleValuePSF,
     TaskItem,
     TemperatureValue,
     obj_prop_id_to_item_prop,
@@ -184,7 +188,7 @@ class UndefinableTask(BaseTask):
 
 
 type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
-type PropertiesDict = dict[SimObjProp, PropValue]
+type PropertiesDict = dict[SimObjProp, PropSatFunction]
 type TaskDict[T: Hashable] = dict[T, TaskItemData[T]]
 
 
@@ -641,11 +645,11 @@ class PlaceNSameIn(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict: TaskDict[str] = {
-            "receptacle": TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type}),
+            "receptacle": TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}),
         }
         for i in range(n):
             task_description_dict[f"placed_object_{i}"] = TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
                 relations={f"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             )
 
@@ -836,14 +840,14 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         return {
             "receptacle": TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type},
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)},
             ),
             "pickupable_receptacle": TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: pickupable_receptacle_type},
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(pickupable_receptacle_type)},
                 relations={"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             ),
             "placed_object": TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
                 relations={"pickupable_receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             ),
         }
@@ -930,15 +934,13 @@ class PlaceCleanedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.IS_DIRTY] = False
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.IS_DIRTY] = SingleValuePSF(False)
 
         return task_description_dict
 
     def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
         """
-        Reset the task with the information of the event.
-
-        All instances of placed_object_type are made dirty during the reset of the task.
+        Make all instances of placed_object_type dirty.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
@@ -951,7 +953,10 @@ class PlaceCleanedIn(PlaceIn):
         last_event: Event = controller.last_event  # type: ignore
 
         for obj_metadata in last_event.metadata["objects"]:
-            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == self.placed_object_type:
+            if (
+                obj_metadata[SimObjFixedProp.OBJECT_TYPE] == self.placed_object_type
+                and not obj_metadata[SimObjVariableProp.IS_DIRTY]
+            ):
                 controller.step(
                     action=Ai2thorAction.DIRTY_OBJECT,
                     objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
@@ -1049,7 +1054,7 @@ class PlaceHeatedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = (
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = SingleValuePSF(
                 TemperatureValue.HOT
             )
 
@@ -1143,7 +1148,7 @@ class PlaceCooledIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = (
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = SingleValuePSF(
                 TemperatureValue.COLD
             )
 
@@ -1202,8 +1207,6 @@ class PlaceCooledIn(PlaceIn):
         return compatible_args
 
 
-# TODO: Implement the fact that any light source can be used instead of only desk lamps
-# TODO: Implement with close_to relation instead of visible for the light source
 class LookInLight(GraphTask[str]):
     """
     Task for looking at a given object in light.
@@ -1212,7 +1215,7 @@ class LookInLight(GraphTask[str]):
 
     This is equivalent to the look_at_obj_in_light task from Alfred.
 
-    The light sources are listed in the LightSourcesType enum.
+    All light sources are switched off during the reset of the task.
     """
 
     def __init__(self, looked_at_object_type: SimObjectType) -> None:
@@ -1241,18 +1244,45 @@ class LookInLight(GraphTask[str]):
         return {
             "light_source": TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,
-                    SimObjVariableProp.IS_TOGGLED: True,
+                    SimObjFixedProp.OBJECT_TYPE: MultiValuePSF(LIGHT_SOURCES),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
                 },
             ),
             "looked_at_object": TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: looked_at_object_type,
-                    SimObjVariableProp.IS_PICKED_UP: True,
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(looked_at_object_type),
+                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
                 },
                 relations={"light_source": {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
             ),
         }
+
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+        """
+        Switch of all light sources in the scene.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            if (
+                obj_metadata[SimObjFixedProp.OBJECT_TYPE] in LIGHT_SOURCES
+                and obj_metadata[SimObjVariableProp.IS_TOGGLED]
+            ):
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_OFF,
+                    objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
+                    forceAction=True,
+                )
+
+        return super().reset(controller)
 
     def text_description(self) -> str:
         """
@@ -1290,8 +1320,8 @@ class LookInLight(GraphTask[str]):
             scene_object_types_count[obj_type] += 1
 
         # Check that there is at least one light source in the scene
-        # TODO: Add support for other light sources
-        if SimObjectType.DESK_LAMP not in scene_object_types_count:
+        # TODO: Test this
+        if not (LIGHT_SOURCES & set(scene_object_types_count)):
             return []
 
         # Keep only the object types that are present in the scene for the blueprint of 'looked_at_object_type'
@@ -1332,8 +1362,8 @@ class Pickup(GraphTask[str]):
         return {
             "picked_up_object": TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: picked_up_object_type,
-                    SimObjVariableProp.IS_PICKED_UP: True,
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(picked_up_object_type),
+                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
                 },
             )
         }
@@ -1400,7 +1430,7 @@ class OpenAny(GraphTask[str]):
         """
         return {
             "opened_object": TaskItemData(
-                properties={SimObjVariableProp.IS_OPEN: True},
+                properties={SimObjVariableProp.IS_OPEN: SingleValuePSF(True)},
             )
         }
 
@@ -1471,8 +1501,8 @@ class Open(GraphTask[str]):
         return {
             "opened_object": TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: opened_object_type,
-                    SimObjVariableProp.IS_OPEN: True,
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(opened_object_type),
+                    SimObjVariableProp.IS_OPEN: SingleValuePSF(True),
                 },
             )
         }
