@@ -18,6 +18,7 @@
 - [ ] Test with the `startx.py` script and add it to the README if necessary
 - [ ] Create a docker image to simplify the Xorg setup
 
+- [ ] Delete the items information in the relations
 - [ ] Add an order to item properties and relations (only properties?) so that the agent doesn't receive reward for a property of order n if it all properties of orders n-1 of the item are not satisfied
 - [ ] Implement the fact that relations count only if the all properties of both items are satisfied (both in the task advancement and the computation of the task advancement bounds)
 - [ ] Replace fixed/variable properties with innate/adaptive?? (or Inherent, Intrinsic vs Dynamic, Adjustable)

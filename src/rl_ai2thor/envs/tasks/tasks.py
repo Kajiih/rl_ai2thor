@@ -1192,7 +1192,6 @@ class LookInLight(GraphTask[str]):
                 "properties": {
                     SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,  # TODO: Add support for other light sources
                     SimObjVariableProp.IS_TOGGLED: True,
-                    SimObjVariableProp.VISIBLE: True,
                 },
             },
             "looked_at_object": {
@@ -1200,6 +1199,7 @@ class LookInLight(GraphTask[str]):
                     SimObjFixedProp.OBJECT_TYPE: looked_at_object_type,
                     SimObjVariableProp.IS_PICKED_UP: True,
                 },
+                "relations": {"light_source": [RelationTypeId.CLOSE_TO]},
             },
         }
 
@@ -1362,7 +1362,7 @@ class OpenAny(GraphTask[str]):
     @classmethod
     def compute_compatible_args_from_blueprint(
         cls,
-        task_blueprint: TaskBlueprint,
+        task_blueprint: TaskBlueprint,  # noqa: ARG003
         event: Event,
     ) -> list[tuple[PropValue, ...]]:
         """

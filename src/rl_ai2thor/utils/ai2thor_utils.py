@@ -27,3 +27,37 @@ def get_scene_objects_dict(objects: list[SimObjMetadata]) -> dict[SimObjId, SimO
         scene_object_dict (dict[SimObjId, SimObjMetadata]): Dictionary of objects indexed by object id.
     """
     return {obj["objectId"]: obj for obj in objects}
+
+
+def compute_objects_3d_distance(obj1: SimObjMetadata, obj2: SimObjMetadata) -> float:
+    """
+    Compute the 3D distance between two objects.
+
+    Args:
+        obj1 (dict): Metadata of the first object.
+        obj2 (dict): Metadata of the second object.
+
+    Returns:
+        float: 3D distance between the two objects.
+    """
+    return (
+        (obj1["position"]["x"] - obj2["position"]["x"]) ** 2
+        + (obj1["position"]["y"] - obj2["position"]["y"]) ** 2
+        + (obj1["position"]["z"] - obj2["position"]["z"]) ** 2
+    ) ** 0.5
+
+
+def compute_objects_2d_distance(obj1: SimObjMetadata, obj2: SimObjMetadata) -> float:
+    """
+    Compute the 2D distance between two objects.
+
+    Args:
+        obj1 (dict): Metadata of the first object.
+        obj2 (dict): Metadata of the second object.
+
+    Returns:
+        float: 2D distance between the two objects.
+    """
+    return (
+        (obj1["position"]["x"] - obj2["position"]["x"]) ** 2 + (obj1["position"]["z"] - obj2["position"]["z"]) ** 2
+    ) ** 0.5

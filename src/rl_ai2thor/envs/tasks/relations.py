@@ -12,6 +12,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjId, SimObjMetadata
+from rl_ai2thor.utils.ai2thor_utils import compute_objects_3d_distance
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.items import PropValue, TaskItem
@@ -24,7 +25,7 @@ class RelationTypeId(StrEnum):
 
     RECEPTACLE_OF = "receptacle_of"
     CONTAINED_IN = "contained_in"
-    # CLOSE_TO = "close_to"
+    CLOSE_TO = "close_to"
 
 
 # %% === Relations ===
@@ -47,18 +48,24 @@ class Relation(ABC):
     candidate_required_prop_value: Any | None = None
 
     @abstractmethod
-    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:
+    def _extract_related_object_ids(
+        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> list[SimObjId]:
         """
         Return the list of the ids of the main object's related objects according to the relation.
 
         Args:
             main_obj_metadata (SimObjMetadata): The metadata of the main object.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
 
         Returns:
             list[SimObjId]: The ids of the main object's related objects.
         """
 
-    def is_semi_satisfied(self, main_obj_metadata: SimObjMetadata) -> bool:
+    def is_semi_satisfied(
+        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> bool:
         """
         Return True if the relation is semi satisfied in the given main object.
 
@@ -68,21 +75,27 @@ class Relation(ABC):
 
         Args:
             main_obj_metadata (SimObjMetadata): The metadata of the main object.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
 
         Returns:
             bool: True if the relation is semi satisfied.
         """
         return any(
             related_object_id in self.related_item.candidate_ids
-            for related_object_id in self._extract_related_object_ids(main_obj_metadata)
+            for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
         )
 
-    def get_satisfying_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> set[SimObjId]:
+    def get_satisfying_related_object_ids(
+        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> set[SimObjId]:
         """
         Return related item's candidate's ids that satisfy the relation with the given main object.
 
         Args:
             main_obj_metadata (SimObjMetadata): The metadata of the main object.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
 
         Returns:
             set[SimObjId]: The ids of the related item's candidate's that satisfy the relation.
@@ -91,7 +104,7 @@ class Relation(ABC):
         try:
             satisfying_related_object_ids = {
                 related_object_id
-                for related_object_id in self._extract_related_object_ids(main_obj_metadata)
+                for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
                 if related_object_id in self.related_item.candidate_ids
             }
         except TypeError:
@@ -138,7 +151,11 @@ class ReceptacleOfRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
 
-    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:  # noqa: PLR6301
+    def _extract_related_object_ids(  # noqa: PLR6301
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],  # noqa: ARG002
+    ) -> list[SimObjId]:
         """Return the ids of the objects contained in the main object."""
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
@@ -165,14 +182,58 @@ class ContainedInRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
 
-    def _extract_related_object_ids(self, main_obj_metadata: SimObjMetadata) -> list[SimObjId]:  # noqa: PLR6301
+    def _extract_related_object_ids(  # noqa: PLR6301
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],  # noqa: ARG002
+    ) -> list[SimObjId]:
         """Return the ids of the objects containing the main object."""
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class CloseToRelation(Relation):
+    """
+    A relation of the form "main_item is close to related_item".
+
+    The inverse relation is itself.
+
+    Attributes:
+        main_item (TaskItem): The main item in the relation.
+        related_item (TaskItem): The related item that is close to the main item.
+        distance (float): The distance between the main item and the related item.
+
+    """
+
+    type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
+    inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
+    candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.PICKUPABLE, init=False)
+    candidate_required_prop_value: PropValue = field(default=True, init=False)
+    main_item: TaskItem
+    related_item: TaskItem
+    distance: float = 1.0
+
+    def _extract_related_object_ids(
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+    ) -> list[SimObjId]:
+        """Return the ids of the objects close to the main object."""
+        close_object_ids = []
+        for scene_object_id, scene_object_metadata in scene_objects_dict.items():
+            if (
+                scene_object_id != main_obj_metadata["objectId"]
+                and compute_objects_3d_distance(main_obj_metadata, scene_object_metadata) <= self.distance
+            ):
+                close_object_ids.append(scene_object_id)
+
+        return close_object_ids
 
 
 # %% === Mappings ===
 relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
+    RelationTypeId.CLOSE_TO: CloseToRelation,
 }
