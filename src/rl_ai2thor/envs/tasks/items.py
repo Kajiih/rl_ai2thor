@@ -7,9 +7,10 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import itertools
-from collections.abc import Hashable
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Hashable
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, NewType
 
 from rl_ai2thor.envs.sim_objects import (
     SimObjectType,
@@ -43,6 +44,71 @@ class FillableLiquid(StrEnum):
 
 
 type PropValue = int | float | bool | TemperatureValue | SimObjectType
+
+
+# %% === Property satisfaction functions ===
+class PSF(ABC):
+    """
+    Base class for functions used to define the set of acceptable values for a property to be satisfied.
+
+    We call those functions *property satisfaction functions* (PSF).
+    """
+
+    @abstractmethod
+    def __call__(self, prop_value: PropValue) -> bool:
+        """Return True if the value satisfies the property."""
+
+
+class SingleValuePSF(PSF):
+    """Defines a property satisfaction function that only accepts a single value."""
+
+    def __init__(self, target_value: PropValue) -> None:
+        """Initialize the target value."""
+        self.target_value = target_value
+
+    def __call__(self, prop_value: PropValue) -> bool:
+        """Return True if the value is equal to the target value."""
+        return prop_value == self.target_value
+
+
+class MultiValuePSF(PSF):
+    """Defines a property satisfaction function that accepts a set of values."""
+
+    def __init__(self, target_values: set[PropValue]) -> None:
+        """Initialize the target values."""
+        self.target_values = target_values
+
+    def __call__(self, prop_value: PropValue) -> bool:
+        """Return True if the value is in the target values."""
+        return prop_value in self.target_values
+
+
+class RangePSF(PSF):
+    """Defines a property satisfaction function that accepts a range of values."""
+
+    def __init__(self, min_value: float | int, max_value: float | int) -> None:
+        """Initialize the range."""
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __call__(self, prop_value: float | int) -> bool:
+        """Return True if the value is in the range."""
+        return self.min_value <= prop_value <= self.max_value
+
+
+class GenericPSF(PSF):
+    """Defines a property satisfaction function with a custom function."""
+
+    def __init__(self, func: Callable[[PropValue], bool]) -> None:
+        """Initialize the property satisfaction function."""
+        self.func = func
+
+    def __call__(self, prop_value: PropValue) -> bool:
+        """Return the result of the custom function."""
+        return self.func(prop_value)
+
+
+type PropSatisfactionFunction = PSF | Callable[[PropValue], bool]
 
 
 # %% === Properties  ===
@@ -108,7 +174,7 @@ class TaskItem[T: Hashable]:
         }
 
         # Other attributes
-        self._candidate_required_properties_rel: dict[SimObjProp, PropValue] = {}
+        self._candidate_required_properties_rel: dict[SimObjFixedProp, PropValue] = {}
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
         self.candidate_ids: set[SimObjId] = set()
 

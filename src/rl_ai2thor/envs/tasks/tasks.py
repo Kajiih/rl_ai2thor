@@ -16,7 +16,7 @@ import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.actions import Ai2thorAction
@@ -1553,9 +1553,9 @@ class IncompatibleRelationsError[T](Exception):
         self.task_description_dict = task_description_dict
 
         super().__init__(
-            f"Both '{relation_type_id}' and its opposite relation involving the same main and related items "
-            f"are present in the task description dictionary: "
-            f"{main_item_id} {relation_type_id} {related_item_id}"
+            f"Two relations of the same type involving the same main and related items are detected: "
+            f"{relation_type_id}({main_item_id}, {related_item_id})\n"
+            f"Full task description dictionary: {task_description_dict}"
         )
 
 
