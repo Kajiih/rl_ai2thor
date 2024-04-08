@@ -269,7 +269,6 @@ class TaskItem[T: Hashable]:
             related_item_id: {
                 relation.type_id: {
                     obj_id: relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id])
-                    # obj_id: obj_id in relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id])  #TODO: Delete
                     for obj_id in self.candidate_ids
                 }
                 for relation in self.organized_relations[related_item_id].values()

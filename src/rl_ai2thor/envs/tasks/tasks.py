@@ -37,7 +37,7 @@ from rl_ai2thor.envs.tasks.items import (
     TemperatureValue,
     obj_prop_id_to_item_prop,
 )
-from rl_ai2thor.envs.tasks.relations import RelationTypeId, relation_type_id_to_relation
+from rl_ai2thor.envs.tasks.relations import RelationParam, RelationTypeId, relation_type_id_to_relation
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
@@ -183,7 +183,17 @@ class UndefinableTask(BaseTask):
         return ""
 
 
-type TaskDict[T: Hashable] = dict[T, dict[Literal["properties", "relations"], dict]]
+type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
+type PropertiesDict = dict[SimObjProp, PropValue]
+type TaskDict[T: Hashable] = dict[T, TaskItemDescription[T]]
+
+
+@dataclass
+class TaskItemDescription[T]:
+    """Description of a task item."""
+
+    properties: PropertiesDict = field(default_factory=dict)
+    relations: RelationsDict[T] = field(default_factory=dict)
 
 
 # TODO: Add support for weighted properties and relations
@@ -584,13 +594,13 @@ class PlaceNSameIn(GraphTask[str]):
     pick_and_place_simple with n=1.
     """
 
-    def __init__(self, placed_object_type: str, receptacle_type: str, n: int = 1) -> None:
+    def __init__(self, placed_object_type: SimObjectType, receptacle_type: SimObjectType, n: int = 1) -> None:
         """
         Initialize the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
             n (int): The number of objects to place.
         """
         self.placed_object_type = placed_object_type
@@ -602,28 +612,28 @@ class PlaceNSameIn(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int = 1) -> TaskDict[str]:
+    def _create_task_description_dict(
+        cls, placed_object_type: SimObjectType, receptacle_type: SimObjectType, n: int = 1
+    ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
             n (int): The number of objects to place.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict: TaskDict[str] = {
-            "receptacle": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: receptacle_type},
-            }
+            "receptacle": TaskItemDescription(properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type}),
         }
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"] = {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: placed_object_type},
-                "relations": {"receptacle": [RelationTypeId.CONTAINED_IN]},
-            }
+            task_description_dict[f"placed_object_{i}"] = TaskItemDescription(
+                properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                relations={f"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+            )
 
         return task_description_dict
 
@@ -689,13 +699,17 @@ class PlaceNSameInSubclass(PlaceNSameIn, ABC):
 
     n: int
 
-    def __init__(self, placed_object_type: str, receptacle_type: str) -> None:
+    def __init__(
+        self,
+        placed_object_type: SimObjectType,
+        receptacle_type: SimObjectType,
+    ) -> None:
         """
         Initialize the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
         """
         super().__init__(placed_object_type, receptacle_type, self.n)
 
@@ -764,14 +778,19 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
     This is equivalent to the pick_and_place_with_movable_recep task from Alfred.
     """
 
-    def __init__(self, placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str) -> None:
+    def __init__(
+        self,
+        placed_object_type: SimObjectType,
+        pickupable_receptacle_type: SimObjectType,
+        receptacle_type: SimObjectType,
+    ) -> None:
         """
         Initialize the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            pickupable_receptacle_type (str): The type of pickupable receptacle to place the object in.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            pickupable_receptacle_type (SimObjectType): The type of pickupable receptacle to place the object in.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
         """
         self.placed_object_type = placed_object_type
         self.pickupable_receptacle_type = pickupable_receptacle_type
@@ -785,31 +804,34 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
 
     @classmethod
     def _create_task_description_dict(
-        cls, placed_object_type: str, pickupable_receptacle_type: str, receptacle_type: str
+        cls,
+        placed_object_type: SimObjectType,
+        pickupable_receptacle_type: SimObjectType,
+        receptacle_type: SimObjectType,
     ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            pickupable_receptacle_type (str): The type of pickupable receptacle to place the object in.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            pickupable_receptacle_type (SimObjectType): The type of pickupable receptacle to place the object in.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "receptacle": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: receptacle_type},
-            },
-            "pickupable_receptacle": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: pickupable_receptacle_type},
-                "relations": {"receptacle": [RelationTypeId.CONTAINED_IN]},
-            },
-            "placed_object": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: placed_object_type},
-                "relations": {"pickupable_receptacle": [RelationTypeId.CONTAINED_IN]},
-            },
+            "receptacle": TaskItemDescription(
+                properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type},
+            ),
+            "pickupable_receptacle": TaskItemDescription(
+                properties={SimObjFixedProp.OBJECT_TYPE: pickupable_receptacle_type},
+                relations={"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+            ),
+            "placed_object": TaskItemDescription(
+                properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
+                relations={"pickupable_receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+            ),
         }
 
     def text_description(self) -> str:
@@ -875,13 +897,18 @@ class PlaceCleanedIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
+    def _create_task_description_dict(
+        cls,
+        placed_object_type: SimObjectType,
+        receptacle_type: SimObjectType,
+        n: int,
+    ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
             n (int): The number of objects to place.
 
         Returns:
@@ -889,7 +916,7 @@ class PlaceCleanedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.IS_DIRTY] = False
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.IS_DIRTY] = False
 
         return task_description_dict
 
@@ -989,13 +1016,18 @@ class PlaceHeatedIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
+    def _create_task_description_dict(
+        cls,
+        placed_object_type: SimObjectType,
+        receptacle_type: SimObjectType,
+        n: int,
+    ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
             n (int): The number of objects to place.
 
         Returns:
@@ -1003,7 +1035,7 @@ class PlaceHeatedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.TEMPERATURE] = (
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = (
                 TemperatureValue.HOT
             )
 
@@ -1078,13 +1110,18 @@ class PlaceCooledIn(PlaceIn):
     """
 
     @classmethod
-    def _create_task_description_dict(cls, placed_object_type: str, receptacle_type: str, n: int) -> TaskDict[str]:
+    def _create_task_description_dict(
+        cls,
+        placed_object_type: SimObjectType,
+        receptacle_type: SimObjectType,
+        n: int,
+    ) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            placed_object_type (str): The type of object to place.
-            receptacle_type (str): The type of receptacle to place the object in.
+            placed_object_type (SimObjectType): The type of object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the object in.
             n (int): The number of objects to place.
 
         Returns:
@@ -1092,7 +1129,7 @@ class PlaceCooledIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"]["properties"][SimObjVariableProp.TEMPERATURE] = (
+            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = (
                 TemperatureValue.COLD
             )
 
@@ -1164,12 +1201,12 @@ class LookInLight(GraphTask[str]):
     The light sources are listed in the LightSourcesType enum.
     """
 
-    def __init__(self, looked_at_object_type: str) -> None:
+    def __init__(self, looked_at_object_type: SimObjectType) -> None:
         """
         Initialize the task.
 
         Args:
-            looked_at_object_type (str): The type of object to look at.
+            looked_at_object_type (SimObjectType): The type of object to look at.
         """
         self.looked_at_object_type = looked_at_object_type
 
@@ -1177,30 +1214,30 @@ class LookInLight(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, looked_at_object_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, looked_at_object_type: SimObjectType) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            looked_at_object_type (str): The type of object to look at.
+            looked_at_object_type (SimObjectType): The type of object to look at.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "light_source": {
-                "properties": {
-                    SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,  # TODO: Add support for other light sources
+            "light_source": TaskItemDescription(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,
                     SimObjVariableProp.IS_TOGGLED: True,
                 },
-            },
-            "looked_at_object": {
-                "properties": {
+            ),
+            "looked_at_object": TaskItemDescription(
+                properties={
                     SimObjFixedProp.OBJECT_TYPE: looked_at_object_type,
                     SimObjVariableProp.IS_PICKED_UP: True,
                 },
-                "relations": {"light_source": [RelationTypeId.CLOSE_TO]},
-            },
+                relations={"light_source": {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
+            ),
         }
 
     def text_description(self) -> str:
@@ -1255,7 +1292,7 @@ class LookInLight(GraphTask[str]):
 class Pickup(GraphTask[str]):
     """Task for picking up a given object."""
 
-    def __init__(self, picked_up_object_type: str) -> None:
+    def __init__(self, picked_up_object_type: SimObjectType) -> None:
         """
         Initialize the task.
 
@@ -1268,20 +1305,23 @@ class Pickup(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, picked_up_object_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, picked_up_object_type: SimObjectType) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            picked_up_object_type (str): The type of object to pick up.
+            picked_up_object_type (SimObjectType): The type of object to pick up.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "picked_up_object": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: picked_up_object_type, "isPickedUp": True},
-            }
+            "picked_up_object": TaskItemDescription(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: picked_up_object_type,
+                    SimObjVariableProp.IS_PICKED_UP: True,
+                },
+            )
         }
 
     def text_description(self) -> str:
@@ -1345,9 +1385,9 @@ class OpenAny(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "opened_object": {
-                "properties": {SimObjVariableProp.IS_OPEN: True},
-            }
+            "opened_object": TaskItemDescription(
+                properties={SimObjVariableProp.IS_OPEN: True},
+            )
         }
 
     def text_description(self) -> str:  # noqa: PLR6301
@@ -1391,12 +1431,12 @@ class OpenAny(GraphTask[str]):
 class Open(GraphTask[str]):
     """Task for opening a given object."""
 
-    def __init__(self, opened_object_type: str) -> None:
+    def __init__(self, opened_object_type: SimObjectType) -> None:
         """
         Initialize the task.
 
         Args:
-            opened_object_type (str): The type of object to open.
+            opened_object_type (SimObjectType): The type of object to open.
         """
         self.opened_object_type = opened_object_type
 
@@ -1404,20 +1444,23 @@ class Open(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, opened_object_type: str) -> TaskDict[str]:
+    def _create_task_description_dict(cls, opened_object_type: SimObjectType) -> TaskDict[str]:
         """
         Create the task description dictionary for the task.
 
         Args:
-            opened_object_type (str): The type of object to open.
+            opened_object_type (SimObjectType): The type of object to open.
 
         Returns:
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "opened_object": {
-                "properties": {SimObjFixedProp.OBJECT_TYPE: opened_object_type, SimObjVariableProp.IS_OPEN: True},
-            }
+            "opened_object": TaskItemDescription(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: opened_object_type,
+                    SimObjVariableProp.IS_OPEN: True,
+                },
+            )
         }
 
     def text_description(self) -> str:

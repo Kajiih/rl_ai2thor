@@ -28,8 +28,10 @@ class RelationTypeId(StrEnum):
     CLOSE_TO = "close_to"
 
 
+type RelationParam = int | float | bool
+
+
 # %% === Relations ===
-# TODO: Add support to parameterize the relations (e.g. distance in CLOSE_TO)
 @dataclass(frozen=True, repr=False, eq=False)
 class Relation(ABC):
     """
@@ -45,7 +47,34 @@ class Relation(ABC):
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: SimObjFixedProp | None = None
-    candidate_required_prop_value: Any | None = None
+    candidate_required_prop_value: PropValue | None = None
+
+    @abstractmethod
+    def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
+        """
+        Return the parameters of the inverse relation.
+
+        Doesn't return the main and related items of the inverse relation since they don't depend on the relation.
+        The output of this method is used to instantiate the inverse relation in create_inverse_relation().
+
+        Returns:
+            inverse_relation_parameters (dict[str, RelationParam]): The parameters of the inverse relation.
+        """
+
+    def create_inverse_relation(self) -> Relation:
+        """
+        Return the inverse relation.
+
+        Returns:
+            inverse_relation (Relation): The inverse relation.
+        """
+        inverse_relation_parameters = self._compute_inverse_relation_parameters()
+        inverse_relation = relation_type_id_to_relation[self.inverse_relation_type_id](
+            main_item=self.related_item,
+            related_item=self.main_item,
+            **inverse_relation_parameters,
+        )
+        return inverse_relation
 
     @abstractmethod
     def _extract_related_object_ids(
@@ -151,6 +180,10 @@ class ReceptacleOfRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
 
+    def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
+        """Return an empty dictionary since the inverse relation doesn't have parameters."""
+        return {}
+
     def _extract_related_object_ids(  # noqa: PLR6301
         self,
         main_obj_metadata: SimObjMetadata,
@@ -181,6 +214,10 @@ class ContainedInRelation(Relation):
     candidate_required_prop_value: PropValue = field(default=True, init=False)
     main_item: TaskItem
     related_item: TaskItem
+
+    def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
+        """Return an empty dictionary since the inverse relation doesn't have parameters."""
+        return {}
 
     def _extract_related_object_ids(  # noqa: PLR6301
         self,
@@ -213,6 +250,10 @@ class CloseToRelation(Relation):
     main_item: TaskItem
     related_item: TaskItem
     distance: float = 1.0
+
+    def _compute_inverse_relation_parameters(self) -> dict[str, float]:
+        """Return a dictionary with the same parameters since the relation is symmetrical."""
+        return {"distance": self.distance}
 
     def _extract_related_object_ids(
         self,
