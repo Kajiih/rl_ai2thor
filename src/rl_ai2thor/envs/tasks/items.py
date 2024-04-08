@@ -190,7 +190,9 @@ class TaskItem[T: Hashable]:
         }
 
     def _get_relations_semi_satisfying_objects(
-        self, candidate_metadata: SimObjMetadata
+        self,
+        candidate_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> dict[T, dict[RelationTypeId, set[SimObjId]]]:
         """
         Return the dictionary of satisfying objects with the given candidate for each relations.
@@ -199,20 +201,25 @@ class TaskItem[T: Hashable]:
 
         Args:
             candidate_metadata (SimObjMetadata): Metadata of the candidate.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+                of the objects in the scene to their metadata.
 
         Returns:
             semi_satisfying_objects (dict[T, dict[RelationTypeId, set[SimObjId]]]): Dictionary indicating which objects are semi-satisfying the relations with the given object.
         """
         return {
             related_item_id: {
-                relation.type_id: relation.get_satisfying_related_object_ids(candidate_metadata)
+                relation.type_id: relation.get_satisfying_related_object_ids(candidate_metadata, scene_objects_dict)
                 for relation in self.organized_relations[related_item_id].values()
             }
             for related_item_id in self.organized_relations
         }
 
+    # TODO? Remove; unused
     def _compute_obj_results(
-        self, obj_metadata: SimObjMetadata
+        self,
+        obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> dict[
         Literal["properties", "relations"],
         dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
@@ -225,6 +232,8 @@ class TaskItem[T: Hashable]:
 
         Args:
             obj_metadata (SimObjMetadata): Object metadata.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+                of the objects in the scene to their metadata.
 
         Returns:
             results (dict[Literal["properties", "relations"], dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]]]): Results of the object for the item.
@@ -234,7 +243,7 @@ class TaskItem[T: Hashable]:
             dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
         ] = {
             "properties": self._get_properties_satisfaction(obj_metadata),
-            "relations": self._get_relations_semi_satisfying_objects(obj_metadata),
+            "relations": self._get_relations_semi_satisfying_objects(obj_metadata, scene_objects_dict),
         }
         return results
 
@@ -268,7 +277,7 @@ class TaskItem[T: Hashable]:
         relations_results = {
             related_item_id: {
                 relation.type_id: {
-                    obj_id: relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id])
+                    obj_id: relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id], scene_objects_dict)
                     for obj_id in self.candidate_ids
                 }
                 for relation in self.organized_relations[related_item_id].values()

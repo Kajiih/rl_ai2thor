@@ -7,8 +7,8 @@ import pytest
 from ai2thor.controller import Controller
 from ai2thor.server import Event
 
-from rl_ai2thor.envs.tasks.items import SimObjFixedProp, SimObjVariableProp
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, Open, Pickup, PlaceCooledIn, TaskBlueprint
+from rl_ai2thor.envs.sim_objects import SimObjectType
+from rl_ai2thor.envs.tasks.tasks import BaseTask, Open, Pickup, PlaceCooledIn
 
 data_dir = Path(__file__).parent / "data"
 
@@ -70,19 +70,19 @@ def create_mock_event(object_list: list | None = None) -> Event:
 
 def test_pickup_task() -> None:
     """Test the Pickup task with a Mug object."""
-    task = Pickup(picked_up_object_type="Mug")
+    task = Pickup(picked_up_object_type=SimObjectType.MUG)
     task_data_dir = data_dir / "test_pickup_mug"
 
 
 def test_open_task() -> None:
     """Test the Open task with a Fridge object."""
-    task = Open(opened_object_type="Fridge")
+    task = Open(opened_object_type=SimObjectType.FRIDGE)
     task_data_dir = data_dir / "test_open_fridge"
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 
 def test_test_place_cooled_in() -> None:
     """Test the PlaceCooledIn task with a Fridge object."""
-    task = PlaceCooledIn(placed_object_type="Apple", receptacle_type="CounterTop")
+    task = PlaceCooledIn(placed_object_type=SimObjectType.APPLE, receptacle_type=SimObjectType.COUNTER_TOP)
     task_data_dir = data_dir / "test_place_cooled_in_apple_counter_top"
     generate_task_tests_from_saved_data(task, task_data_dir)

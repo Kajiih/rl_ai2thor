@@ -18,6 +18,7 @@
 - [ ] Test with the `startx.py` script and add it to the README if necessary
 - [ ] Create a docker image to simplify the Xorg setup
 
+- [ ] Delete the main and related item information from the relations
 - [ ] Implement a way to define tasks directly from config with task dictionaries
 - [ ] Add an order to item properties and relations (only properties?) so that the agent doesn't receive reward for a property of order n if it all properties of orders n-1 of the item are not satisfied
 - [ ] Implement the fact that relations count only if the all properties of both items are satisfied (both in the task advancement and the computation of the task advancement bounds)
@@ -67,7 +68,7 @@
   - [ ] Make `gridsize` and `moveMagnitude` parameters coherent (for `MoveAhead`-type actions)
   - [ ] Make the whole framework split-aware ('train', 'test' splits, ...)
   - [ ] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
-  - [ ] Add parameters to relations and properties
+  - [x] Add parameters to relations and properties
   - [ ] Improve config (and environment mode config) handling
   - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
   - [x] Add Single task wrapper instead?

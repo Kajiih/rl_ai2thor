@@ -185,11 +185,11 @@ class UndefinableTask(BaseTask):
 
 type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
 type PropertiesDict = dict[SimObjProp, PropValue]
-type TaskDict[T: Hashable] = dict[T, TaskItemDescription[T]]
+type TaskDict[T: Hashable] = dict[T, TaskItemData[T]]
 
 
 @dataclass
-class TaskItemDescription[T]:
+class TaskItemData[T]:
     """Description of a task item."""
 
     properties: PropertiesDict = field(default_factory=dict)
@@ -508,44 +508,58 @@ class GraphTask[T: Hashable](BaseTask):
         Returns:
             items (list[TaskItem]): List of the items of the task.
         """
+        # === Instantiate items without relations ===
         items = {
             item_id: TaskItem(
                 item_id,
-                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_dict.get("properties", {}).items()},
+                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_data.properties.items()},
             )
-            for item_id, item_dict in task_description_dict.items()
+            for item_id, item_data in task_description_dict.items()
         }
+
+        # === Instantiate relations ===
         organized_relations: dict[T, dict[T, dict[RelationTypeId, Relation]]] = {
-            main_item_id: {
-                related_item_id: {
-                    relation_type_id: relation_type_id_to_relation[relation_type_id](
-                        items[main_item_id], items[related_item_id]
-                    )
-                    for relation_type_id in relation_type_ids
-                }
-                for related_item_id, relation_type_ids in main_item_dict.get("relations", {}).items()
-            }
-            for main_item_id, main_item_dict in task_description_dict.items()
+            main_item_id: {} for main_item_id in items
         }
 
-        # Add inverse relations
-        inverse_relations_type_ids = {
-            related_item_id: {main_item_id: relation.inverse_relation_type_id}
-            for main_item_id, relations_dict in organized_relations.items()
-            for related_item_id, relations in relations_dict.items()
-            for relation in relations.values()
-        }
-
-        for related_item_id in inverse_relations_type_ids:
-            for main_item_id, relation_type_id in inverse_relations_type_ids[related_item_id].items():
-                if main_item_id not in organized_relations[related_item_id]:
+        for main_item_id, main_item_data in task_description_dict.items():
+            main_item = items[main_item_id]
+            for related_item_id, relations_dict in main_item_data.relations.items():
+                related_item = items[related_item_id]
+                if related_item_id not in organized_relations[main_item_id]:
+                    organized_relations[main_item_id][related_item_id] = {}
                     organized_relations[related_item_id][main_item_id] = {}
-                if relation_type_id not in organized_relations[related_item_id][main_item_id]:
-                    organized_relations[related_item_id][main_item_id][relation_type_id] = relation_type_id_to_relation[
-                        relation_type_id
-                    ](items[related_item_id], items[main_item_id])
+                for relation_type_id, relation_parameters in relations_dict.items():
+                    if relation_type_id in organized_relations[main_item_id][related_item_id]:
+                        raise IncompatibleRelationsError(
+                            relation_type_id,
+                            main_item_id,
+                            related_item_id,
+                            task_description_dict,
+                        )
 
-        # Set item relations
+                    # === Add direct relations ===
+                    relation = relation_type_id_to_relation[relation_type_id](
+                        main_item=main_item,
+                        related_item=related_item,
+                        **relation_parameters,
+                    )
+                    organized_relations[main_item_id][related_item_id][relation_type_id] = relation
+
+                    # === Add inverse relations ===
+                    inverse_relation_type_id = relation.inverse_relation_type_id
+                    if inverse_relation_type_id in organized_relations[related_item_id][main_item_id]:
+                        raise IncompatibleRelationsError(
+                            relation_type_id=inverse_relation_type_id,
+                            main_item_id=related_item_id,
+                            related_item_id=main_item_id,
+                            task_description_dict=task_description_dict,
+                        )
+                    organized_relations[related_item_id][main_item_id][inverse_relation_type_id] = (
+                        relation.create_inverse_relation()
+                    )
+
+        # === Set item relations ===
         for item_id, item in items.items():
             item.relations = {
                 relation
@@ -627,10 +641,10 @@ class PlaceNSameIn(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         task_description_dict: TaskDict[str] = {
-            "receptacle": TaskItemDescription(properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type}),
+            "receptacle": TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type}),
         }
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"] = TaskItemDescription(
+            task_description_dict[f"placed_object_{i}"] = TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
                 relations={f"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             )
@@ -821,14 +835,14 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "receptacle": TaskItemDescription(
+            "receptacle": TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: receptacle_type},
             ),
-            "pickupable_receptacle": TaskItemDescription(
+            "pickupable_receptacle": TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: pickupable_receptacle_type},
                 relations={"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             ),
-            "placed_object": TaskItemDescription(
+            "placed_object": TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: placed_object_type},
                 relations={"pickupable_receptacle": {RelationTypeId.CONTAINED_IN: {}}},
             ),
@@ -1225,13 +1239,13 @@ class LookInLight(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "light_source": TaskItemDescription(
+            "light_source": TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: SimObjectType.DESK_LAMP,
                     SimObjVariableProp.IS_TOGGLED: True,
                 },
             ),
-            "looked_at_object": TaskItemDescription(
+            "looked_at_object": TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: looked_at_object_type,
                     SimObjVariableProp.IS_PICKED_UP: True,
@@ -1316,7 +1330,7 @@ class Pickup(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "picked_up_object": TaskItemDescription(
+            "picked_up_object": TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: picked_up_object_type,
                     SimObjVariableProp.IS_PICKED_UP: True,
@@ -1385,7 +1399,7 @@ class OpenAny(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "opened_object": TaskItemDescription(
+            "opened_object": TaskItemData(
                 properties={SimObjVariableProp.IS_OPEN: True},
             )
         }
@@ -1455,7 +1469,7 @@ class Open(GraphTask[str]):
             task_description_dict (TaskDict[str]): Task description dictionary.
         """
         return {
-            "opened_object": TaskItemDescription(
+            "opened_object": TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: opened_object_type,
                     SimObjVariableProp.IS_OPEN: True,
@@ -1504,6 +1518,45 @@ class Open(GraphTask[str]):
         }
         # Return a list with all the compatible combinations of opened_object_type
         return [(opened_object_type,) for opened_object_type in args_blueprints["opened_object_type"]]
+
+
+# %% Exceptions
+class IncompatibleRelationsError[T](Exception):
+    """
+    Exception raised when the two relations of the same type involving the same main and related items are detected.
+
+    Such case is not allowed because combining relations and keeping only the most restrictive is
+    not supported yet. In particular, one should not add one relation and its opposite relation
+    (e.g. `receptacle is_receptacle_of object` and `object is_contained_in receptacle`) because it
+    is done automatically when instantiating the task.
+    """
+
+    def __init__(
+        self,
+        relation_type_id: RelationTypeId,
+        main_item_id: T,
+        related_item_id: T,
+        task_description_dict: TaskDict[T],
+    ) -> None:
+        """
+        Initialize the exception.
+
+        Args:
+            relation_type_id (RelationTypeId): The type of relation.
+            main_item_id (T): The id of the main item.
+            related_item_id (T): The id of the related item.
+            task_description_dict (TaskDict[T]): Full task description dictionary.
+        """
+        self.relation_type_id = relation_type_id
+        self.main_item_id = main_item_id
+        self.related_item_id = related_item_id
+        self.task_description_dict = task_description_dict
+
+        super().__init__(
+            f"Both '{relation_type_id}' and its opposite relation involving the same main and related items "
+            f"are present in the task description dictionary: "
+            f"{main_item_id} {relation_type_id} {related_item_id}"
+        )
 
 
 # %% === Constants ===
