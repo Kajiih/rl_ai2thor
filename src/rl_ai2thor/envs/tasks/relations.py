@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_ai2thor.envs.tasks.items import SingleValuePSF
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
@@ -76,6 +77,49 @@ class Relation(ABC):
             **inverse_relation_parameters,
         )
         return inverse_relation
+
+    # TODO: Find a way to implement the same thing but without the need to check every pair of candidates
+    @abstractmethod
+    def are_candidates_compatible(
+        self,
+        main_candidate_metadata: SimObjMetadata,
+        related_candidate_metadata: SimObjMetadata,
+    ) -> bool:
+        """
+        Return True if the candidates satisfy the relation.
+
+        It doesn't check the candidate required property since it is already used to filter the candidates.
+
+        Args:
+            main_candidate_metadata (SimObjMetadata): The metadata of a candidate of the main item.
+            related_candidate_metadata (SimObjMetadata): The metadata of a candidate of the related item.
+
+        Returns:
+            compatible (bool): True if the candidates are compatible with the relation and that they can satisfy it in an assignment.
+        """
+
+    # TODO: Check if we keep this; probably unused
+    def compute_compatible_related_candidates(
+        self,
+        main_candidate_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+    ) -> set[SimObjId]:
+        """
+        Return the ids of the related candidates that are compatible with the main candidate.
+
+        Args:
+            main_candidate_metadata (SimObjMetadata): The metadata of a candidate of the main item.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
+
+        Returns:
+            compatible_related_candidates (set[SimObjId]): The ids of the related candidates that are compatible with the main candidate.
+        """
+        return {
+            related_object_id
+            for related_object_id in self._extract_related_object_ids(main_candidate_metadata, scene_objects_dict)
+            if self.are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
+        }
 
     @abstractmethod
     def _extract_related_object_ids(
@@ -194,6 +238,17 @@ class ReceptacleOfRelation(Relation):
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
 
+    def are_candidates_compatible(  # noqa: PLR6301
+        self,
+        main_candidate_metadata: SimObjMetadata,
+        related_candidate_metadata: SimObjMetadata,
+    ) -> bool:
+        """Return True if the main candidate is a compatible receptacle of the related candidate."""
+        return (
+            main_candidate_metadata["objectType"]
+            in OBJECT_TYPES_DATA[related_candidate_metadata["objectType"]].compatible_receptacles
+        )
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class ContainedInRelation(Relation):
@@ -228,6 +283,17 @@ class ContainedInRelation(Relation):
         """Return the ids of the objects containing the main object."""
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []
+
+    def are_candidates_compatible(  # noqa: PLR6301
+        self,
+        main_candidate_metadata: SimObjMetadata,
+        related_candidate_metadata: SimObjMetadata,
+    ) -> bool:
+        """Return True if the related candidate is a compatible receptacle of the main candidate."""
+        return (
+            related_candidate_metadata["objectType"]
+            in OBJECT_TYPES_DATA[main_candidate_metadata["objectType"]].compatible_receptacles
+        )
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -271,6 +337,17 @@ class CloseToRelation(Relation):
                 close_object_ids.append(scene_object_id)
 
         return close_object_ids
+
+    def are_candidates_compatible(  # noqa: PLR6301
+        self,
+        main_candidate_metadata: SimObjMetadata,
+        related_candidate_metadata: SimObjMetadata,
+    ) -> bool:
+        """Return True if at least one of the candidates is pickupable or moveable."""
+        return any(
+            candidate_metadata[SimObjFixedProp.PICKUPABLE] or candidate_metadata[SimObjFixedProp.MOVEABLE]
+            for candidate_metadata in [main_candidate_metadata, related_candidate_metadata]
+        )
 
 
 # %% === Mappings ===

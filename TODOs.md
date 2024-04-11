@@ -18,6 +18,8 @@
 - [ ] Test with the `startx.py` script and add it to the README if necessary
 - [ ] Create a docker image to simplify the Xorg setup
 
+- [ ] Add scene required properties to item properties (like the need of a `knife` to slice or a compatible cooking source to cook)
+- [x] Change `OBJECT_TYPES_DATA` to be a dataclass
 - [ ] Delete the main and related item information from the relations
 - [ ] Implement a way to define tasks directly from config with task dictionaries
 - [ ] Add an order to item properties and relations (only properties?) so that the agent doesn't receive reward for a property of order n if it all properties of orders n-1 of the item are not satisfied

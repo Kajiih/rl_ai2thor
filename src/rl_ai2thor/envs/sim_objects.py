@@ -162,8 +162,8 @@ class SimObjFixedProp(StrEnum):
     OPENABLE = "openable"
     PICKUPABLE = "pickupable"
     MOVEABLE = "moveable"
-    # MASS = "mass"
-    # SALIENT_MATERIALS = "salientMaterials"
+    MASS = "mass"
+    SALIENT_MATERIALS = "salientMaterials"
 
 
 # TODO: Add support for position, rotation and distance.
@@ -183,7 +183,7 @@ class SimObjVariableProp(StrEnum):
     IS_OPEN = "isOpen"
     OPENNESS = "openness"
     IS_PICKED_UP = "isPickedUp"
-    # POSITION = "position"
+    POSITION = "position"
     # ROTATION = "rotation"
     # DISTANCE = "distance"
 
@@ -201,52 +201,52 @@ type SimObjMetadata = dict[SimObjMetadataKey, SimObjPropValue]
 PICKUPABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.PICKUPABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.PICKUPABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 RECEPTACLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.RECEPTACLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.RECEPTACLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 MOVEABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.MOVEABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.MOVEABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 SLICEABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.SLICEABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.SLICEABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 OPENABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.OPENABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.OPENABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 TOGGLEABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.TOGGLEABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.TOGGLEABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 BREAKABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.BREAKABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.BREAKABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 FILLABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.CAN_FILL_WITH_LIQUID in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.CAN_FILL_WITH_LIQUID in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 DIRTYABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.DIRTYABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.DIRTYABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 COOKABLES = {
     object_type
     for object_type in SimObjectType
-    if SimObjFixedProp.COOKABLE in OBJECT_TYPES_DATA[object_type]["actionable_properties"]
+    if SimObjFixedProp.COOKABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
 
 PICKUPABLE_RECEPTACLES = PICKUPABLES & RECEPTACLES

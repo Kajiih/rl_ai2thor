@@ -272,8 +272,30 @@ class GraphTask[T: Hashable](BaseTask):
 
         self.overlap_classes: list[ItemOverlapClass] = []
 
+    # TODO: Implement this
+    @staticmethod
+    def compute_compatible_args_from_blueprint(
+        task_blueprint: TaskBlueprint,
+        event: Event,
+    ) -> list[tuple[PropValue, ...]]:
+        """
+        Compute the compatible task arguments from the task blueprint and the event.
+
+        Args:
+            task_blueprint (TaskBlueprint): Task blueprint.
+            event (Event): Event corresponding to the state of the scene
+                at the beginning of the episode.
+
+        Returns:
+            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+        """
+        raise NotImplementedError
+        # Implement checking which object types are present in the scene
+        # Implement checking which pairs of object types are compatible with the relations
+        # Merge this with the task reset?
+
     # TODO? Add check to make sure the task is feasible?
-    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
 
@@ -284,6 +306,7 @@ class GraphTask[T: Hashable](BaseTask):
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
+            reset_successful (bool): True if the task is successfully reset.
             initial_task_advancement (float): Initial task advancement.
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
@@ -294,13 +317,15 @@ class GraphTask[T: Hashable](BaseTask):
             for obj_metadata in event.metadata["objects"]:
                 if item.is_candidate(obj_metadata):
                     item.candidate_ids.add(obj_metadata["objectId"])
+        if not all(item.candidate_ids for item in self.items):
+            return False, 0, False, {}
 
         self.overlap_classes = self._compute_overlap_classes(self.items)
         # Compute max task advancement = Total number of properties and relations of the items
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
         # Return initial task advancement
-        return self.compute_task_advancement(event)
+        return True, *self.compute_task_advancement(event)
 
     @staticmethod
     def _compute_overlap_classes(items: list[TaskItem[T]]) -> list[ItemOverlapClass[T]]:
@@ -490,8 +515,6 @@ class GraphTask[T: Hashable](BaseTask):
 
         return task_advancement
 
-    # TODO: Check if we keep the relation set too (might not be necessary)
-    # TODO: Change to only return a plain list of items
     # TODO: Add support for overriding relations and keep the most restrictive one
     @staticmethod
     def full_initialize_items_and_relations_from_dict(
@@ -703,7 +726,7 @@ class PlaceNSameIn(GraphTask[str]):
         compatible_args = [
             (placed_object_type, compatible_receptacle, n)
             for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             for n in task_blueprint.task_args["n"]
             if compatible_receptacle in args_blueprints["receptacle_type"]
             and scene_object_types_count[placed_object_type] >= n
@@ -772,7 +795,7 @@ class PlaceNSameInSubclass(PlaceNSameIn, ABC):
         compatible_args = [
             (placed_object_type, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
 
@@ -898,9 +921,9 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         return [
             (placed_object_type, pickupable_receptacle, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
-            for pickupable_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            for pickupable_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             if pickupable_receptacle in args_blueprints["pickupable_receptacle_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[pickupable_receptacle]["compatible_receptacles"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[pickupable_receptacle].compatible_receptacles
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
 
@@ -1015,7 +1038,7 @@ class PlaceCleanedIn(PlaceIn):
         return [
             (placed_object_type, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
 
@@ -1107,8 +1130,8 @@ class PlaceHeatedIn(PlaceIn):
         compatible_args = [
             (placed_object_type, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
-            if OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"] & scene_heat_sources
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles & scene_heat_sources
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
         return compatible_args
@@ -1200,8 +1223,8 @@ class PlaceCooledIn(PlaceIn):
         compatible_args = [
             (placed_object_type, compatible_receptacle)
             for placed_object_type in args_blueprints["placed_object_type"]
-            if OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"] & scene_cold_sources
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type]["compatible_receptacles"]
+            if OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles & scene_cold_sources
+            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
             if compatible_receptacle in args_blueprints["receptacle_type"]
         ]
         return compatible_args
@@ -1550,7 +1573,7 @@ class Open(GraphTask[str]):
         return [(opened_object_type,) for opened_object_type in args_blueprints["opened_object_type"]]
 
 
-# %% Exceptions
+# %%  === Exceptions ===
 class IncompatibleRelationsError[T](Exception):
     """
     Exception raised when the two relations of the same type involving the same main and related items are detected.
