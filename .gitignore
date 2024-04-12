@@ -123,8 +123,14 @@ dmypy.json
 # Mac OS
 .DS_Store
 
-
 ## Directly added
 outputs/
 wandb/
 tests/media/
+
+
+## Dev files
+old/
+rl_thor_1
+
+jupytest*.ipynb
