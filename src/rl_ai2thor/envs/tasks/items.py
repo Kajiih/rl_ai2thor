@@ -44,6 +44,7 @@ class FillableLiquid(StrEnum):
 
 
 type PropValue = int | float | bool | TemperatureValue | SimObjectType
+type Assignment[T] = dict[TaskItem[T], SimObjId]
 
 
 # %% === Property satisfaction functions ===
@@ -662,7 +663,7 @@ class ItemOverlapClass[T: Hashable]:
             # TODO?: Replace candidate ids by their index in the list to make it more efficient? Probably need this kind of optimizations
         ]
         # Filter the permutations where the assigned objects are not candidates of the items
-        self.valid_assignments: list[dict[TaskItem[T], SimObjId]] = [
+        self.valid_assignments: list[Assignment[T]] = [
             permutation
             for permutation in candidate_permutations
             if all(obj_id in item.candidate_ids for item, obj_id in permutation.items())
@@ -672,7 +673,7 @@ class ItemOverlapClass[T: Hashable]:
             # raise NoValidAssignmentError(self)
             print(f"No valid assignment for overlap class {self}")
 
-    def prune_assignments(self, compatible_global_assignments: list[dict[TaskItem[T], SimObjId]]) -> None:
+    def prune_assignments(self, compatible_global_assignments: list[Assignment[T]]) -> None:
         """
         Prune the valid assignments to keep only those that are part of the given compatible assignments.
 
@@ -682,7 +683,7 @@ class ItemOverlapClass[T: Hashable]:
         candidates are compatible when taking into account the relations between the items.
 
         Args:
-            compatible_global_assignments (list[dict[TaskItem[T], SimObjId]]): List of global
+            compatible_global_assignments (list[Assignment[T]]): List of global
                 compatible (for the whole task and not only this overlap class).
         """
         compatible_valid_assignment = []
@@ -695,7 +696,7 @@ class ItemOverlapClass[T: Hashable]:
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
-        list[dict[TaskItem[T], SimObjId]],
+        list[Assignment[T]],
         dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]],
         dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]],
         dict[TaskItem[T], dict[SimObjId, int]],
@@ -717,7 +718,7 @@ class ItemOverlapClass[T: Hashable]:
                 the objects in the scene. The keys are the object ids.
 
         Returns:
-            interesting_assignments (list[dict[TaskItem[T], SimObjId]]):
+            interesting_assignments (list[Assignment[T]]):
                 List of the interesting assignments of objects to the items in the overlap class.
             all_properties_results (dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]]):
                 Results of each object for each property of each item in the overlap class.

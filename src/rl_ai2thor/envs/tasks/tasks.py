@@ -32,6 +32,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjVariableProp,
 )
 from rl_ai2thor.envs.tasks.items import (
+    Assignment,
     ItemOverlapClass,
     MultiValuePSF,
     PropSatFunction,
@@ -348,7 +349,7 @@ class GraphTask[T: Hashable](BaseTask):
         scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
         compatible_assignments = []
         for assignment_product in valid_assignments_product:
-            global_assignment: dict[TaskItem[T], SimObjId] = {
+            global_assignment: Assignment[T] = {
                 item: candidate_id
                 for overlap_class_assignment in assignment_product
                 for item, candidate_id in overlap_class_assignment.items()
@@ -504,7 +505,7 @@ class GraphTask[T: Hashable](BaseTask):
         # Compute the task advancement for each global assignment
         for assignment_product in assignment_products:
             # Merge the assignments of the overlap classes
-            global_assignment: dict[TaskItem[T], SimObjId] = {
+            global_assignment: Assignment[T] = {
                 item: obj_id
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
@@ -556,7 +557,7 @@ class GraphTask[T: Hashable](BaseTask):
 
     def compute_assignment_advancement(
         self,
-        global_assignment: dict[TaskItem[T], SimObjId],
+        global_assignment: Assignment[T],
         all_relation_results: dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]],
         all_properties_scores: dict[TaskItem[T], dict[SimObjId, int]],
     ) -> float:
@@ -564,7 +565,7 @@ class GraphTask[T: Hashable](BaseTask):
         Compute the task advancement for a given assignment.
 
         Args:
-            global_assignment (dict[TaskItem[T], SimObjId]): Assignment of objects to the items.
+            global_assignment (Assignment[T]): Assignment of objects to the items.
             all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]]):
                 Results of each object for the relation of each item.
             all_properties_scores (dict[TaskItem[T], dict[SimObjId, int]]):
