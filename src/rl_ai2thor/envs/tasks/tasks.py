@@ -338,15 +338,51 @@ class GraphTask[T: Hashable](BaseTask):
                 print(f"No candidate found for item {item.id}")
                 return False, 0, False, {}
 
-        # === Check the compatibility of candidates for each relation ===
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+        compatible_assignments = self._compute_compatible_assignments(scene_objects_dict)
+
+        if not compatible_assignments:
+            print("No compatible assignment found")
+            return False, 0, False, {}
+
+        # Keep only candidates that are in at least one compatible assignment
+        for item in self.items:
+            item.candidate_ids = {assignment[item] for assignment in compatible_assignments}
+
+        self.overlap_classes = self._compute_overlap_classes(self.items)
+
+        # For each overlap_class, keep only valid assignments if they are part of one of the compatible assignments
+        # TODO: Check if this is necessary
+        for overlap_class in self.overlap_classes:
+            overlap_class.prune_assignments(compatible_assignments)
+
+        # Compute max task advancement = Total number of properties and relations of the items
+        # TODO: Make it compatible with weighted properties and relations
+        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
+
+        # Return initial task advancement
+        return True, *self.compute_task_advancement(event, scene_objects_dict)
+
+    def _compute_compatible_assignments(
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> list[Assignment[T]]:
+        """
+        Compute the compatible assignments of the items in the scene.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping object ids to
+                their metadata.
+
+        Returns:
+            compatible_assignments (list[Assignment[T]]): List of compatible assignments.
+        """
         temp_overlap_classes = self._compute_overlap_classes(self.items)
         if not all(overlap_class.valid_assignments for overlap_class in temp_overlap_classes):
-            return False, 0, False, {}
+            return []
 
         valid_assignments_product = itertools.product(
             *(overlap_class.valid_assignments for overlap_class in temp_overlap_classes)
         )
-        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
         compatible_assignments = []
         for assignment_product in valid_assignments_product:
             global_assignment: Assignment[T] = {
@@ -373,26 +409,7 @@ class GraphTask[T: Hashable](BaseTask):
             if not incompatible_assignment:
                 compatible_assignments.append(global_assignment)
 
-        if not compatible_assignments:
-            return False, 0, False, {}
-
-        # === Keep only candidates that are in at least one compatible assignment ===
-        for item in self.items:
-            item.candidate_ids = {assignment[item] for assignment in compatible_assignments}
-
-        self.overlap_classes = self._compute_overlap_classes(self.items)
-
-        # For each overlap_class, keep only valid assignments if they are part of one of the compatible assignments
-        # TODO: Check if this is necessary
-        for overlap_class in self.overlap_classes:
-            overlap_class.prune_assignments(compatible_assignments)
-
-        # Compute max task advancement = Total number of properties and relations of the items
-        # TODO: Make it compatible with weighted properties and relations
-        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
-
-        # Return initial task advancement
-        return True, *self.compute_task_advancement(event, scene_objects_dict)
+        return compatible_assignments
 
     @staticmethod
     def _compute_overlap_classes(items: list[TaskItem[T]]) -> list[ItemOverlapClass[T]]:
