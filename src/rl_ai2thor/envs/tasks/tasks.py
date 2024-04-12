@@ -184,7 +184,7 @@ class UndefinedTask(BaseTask):
         """Return the task advancement and whether the task is completed."""
         raise NotImplementedError("Undefined task")
 
-    def text_description(self) -> str:  
+    def text_description(self) -> str:
         """Return a text description of the task."""
         raise NotImplementedError("Undefined task")
 
@@ -369,7 +369,7 @@ class GraphTask[T: Hashable](BaseTask):
 
                     relations = main_item.organized_relations.get(related_item.id, {})
                     for relation in relations.values():
-                        if not relation._uncached_are_candidates_compatible(
+                        if not relation.are_candidates_compatible(
                             main_candidate_metadata, related_candidate_metadata
                         ):  # TODO: Use the cached version
                             incompatible_assignment = True

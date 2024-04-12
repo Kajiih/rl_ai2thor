@@ -18,6 +18,7 @@
 - [ ] Test with the `startx.py` script and add it to the README if necessary
 - [ ] Create a docker image to simplify the Xorg setup
 
+- [ ] Add indirect candidate requirement for certain item prop (`water_source` necessary when `dirty=True`). Eventually make it at the same time than adding intermediate goals (toggling a `water_source`)
 - [ ] Add scene required properties to item properties (like the need of a `knife` to slice or a compatible cooking source to cook)
 - [x] Change `OBJECT_TYPES_DATA` to be a dataclass
 - [ ] Delete the main and related item information from the relations

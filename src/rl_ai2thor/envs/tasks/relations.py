@@ -6,9 +6,7 @@ TODO: Finish module docstring.
 
 from __future__ import annotations
 
-import functools
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +15,7 @@ from rl_ai2thor.envs.tasks.items import SingleValuePSF
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.items import PropSatFunction, PropValue, TaskItem
+    from rl_ai2thor.envs.tasks.items import PropSatFunction, TaskItem
 
 
 # %% === Enums ===
@@ -34,25 +32,24 @@ type RelationParam = int | float | bool
 
 
 # %% === Relations ===
-@dataclass(frozen=True, repr=False, eq=False)
 class Relation(ABC):
     """
     A relation between two items in the definition of a task.
 
     Attributes:
         main_item (TaskItem): The main item in the relation.
-    related_item (TaskItem): The related item to which the main item is related.
+        related_item (TaskItem): The related item to which the main item is related.
     """
 
-    main_item: TaskItem
-    related_item: TaskItem
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: SimObjFixedProp | None = None
     candidate_required_prop_sat_function: PropSatFunction | None = None
 
-    # def __post_init__(self) -> None:
-    #     self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
+    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
+        self.main_item = main_item
+        self.related_item = related_item
+        # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
@@ -83,7 +80,7 @@ class Relation(ABC):
 
     # TODO: Find a way to implement the same thing but without the need to check every pair of candidates
     @abstractmethod
-    def _uncached_are_candidates_compatible(
+    def are_candidates_compatible(
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -121,7 +118,7 @@ class Relation(ABC):
         return {
             related_object_id
             for related_object_id in self._extract_related_object_ids(main_candidate_metadata, scene_objects_dict)
-            if self._uncached_are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
+            if self.are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
         }
 
     @abstractmethod
@@ -208,7 +205,6 @@ class Relation(ABC):
         return hash((self.type_id, self.main_item, self.related_item))
 
 
-@dataclass(frozen=True, repr=False, eq=False)
 class ReceptacleOfRelation(Relation):
     """
     A relation of the form "main_item is a receptacle of related_item".
@@ -221,12 +217,13 @@ class ReceptacleOfRelation(Relation):
 
     """
 
-    type_id: RelationTypeId = field(default=RelationTypeId.RECEPTACLE_OF, init=False)
-    inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.CONTAINED_IN, init=False)
-    candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.RECEPTACLE, init=False)
-    candidate_required_prop_sat_function: PropSatFunction = field(default=SingleValuePSF(True), init=False)
-    main_item: TaskItem
-    related_item: TaskItem
+    type_id = RelationTypeId.RECEPTACLE_OF
+    inverse_relation_type_id = RelationTypeId.CONTAINED_IN
+    candidate_required_prop = SimObjFixedProp.RECEPTACLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
+        super().__init__(main_item, related_item)
 
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
         """Return an empty dictionary since the inverse relation doesn't have parameters."""
@@ -241,7 +238,7 @@ class ReceptacleOfRelation(Relation):
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
 
-    def _uncached_are_candidates_compatible(  # noqa: PLR6301
+    def are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -253,7 +250,6 @@ class ReceptacleOfRelation(Relation):
         )
 
 
-@dataclass(frozen=True, repr=False, eq=False)
 class ContainedInRelation(Relation):
     """
     A relation of the form "main_item is_contained_in related_item".
@@ -267,12 +263,13 @@ class ContainedInRelation(Relation):
     # TODO: Finish docstring.
     """
 
-    type_id: RelationTypeId = field(default=RelationTypeId.CONTAINED_IN, init=False)
-    inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.RECEPTACLE_OF, init=False)
-    candidate_required_prop: SimObjFixedProp = field(default=SimObjFixedProp.PICKUPABLE, init=False)
-    candidate_required_prop_sat_function: PropSatFunction = field(default=SingleValuePSF(True), init=False)
-    main_item: TaskItem
-    related_item: TaskItem
+    type_id = RelationTypeId.CONTAINED_IN
+    inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
+    candidate_required_prop = SimObjFixedProp.PICKUPABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
+        super().__init__(main_item, related_item)
 
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
         """Return an empty dictionary since the inverse relation doesn't have parameters."""
@@ -287,7 +284,7 @@ class ContainedInRelation(Relation):
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []
 
-    def _uncached_are_candidates_compatible(  # noqa: PLR6301
+    def are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -299,7 +296,6 @@ class ContainedInRelation(Relation):
         )
 
 
-@dataclass(frozen=True, repr=False, eq=False)
 class CloseToRelation(Relation):
     """
     A relation of the form "main_item is close to related_item".
@@ -313,13 +309,14 @@ class CloseToRelation(Relation):
 
     """
 
-    type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
-    inverse_relation_type_id: RelationTypeId = field(default=RelationTypeId.CLOSE_TO, init=False)
+    type_id = RelationTypeId.CLOSE_TO
+    inverse_relation_type_id = RelationTypeId.CLOSE_TO
     candidate_required_prop = None
     candidate_required_prop_sat_function = None
-    main_item: TaskItem
-    related_item: TaskItem
-    distance: float = 1.0
+
+    def __init__(self, main_item: TaskItem, related_item: TaskItem, distance: float) -> None:
+        super().__init__(main_item, related_item)
+        self.distance = distance
 
     def _compute_inverse_relation_parameters(self) -> dict[str, float]:
         """Return a dictionary with the same parameters since the relation is symmetrical."""
@@ -341,7 +338,7 @@ class CloseToRelation(Relation):
 
         return close_object_ids
 
-    def _uncached_are_candidates_compatible(  # noqa: PLR6301
+    def are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,

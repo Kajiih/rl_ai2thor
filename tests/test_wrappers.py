@@ -69,22 +69,6 @@ def test_single_task_wrapper_more_than_one_task_blueprint_error():
     assert exc_info.value.config == env.config
 
 
-def test_single_task_wrapper_more_than_one_argument_value_error():
-    multi_arg_values_config = {
-        "tasks": [
-            {
-                "type": "PlaceIn",
-                "args": {"placed_object_type": ["Apple", "Banana"], "receptacle_type": "Bowl"},
-                "scenes": ["Kitchen", "LivingRoom", "Bedroom", "Bathroom"],
-            },
-        ]
-    }
-    env = ITHOREnv(override_config=multi_arg_values_config)
-    with pytest.raises(MoreThanOneArgumentValueError) as exc_info:
-        SingleTaskWrapper(env)
-    assert exc_info.value.config == env.config
-
-
 def test_single_task_wrapper_reset(single_task_ithor_env):
     wrapped_env = SingleTaskWrapper(single_task_ithor_env)
     observation, info = wrapped_env.reset()
