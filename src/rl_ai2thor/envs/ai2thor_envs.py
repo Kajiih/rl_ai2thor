@@ -26,7 +26,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinableTask
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinedTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
@@ -286,8 +286,8 @@ class ITHOREnv(
         self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
         self.current_scene = None  # TODO: Replace with an undefined scene of type SceneId
-        self.current_task_type = UndefinableTask
-        self.task = UndefinableTask()
+        self.current_task_type = UndefinedTask
+        self.task = UndefinedTask()
         self.step_count = 0
         # Initialize gymnasium seed
         super().reset(seed=self.config["seed"])

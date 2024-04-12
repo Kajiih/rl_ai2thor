@@ -169,20 +169,24 @@ class BaseTask(ABC):
         """
 
 
-class UndefinableTask(BaseTask):
+class UndefinedTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
 
-    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:  #   # noqa: ARG002, PLR6301
+    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
         """Reset and initialize the task and the controller."""
-        return 0.0, False, {}
+        raise NotImplementedError("Undefined task")
 
-    def compute_task_advancement(  # noqa: PLR6301
+    def compute_task_advancement(
         self,
-        event: Event,  # noqa: ARG002
-        scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,  # noqa: ARG002
+        event: Event,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
-        return 0.0, False, {}
+        raise NotImplementedError("Undefined task")
+
+    def text_description(self) -> str:  
+        """Return a text description of the task."""
+        raise NotImplementedError("Undefined task")
 
 
 type TaskArg = PropValue | int
