@@ -18,7 +18,6 @@ from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from rl_ai2thor.data import OBJECT_TYPES_DATA
 from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
 from rl_ai2thor.envs.sim_objects import (
@@ -26,6 +25,7 @@ from rl_ai2thor.envs.sim_objects import (
     DIRTYABLES,
     HEAT_SOURCES,
     LIGHT_SOURCES,
+    OBJECT_TYPES_DATA,
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
@@ -126,17 +126,41 @@ class BaseTask(ABC):
     _reward_handler_type: type[BaseRewardHandler]
 
     @abstractmethod
-    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
-        """Reset and initialize the task and the controller."""
+    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
+        """
+        Reset and initialize the task and the controller.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            reset_successful (bool): True if the task is successfully reset.
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement at the beginning of the episode.
+        """
 
     @abstractmethod
     def compute_task_advancement(
         self,
         event: Event,
-        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[float, bool, dict[str, Any]]:
-        """Return the task advancement and whether the task is completed."""
+        """
+        Return the task advancement and whether the task is completed.
 
+        Args:
+            event (Event): Event corresponding to the state of the scene.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
+                mapping object ids to their metadata to avoid recomputing it. Defaults to None.
+
+        Returns:
+            task_advancement (float): Task advancement.
+            is_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement.
+        """
+
+    # TODO: Delete
     @classmethod
     @abstractmethod
     def compute_compatible_args_from_blueprint(
@@ -180,7 +204,7 @@ class UndefinableTask(BaseTask):
     def compute_task_advancement(  # noqa: PLR6301
         self,
         event: Event,  # noqa: ARG002
-        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,  # noqa: ARG002
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,  # noqa: ARG002
     ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
@@ -199,6 +223,7 @@ class UndefinableTask(BaseTask):
         return ""
 
 
+type TaskArg = PropValue | int
 type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
 type PropertiesDict = dict[SimObjProp, PropSatFunction]
 type TaskDict[T: Hashable] = dict[T, TaskItemData[T]]
@@ -331,6 +356,7 @@ class GraphTask[T: Hashable](BaseTask):
         event: Event = controller.last_event  # type: ignore
         # Initialize the candidates of the items
         for item in self.items:
+            item.candidate_ids = set()
             for obj_metadata in event.metadata["objects"]:
                 if item.is_candidate(obj_metadata):
                     item.candidate_ids.add(obj_metadata["objectId"])
@@ -396,7 +422,9 @@ class GraphTask[T: Hashable](BaseTask):
                 main_candidate_metadata = scene_objects_dict[global_assignment[main_item]]
                 for related_item in self.items[i + 1 :]:
                     related_candidate_metadata = scene_objects_dict[global_assignment[related_item]]
-                    for relation in main_item.organized_relations[related_item.id].values():
+
+                    relations = main_item.organized_relations.get(related_item.id, {})
+                    for relation in relations.values():
                         if not relation._uncached_are_candidates_compatible(
                             main_candidate_metadata, related_candidate_metadata
                         ):  # TODO: Use the cached version
@@ -463,7 +491,7 @@ class GraphTask[T: Hashable](BaseTask):
     def compute_task_advancement(
         self,
         event: Event,
-        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
@@ -482,7 +510,7 @@ class GraphTask[T: Hashable](BaseTask):
 
         Args:
             event (Event): Event corresponding to the state of the scene.
-            scene_object_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
+            scene_objects_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
                 mapping object ids to their metadata to avoid recomputing it. Defaults to None.
 
         Returns:
@@ -491,10 +519,8 @@ class GraphTask[T: Hashable](BaseTask):
             info (dict[str, Any]): Additional information about the task advancement.
         """
         # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
-        if scene_object_dict is None:
-            scene_objects_dict: dict[SimObjId, SimObjMetadata] = {
-                obj["objectId"]: obj for obj in event.metadata["objects"]
-            }
+        if scene_objects_dict is None:
+            scene_objects_dict = {obj["objectId"]: obj for obj in event.metadata["objects"]}
         overlap_classes_assignment_data = [
             overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]
@@ -703,9 +729,9 @@ class TaskBlueprint:
 
     task_type: type[BaseTask]
     scenes: set[SceneId]
-    task_args: Mapping[str, frozenset[PropValue]] = field(default_factory=dict)
+    task_args: Mapping[str, TaskArg] = field(default_factory=dict)
 
-    def compute_compatible_task_args(self, event: Event) -> list[tuple[PropValue, ...]]:
+    def compute_compatible_task_args(self, event: Event) -> list[tuple[TaskArg, ...]]:
         """
         Compute the compatible task arguments from the event.
 
@@ -714,7 +740,7 @@ class TaskBlueprint:
                 at the beginning of the episode.
 
         Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
+            compatible_args (list[tuple[TaskArg, ...]]): List of compatible task arguments.
         """
         return self.task_type.compute_compatible_args_from_blueprint(self, event)
 

@@ -31,6 +31,9 @@ rel_tolerance = 5e-2
 
 seed = 42
 
+test_media_path = Path("tests/media")
+test_media_path.mkdir(exist_ok=True)
+
 
 # %% === Fixtures ===
 # TODO: Change fixture to have a specific base config
@@ -103,9 +106,7 @@ partial_config = {
 }
 
 
-def test__compute_action_availabilities(ithor_env: ITHOREnv):
-    ithor_env.config = partial_config
-
+def test__compute_action_availabilities():
     expected_availabilities = {
         EnvActionName.MOVE_AHEAD: True,
         EnvActionName.MOVE_BACK: False,
@@ -144,20 +145,20 @@ def test__compute_action_availabilities(ithor_env: ITHOREnv):
         EnvActionName.DIRTY_OBJECT: False,
     }
 
-    action_availabilities = ithor_env._compute_action_availabilities()
+    action_availabilities = ITHOREnv._compute_action_availabilities(partial_config)
 
     assert action_availabilities == expected_availabilities
 
 
-def test_compute_action_availabilities_unknown_action_category(ithor_env: ITHOREnv):
-    ithor_env.config = {
+def test_compute_action_availabilities_unknown_action_category():
+    config = {
         "action_categories": {
             "_unknown_action_category": None,
         }
     }
 
     with pytest.raises(UnknownActionCategoryError) as exc_info:
-        ithor_env._compute_action_availabilities()
+        ITHOREnv._compute_action_availabilities(config)
 
     assert exc_info.value.action_category == "_unknown_action_category"
 
@@ -257,48 +258,15 @@ def test__compute_available_scenes():
     assert available_scenes == expected_available_scenes
 
 
-def test__develop_config_task_args_single_arg():
-    task_args = "Mug"
-    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
-    assert developed_task_arg == frozenset(["Mug"])
-
-
-def test__develop_config_task_args_single_arg_from_group():
-    task_args = "_PICKUPABLES"
-    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
-    expected_developed_task_arg = frozenset(ALL_OBJECT_GROUPS["_PICKUPABLES"])
-    assert developed_task_arg == expected_developed_task_arg
-
-
-def test__develop_config_task_args_multiple_args():
-    task_args = ["Mug", "Knife", "_PICKUPABLES"]
-    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
-    expected_developed_task_arg = frozenset(["Mug", "Knife", *ALL_OBJECT_GROUPS["_PICKUPABLES"]])
-    assert developed_task_arg == expected_developed_task_arg
-
-
-def test__develop_config_task_args_multiple_args_with_duplicates():
-    task_args = ["Mug", "Knife", "_PICKUPABLES", "Mug"]
-    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
-    expected_developed_task_arg = frozenset(["Mug", "Knife", *ALL_OBJECT_GROUPS["_PICKUPABLES"]])
-    assert developed_task_arg == expected_developed_task_arg
-
-
-def test__develop_config_task_args_empty_arg():
-    task_args = []
-    developed_task_arg = ITHOREnv._develop_config_task_args(task_args)
-    assert developed_task_arg == frozenset()
-
-
-def test__create_task_blueprints(ithor_env: ITHOREnv):
-    ithor_env.config = {
+def test__create_task_blueprints():
+    config = {
         "globally_excluded_scenes": ["FloorPlan1"],
         "tasks": [
             {
                 "type": "PlaceIn",
                 "args": {
-                    "placed_object_type": ["Mug", "Knife"],
-                    "receptacle_type": ["Sink", "Pot", "_PICKUPABLE_RECEPTACLES"],
+                    "placed_object_type": "Knife",
+                    "receptacle_type": "Sink",
                 },
                 "scenes": ["FloorPlan1", "FloorPlan2"],
             },
@@ -310,21 +278,17 @@ def test__create_task_blueprints(ithor_env: ITHOREnv):
         ],
     }
 
-    task_blueprints = ithor_env._create_task_blueprints()
+    task_blueprints = ITHOREnv._create_task_blueprints(config)
 
-    assert len(task_blueprints) == 2  # noqa: PLR2004
+    assert len(task_blueprints) == len(config["tasks"])
 
     # Check task blueprint 1
     task_blueprint_1 = task_blueprints[0]
     assert task_blueprint_1.task_type == ALL_TASKS["PlaceIn"]
     assert task_blueprint_1.scenes == {"FloorPlan2"}
     assert task_blueprint_1.task_args == {
-        "placed_object_type": frozenset([SimObjectType("Mug"), SimObjectType("Knife")]),
-        "receptacle_type": frozenset([
-            SimObjectType("Sink"),
-            SimObjectType("Pot"),
-            *list(ALL_OBJECT_GROUPS["_PICKUPABLE_RECEPTACLES"]),
-        ]),
+        "placed_object_type": SimObjectType("Knife"),
+        "receptacle_type": SimObjectType("Sink"),
     }
 
     # Check task blueprint 2
@@ -332,14 +296,14 @@ def test__create_task_blueprints(ithor_env: ITHOREnv):
     assert task_blueprint_2.task_type == ALL_TASKS["PlaceNSameIn"]
     assert task_blueprint_2.scenes == {"FloorPlan3"}
     assert task_blueprint_2.task_args == {
-        "placed_object_type": frozenset([SimObjectType("Apple")]),
-        "receptacle_type": frozenset([SimObjectType("Plate")]),
-        "n": frozenset({2}),
+        "placed_object_type": SimObjectType("Apple"),
+        "receptacle_type": SimObjectType("Plate"),
+        "n": 2,
     }
 
 
-def test__create_task_blueprints_unknown_task(ithor_env: ITHOREnv):
-    ithor_env.config = {
+def test__create_task_blueprints_unknown_task():
+    config = {
         "globally_excluded_scenes": [],
         "tasks": [
             {
@@ -351,21 +315,20 @@ def test__create_task_blueprints_unknown_task(ithor_env: ITHOREnv):
     }
 
     with pytest.raises(UnknownTaskTypeError) as exc_info:
-        ithor_env._create_task_blueprints()
+        ITHOREnv._create_task_blueprints(config)
 
     assert exc_info.value.task_type == "_unknown_task"
 
 
 # More with empty task config
-def test__create_task_blueprints_empty_task_config(ithor_env: ITHOREnv):
-    env_config = {
+def test__create_task_blueprints_empty_task_config():
+    config = {
         "globally_excluded_scenes": [],
         "tasks": [],
     }
-    ithor_env.config = deepcopy(env_config)
 
     with pytest.raises(NoTaskBlueprintError) as exc_info:
-        ithor_env._create_task_blueprints()
+        ITHOREnv._create_task_blueprints(config)
 
     assert exc_info.value.config == {"globally_excluded_scenes": [], "tasks": []}
 
@@ -390,7 +353,6 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
     env_obs2: NDArray = obs2["env_obs"]  # type: ignore
     task_obs2 = obs2["task_obs"]
     assert ithor_env.current_task_type == ithor_env_2.current_task_type
-    assert ithor_env.current_task_args == ithor_env_2.current_task_args
     assert task_obs1 == task_obs2
 
     obs1_2, info1_2 = ithor_env.reset(seed=seed)
@@ -400,7 +362,6 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
     env_obs2_2: NDArray = obs2_2["env_obs"]  # type: ignore
     task_obs2_2 = obs2_2["task_obs"]
     assert ithor_env.current_task_type == ithor_env_2.current_task_type
-    assert ithor_env.current_task_args == ithor_env_2.current_task_args
     assert task_obs1_2 == task_obs2_2
 
     # Check if the scene are identical
@@ -411,17 +372,17 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
     try:
         assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(env_obs1).save("obs1.png")
-        Image.fromarray(env_obs2).save("obs2.png")
-        Image.fromarray(env_obs1 - env_obs2).save("diff.png")
+        Image.fromarray(env_obs1).save(test_media_path / "obs1.png")
+        Image.fromarray(env_obs2).save(test_media_path / "obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save(test_media_path / "diff.png")
         assert env_obs1 == pytest.approx(env_obs2, abs=0, rel=0)
 
     try:
         assert env_obs1_2 == pytest.approx(env_obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(env_obs1_2).save("env_obs1_2.png")
-        Image.fromarray(env_obs1_2).save("env_obs2_2.png")
-        Image.fromarray(env_obs1_2 - env_obs2_2).save("diff_2.png")
+        Image.fromarray(env_obs1_2).save(test_media_path / "obs1_2.png")
+        Image.fromarray(env_obs1_2).save(test_media_path / "obs2_2.png")
+        Image.fromarray(env_obs1_2 - env_obs2_2).save(test_media_path / "diff_2.png")
         assert env_obs1_2 == pytest.approx(env_obs2_2, abs=0, rel=0)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -431,16 +392,17 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
 def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
     obs1, info1 = ithor_env.reset(seed=seed)
     task_type = ithor_env.current_task_type
-    task_args = ithor_env.current_task_args
     data_path = Path("tests/data/test_reset_different_runtime_reproducible_obs_info.pkl")
-    # to_serialize_data = (obs1, info1, task_type, task_args)
+
+    # Run the following only once to save the data
+    # to_serialize_data = (obs1, info1, task_type)
     # with data_path.open("wb") as f:
     #     pkl.dump(to_serialize_data, f)
+
     with data_path.open("rb") as f:
-        obs2, info2, task_type2, task_args2 = pkl.load(f)  # noqa: S301
+        obs2, info2, task_type2 = pkl.load(f)  # noqa: S301
 
     assert task_type == task_type2
-    assert task_args == task_args2
 
     # Check if the scene are identical
     split_assert_dicts(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -458,9 +420,9 @@ def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
     try:
         assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(env_obs1).save("obs1.png")
-        Image.fromarray(env_obs2).save("obs2.png")
-        Image.fromarray(env_obs1 - env_obs2).save("diff.png")
+        Image.fromarray(env_obs1).save(test_media_path / "obs1.png")
+        Image.fromarray(env_obs2).save(test_media_path / "obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save(test_media_path / "diff.png")
         assert env_obs1 == pytest.approx(env_obs2, abs=0, rel=0)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)

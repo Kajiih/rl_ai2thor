@@ -4,10 +4,13 @@ Sim objects and sim objects properties in AI2-THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, NewType
 
-from rl_ai2thor.data import OBJECT_TYPES_DATA
+from rl_ai2thor.data import _OBJECT_TYPES_DICT
 
 
 # %% === Sim Object Types ===
@@ -119,7 +122,7 @@ class SimObjectType(StrEnum):
     STOVE_BURNER = "StoveBurner"
     STOVE_KNOB = "StoveKnob"
     TABLE_TOP_DECOR = "TableTopDecor"
-    # TARGET_CIRCLE = "TargetCircle"
+    TARGET_CIRCLE = "TargetCircle"
     TEDDY_BEAR = "TeddyBear"
     TELEVISION = "Television"
     TENNIS_RACKET = "TennisRacket"
@@ -196,6 +199,29 @@ SimObjId = NewType("SimObjId", str)
 type SimObjPropValue = Any
 type SimObjMetadata = dict[SimObjMetadataKey, SimObjPropValue]
 
+
+# %% === Sim Object Types Data ===
+@dataclass(frozen=True)
+class ObjTypeData:
+    """Data for a sim object type in AI2-THOR."""
+
+    scenes: str
+    actionable_properties: frozenset[SimObjFixedProp]
+    materials_properties: frozenset[SimObjFixedProp]
+    compatible_receptacles: frozenset[SimObjectType]
+    contextual_interactions: str
+
+
+OBJECT_TYPES_DATA = {
+    SimObjectType(sim_object_type): ObjTypeData(
+        scenes=object_type_data["scenes"],
+        actionable_properties=frozenset(object_type_data["actionable_properties"]),
+        materials_properties=frozenset(object_type_data["materials_properties"]),
+        compatible_receptacles=frozenset(object_type_data["compatible_receptacles"]),
+        contextual_interactions=object_type_data["contextual_interactions"],
+    )
+    for sim_object_type, object_type_data in _OBJECT_TYPES_DICT.items()
+}
 
 # %% === Sim Object Groups ===
 PICKUPABLES = {

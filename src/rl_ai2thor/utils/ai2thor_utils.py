@@ -24,7 +24,7 @@ def get_scene_objects_dict(objects: list[SimObjMetadata]) -> dict[SimObjId, SimO
         objects (list[dict]): List of objects to index.
 
     Returns:
-        scene_object_dict (dict[SimObjId, SimObjMetadata]): Dictionary of objects indexed by object id.
+        scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary of objects indexed by object id.
     """
     return {obj["objectId"]: obj for obj in objects}
 

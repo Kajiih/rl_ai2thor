@@ -100,7 +100,7 @@ class ITHOREnv(
         self._create_observation_space()
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
-        self.task_blueprints = self._create_task_blueprints()
+        self.task_blueprints = self._create_task_blueprints(self.config)
 
     @staticmethod
     def _load_and_override_config(
@@ -129,36 +129,40 @@ class ITHOREnv(
 
         return config
 
-    def _compute_action_availabilities(self) -> dict[EnvActionName, bool]:
+    @staticmethod
+    def _compute_action_availabilities(config: dict[str, Any]) -> dict[EnvActionName, bool]:
         """
         Compute the action availabilities based on the environment mode config.
+
+        Args:
+            config (dict): Environment config.
 
         Returns:
             dict[EnvActionName, bool]: Dictionary indicating which actions are available.
         """
         action_availabilities = {action.name: False for action in ALL_ACTIONS}
 
-        for action_category in self.config["action_categories"]:
+        for action_category in config["action_categories"]:
             if action_category not in ActionCategory:
                 raise UnknownActionCategoryError(action_category)
 
-            if self.config["action_categories"][action_category]:
+            if config["action_categories"][action_category]:
                 # Enable all actions in the category
                 for action in ACTIONS_BY_CATEGORY[action_category]:
                     action_availabilities[action.name] = True
 
         # Handle specific cases
-        if self.config["simple_movement_actions"]:
+        if config["simple_movement_actions"]:
             for action_name in [EnvActionName.MOVE_BACK, EnvActionName.MOVE_LEFT, EnvActionName.MOVE_RIGHT]:
                 action_availabilities[action_name] = False
 
-        if self.config["use_done_action"]:
+        if config["use_done_action"]:
             action_availabilities[EnvActionName.DONE] = True
 
         if (
-            self.config["partial_openness"]
-            and self.config["action_categories"]["open_close_actions"]
-            and not self.config["discrete_actions"]
+            config["partial_openness"]
+            and config["action_categories"]["open_close_actions"]
+            and not config["discrete_actions"]
         ):
             for action_name in [EnvActionName.OPEN_OBJECT, EnvActionName.CLOSE_OBJECT]:
                 action_availabilities[action_name] = False
@@ -168,7 +172,7 @@ class ITHOREnv(
 
     def _create_action_space(self) -> None:
         """Create the action space according to the available action groups in the environment mode config."""
-        self.action_availabilities = self._compute_action_availabilities()
+        self.action_availabilities = self._compute_action_availabilities(self.config)
 
         available_actions = [action_name for action_name, available in self.action_availabilities.items() if available]
         self.action_idx_to_name = dict(enumerate(available_actions))
@@ -231,18 +235,22 @@ class ITHOREnv(
 
         return available_scenes
 
-    def _create_task_blueprints(self) -> list[TaskBlueprint]:
+    @staticmethod
+    def _create_task_blueprints(config: dict[str, Any]) -> list[TaskBlueprint]:
         """
         Create the task blueprints based on the environment mode config.
+
+        Args:
+            config (dict): Environment config.
 
         Returns:
             list[TaskBlueprint]: List of task blueprints.
         """
-        tasks_config = self.config["tasks"]
+        tasks_config = config["tasks"]
         if not isinstance(tasks_config, list):
             tasks_config = [tasks_config]
         task_blueprints = []
-        globally_excluded_scenes = set(self.config["globally_excluded_scenes"])
+        globally_excluded_scenes = set(config["globally_excluded_scenes"])
         for task_description in tasks_config:
             task_type = task_description["type"]
             if task_type not in ALL_TASKS:
@@ -252,7 +260,7 @@ class ITHOREnv(
             task_blueprints.append(
                 TaskBlueprint(
                     task_type=ALL_TASKS[task_type],
-                    scenes=self._compute_config_available_scenes(
+                    scenes=ITHOREnv._compute_config_available_scenes(
                         task_description["scenes"], excluded_scenes=globally_excluded_scenes
                     ),
                     task_args=task_args,
@@ -260,7 +268,7 @@ class ITHOREnv(
             )
 
         if not task_blueprints:
-            raise NoTaskBlueprintError(self.config)
+            raise NoTaskBlueprintError(config)
 
         return task_blueprints
 

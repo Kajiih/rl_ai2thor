@@ -25,7 +25,8 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
         terminated_list = pkl.load(h)  # noqa: S301
 
     mock_controller = MockController(last_event=event_list[0])
-    task_advancement, is_terminated, _ = task.reset(mock_controller)
+    reset_successful, task_advancement, is_terminated, _ = task.reset(mock_controller)
+    assert reset_successful
     assert task_advancement == advancement_list[0]
     assert is_terminated == terminated_list[0]
 
@@ -77,6 +78,7 @@ def test_pickup_task() -> None:
     """Test the Pickup task with a Mug object."""
     task = Pickup(picked_up_object_type=SimObjectType.MUG)
     task_data_dir = data_dir / "test_pickup_mug"
+    generate_task_tests_from_saved_data(task, task_data_dir)
 
 
 def test_open_task() -> None:

@@ -29,8 +29,6 @@ class SingleTaskWrapper(ObservationWrapper, ITHOREnv):
         # Check that there is only one task
         if len(unwrapped_env.task_blueprints) > 1:
             raise MoreThanOneTaskBlueprintError(unwrapped_env.config)
-        if max(len(arg_values) for arg_values in unwrapped_env.task_blueprints[0].task_args.values()) > 1:
-            raise MoreThanOneArgumentValueError(unwrapped_env.config)
 
         self.observation_space = self.env.observation_space.spaces["env_obs"]
 
@@ -122,8 +120,9 @@ class MoreThanOneTaskBlueprintError(Exception):
         return f"The environment has more than one task blueprint, which is incompatible with {SingleTaskWrapper.__name__}; config['tasks']]: {self.config["tasks"]}"
 
 
+# TODO: Delete; deprecated since task blueprint don't support multiple arguments values anymore
 class MoreThanOneArgumentValueError(Exception):
-    """Exception raised when there is more than one possible argument value for the task in an environment wrapped by SingleTaskWrapper."""
+    """Exception raised when there is more than one possible value for a task argument in an environment wrapped by SingleTaskWrapper."""
 
     def __init__(self, config: dict) -> None:
         self.config = config

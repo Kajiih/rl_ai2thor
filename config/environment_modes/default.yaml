@@ -103,7 +103,7 @@ tasks:
     scenes: &ALL_SCENES [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
   - type: PlaceNSameIn
     args:
-      n: 2
+      n: 1
       placed_object_type: Apple
       receptacle_type: CounterTop
     scenes: *ALL_SCENES
