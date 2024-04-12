@@ -182,7 +182,9 @@ class TaskItem[T: Hashable]:
         self.properties = properties
 
         # Infer the candidate required properties from the item properties
-        self._prop_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {
+        self._prop_candidate_required_properties: dict[  # TODO: Check why there is a reportAttributeAccessIssue
+            SimObjFixedProp, PropSatFunction
+        ] = {
             prop.candidate_required_prop: (
                 prop_satisfaction_function if prop.is_fixed else prop.candidate_required_prop_sat_function
             )
@@ -219,7 +221,7 @@ class TaskItem[T: Hashable]:
             }
             for relation in relations
         })
-        self._rel_candidate_required_properties.update({
+        self._rel_candidate_required_properties.update({  # TODO: Check why there is a reportCallIssue
             relation.candidate_required_prop: relation.candidate_required_prop_sat_function
             for relation in relations
             if relation.candidate_required_prop is not None
@@ -660,14 +662,35 @@ class ItemOverlapClass[T: Hashable]:
             # TODO?: Replace candidate ids by their index in the list to make it more efficient? Probably need this kind of optimizations
         ]
         # Filter the permutations where the assigned objects are not candidates of the items
-        self.valid_assignments = [
+        self.valid_assignments: list[dict[TaskItem[T], SimObjId]] = [
             permutation
             for permutation in candidate_permutations
             if all(obj_id in item.candidate_ids for item, obj_id in permutation.items())
         ]
 
         if not self.valid_assignments:
-            raise NoValidAssignmentError(self)
+            # raise NoValidAssignmentError(self)
+            print(f"No valid assignment for overlap class {self}")
+
+    def prune_assignments(self, compatible_global_assignments: list[dict[TaskItem[T], SimObjId]]) -> None:
+        """
+        Prune the valid assignments to keep only those that are part of the given compatible assignments.
+
+        Valid assignments are assignments where each item is associated with a candidate
+        that has all correct candidate_required_properties (without taking into account the
+        relations between the items) and compatible assignments are valid assignment where the
+        candidates are compatible when taking into account the relations between the items.
+
+        Args:
+            compatible_global_assignments (list[dict[TaskItem[T], SimObjId]]): List of global
+                compatible (for the whole task and not only this overlap class).
+        """
+        compatible_valid_assignment = []
+        for assignment in self.valid_assignments:
+            for global_assignment in compatible_global_assignments:
+                if all(assignment[item] == global_assignment[item] for item in self.items):
+                    compatible_valid_assignment.append(assignment)
+                    break
 
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
@@ -753,6 +776,7 @@ class NoCandidateError(Exception):
         return f"Item '{self.item}' has no candidate with the required properties {self.item.candidate_required_properties}"
 
 
+# TODO: Unused; Replace by a warning?
 class NoValidAssignmentError(Exception):
     """
     Exception raised when no valid assignment is found during the initialization of an overlap class.

@@ -252,7 +252,7 @@ def test__compute_available_scenes():
         "FloorPlan9",
     }
 
-    available_scenes = ITHOREnv._compute_available_scenes(scenes, excluded_scenes)
+    available_scenes = ITHOREnv._compute_config_available_scenes(scenes, excluded_scenes)
 
     assert available_scenes == expected_available_scenes
 

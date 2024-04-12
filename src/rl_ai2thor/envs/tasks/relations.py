@@ -6,6 +6,7 @@ TODO: Finish module docstring.
 
 from __future__ import annotations
 
+import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -51,6 +52,9 @@ class Relation(ABC):
     candidate_required_prop: SimObjFixedProp | None = None
     candidate_required_prop_sat_function: PropSatFunction | None = None
 
+    # def __post_init__(self) -> None:
+    #     self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
+
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
         """
@@ -80,7 +84,7 @@ class Relation(ABC):
 
     # TODO: Find a way to implement the same thing but without the need to check every pair of candidates
     @abstractmethod
-    def are_candidates_compatible(
+    def _uncached_are_candidates_compatible(
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -118,7 +122,7 @@ class Relation(ABC):
         return {
             related_object_id
             for related_object_id in self._extract_related_object_ids(main_candidate_metadata, scene_objects_dict)
-            if self.are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
+            if self._uncached_are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
         }
 
     @abstractmethod
@@ -238,7 +242,7 @@ class ReceptacleOfRelation(Relation):
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _uncached_are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -284,7 +288,7 @@ class ContainedInRelation(Relation):
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _uncached_are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -338,7 +342,7 @@ class CloseToRelation(Relation):
 
         return close_object_ids
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _uncached_are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,

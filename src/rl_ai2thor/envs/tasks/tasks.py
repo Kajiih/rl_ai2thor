@@ -96,23 +96,26 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 
         return reward, task_completion, info
 
-    def reset(self, controller: Controller) -> tuple[bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, bool, dict[str, Any]]:
         """
         Reset the reward handler.
+
+        The reset is considered not successful if the task and the scene are incompatible.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
+            reset_successful (bool): True if the task is successfully reset.
             terminated (bool): Whether the episode has terminated.
             info (dict[str, Any]): Additional information about the state of the task.
         """
         # Reset the task
-        task_advancement, task_completion, info = self.task.reset(controller)
+        reset_successful, task_advancement, task_completion, info = self.task.reset(controller)
         # Initialize the last step advancement
         self.last_step_advancement = task_advancement
 
-        return task_completion, info
+        return reset_successful, task_completion, info
 
 
 # %% === Tasks ===
@@ -126,7 +129,11 @@ class BaseTask(ABC):
         """Reset and initialize the task and the controller."""
 
     @abstractmethod
-    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(
+        self,
+        event: Event,
+        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,
+    ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
 
     @classmethod
@@ -169,7 +176,11 @@ class UndefinableTask(BaseTask):
         """Reset and initialize the task and the controller."""
         return 0.0, False, {}
 
-    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:  # noqa: ARG002, PLR6301
+    def compute_task_advancement(  # noqa: PLR6301
+        self,
+        event: Event,  # noqa: ARG002
+        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,  # noqa: ARG002
+    ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
 
@@ -267,8 +278,8 @@ class GraphTask[T: Hashable](BaseTask):
                 Dictionary describing the items and their properties and relations.
         """
         self.task_description_dict = task_description_dict
-        self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
-        self._items_by_id = {item.id: item for item in self.items}
+        self.items: list[TaskItem[T]] = self.full_initialize_items_and_relations_from_dict(task_description_dict)
+        self._items_by_id: dict[T, TaskItem[T]] = {item.id: item for item in self.items}
 
         self.overlap_classes: list[ItemOverlapClass] = []
 
@@ -302,6 +313,11 @@ class GraphTask[T: Hashable](BaseTask):
         Initialize the candidates of the items with the objects
         in the scene and compute the overlap classes.
 
+        Valid assignments are assignments where each item is associated with a candidate
+        that has all correct candidate_required_properties (without taking into account the
+        relations between the items) and compatible assignments are valid assignment where the
+        candidates are compatible when taking into account the relations between the items.
+
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
@@ -317,15 +333,65 @@ class GraphTask[T: Hashable](BaseTask):
             for obj_metadata in event.metadata["objects"]:
                 if item.is_candidate(obj_metadata):
                     item.candidate_ids.add(obj_metadata["objectId"])
-        if not all(item.candidate_ids for item in self.items):
+            if not item.candidate_ids:
+                print(f"No candidate found for item {item.id}")
+                return False, 0, False, {}
+
+        # === Check the compatibility of candidates for each relation ===
+        temp_overlap_classes = self._compute_overlap_classes(self.items)
+        if not all(overlap_class.valid_assignments for overlap_class in temp_overlap_classes):
             return False, 0, False, {}
 
+        valid_assignments_product = itertools.product(
+            *(overlap_class.valid_assignments for overlap_class in temp_overlap_classes)
+        )
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+        compatible_assignments = []
+        for assignment_product in valid_assignments_product:
+            global_assignment: dict[TaskItem[T], SimObjId] = {
+                item: candidate_id
+                for overlap_class_assignment in assignment_product
+                for item, candidate_id in overlap_class_assignment.items()
+            }
+            incompatible_assignment = False
+            for i in range(len(self.items)):
+                main_item = self.items[i]
+                main_candidate_metadata = scene_objects_dict[global_assignment[main_item]]
+                for related_item in self.items[i + 1 :]:
+                    related_candidate_metadata = scene_objects_dict[global_assignment[related_item]]
+                    for relation in main_item.organized_relations[related_item.id].values():
+                        if not relation._uncached_are_candidates_compatible(
+                            main_candidate_metadata, related_candidate_metadata
+                        ):  # TODO: Use the cached version
+                            incompatible_assignment = True
+                            break
+                    if incompatible_assignment:
+                        break
+                if incompatible_assignment:
+                    break
+            if not incompatible_assignment:
+                compatible_assignments.append(global_assignment)
+
+        if not compatible_assignments:
+            return False, 0, False, {}
+
+        # === Keep only candidates that are in at least one compatible assignment ===
+        for item in self.items:
+            item.candidate_ids = {assignment[item] for assignment in compatible_assignments}
+
         self.overlap_classes = self._compute_overlap_classes(self.items)
+
+        # For each overlap_class, keep only valid assignments if they are part of one of the compatible assignments
+        # TODO: Check if this is necessary
+        for overlap_class in self.overlap_classes:
+            overlap_class.prune_assignments(compatible_assignments)
+
         # Compute max task advancement = Total number of properties and relations of the items
+        # TODO: Make it compatible with weighted properties and relations
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
         # Return initial task advancement
-        return True, *self.compute_task_advancement(event)
+        return True, *self.compute_task_advancement(event, scene_objects_dict)
 
     @staticmethod
     def _compute_overlap_classes(items: list[TaskItem[T]]) -> list[ItemOverlapClass[T]]:
@@ -376,7 +442,11 @@ class GraphTask[T: Hashable](BaseTask):
         ]
 
     # TODO: Add trying only the top k interesting assignments according to the maximum possible score (need to order the list of interesting candidates then the list of interesting assignments for each overlap class)
-    def compute_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
+    def compute_task_advancement(
+        self,
+        event: Event,
+        scene_object_dict: dict[SimObjId, SimObjMetadata] | None = None,
+    ) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -394,6 +464,8 @@ class GraphTask[T: Hashable](BaseTask):
 
         Args:
             event (Event): Event corresponding to the state of the scene.
+            scene_object_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
+                mapping object ids to their metadata to avoid recomputing it. Defaults to None.
 
         Returns:
             task_advancement (float): Task advancement.
@@ -401,7 +473,10 @@ class GraphTask[T: Hashable](BaseTask):
             info (dict[str, Any]): Additional information about the task advancement.
         """
         # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
-        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+        if scene_object_dict is None:
+            scene_objects_dict: dict[SimObjId, SimObjMetadata] = {
+                obj["objectId"]: obj for obj in event.metadata["objects"]
+            }
         overlap_classes_assignment_data = [
             overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]

@@ -34,14 +34,17 @@ class BaseRewardHandler(ABC):
         """
 
     @abstractmethod
-    def reset(self, controller: Controller) -> tuple[bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, bool, dict[str, Any]]:
         """
         Reset the reward handler.
+
+        In some cases, the reset can fail (e.g. if the task and the scene are incompatible).
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
+            reset_successful (bool): True if the reset is successful.
             terminated (bool): Whether the episode has terminated.
             info (dict[str, Any]): Additional information about the state of the task.
         """
@@ -79,7 +82,7 @@ class MultiRewardHandler(BaseRewardHandler):
         }
         return sum(rewards), any(task_completions), combined_info
 
-    def reset(self, controller: Controller) -> tuple[bool, dict[str, dict[str, Any]]]:
+    def reset(self, controller: Controller) -> tuple[bool, bool, dict[str, dict[str, Any]]]:
         """
         Reset the reward handlers.
 
@@ -87,13 +90,14 @@ class MultiRewardHandler(BaseRewardHandler):
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
         Returns:
+            reset_successful (bool): True if the reset is successful.
             terminated (bool): Whether one of the reward handlers has terminated the episode.
             info (dict[str, Any]): Additional information about the state of the task.
         """
-        task_completions, infos = zip(
+        resets_successful, task_completions, infos = zip(
             *(reward_handler.reset(controller) for reward_handler in self.reward_handlers), strict=True
         )
         combined_info = {
             handler.__class__.__name__: info for handler, info in zip(self.reward_handlers, infos, strict=True)
         }
-        return any(task_completions), combined_info
+        return all(resets_successful), any(task_completions), combined_info

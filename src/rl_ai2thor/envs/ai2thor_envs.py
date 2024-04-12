@@ -26,9 +26,11 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
 )
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjId
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, BaseTask, TaskBlueprint, UndefinableTask
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
+
+if TYPE_CHECKING:
+    from rl_ai2thor.envs.sim_objects import SimObjId
 
 
 # %% Environment definitions
@@ -201,7 +203,10 @@ class ITHOREnv(
         })
 
     @staticmethod
-    def _compute_available_scenes(scenes: list[str] | str, excluded_scenes: set[str] | None = None) -> set[SceneId]:
+    def _compute_config_available_scenes(
+        scenes: list[str] | str,
+        excluded_scenes: set[str] | None = None,
+    ) -> set[SceneId]:
         """
         Compute the available scenes based on the environment mode config.
 
@@ -244,17 +249,13 @@ class ITHOREnv(
                 raise UnknownTaskTypeError(task_type)
             task_args = task_description.get("args", {})
 
-            developed_task_args = {
-                arg_name: self._develop_config_task_args(arg_values) for arg_name, arg_values in task_args.items()
-            }
-
             task_blueprints.append(
                 TaskBlueprint(
                     task_type=ALL_TASKS[task_type],
-                    scenes=self._compute_available_scenes(
+                    scenes=self._compute_config_available_scenes(
                         task_description["scenes"], excluded_scenes=globally_excluded_scenes
                     ),
-                    task_args=developed_task_args,
+                    task_args=task_args,
                 )
             )
 
@@ -262,32 +263,6 @@ class ITHOREnv(
             raise NoTaskBlueprintError(self.config)
 
         return task_blueprints
-
-    # TODO: Make it more general
-    @staticmethod
-    def _develop_config_task_args[V](task_args: list[V] | V) -> frozenset[V]:
-        """
-        Develop an argument or a list of arguments from the environment mode config.
-
-        Developing the argument means replacing the names of argument groups by the
-        actual members of the group (e.g. replacing "_PICKUPABLES" by the set of
-        pickupable object types as defined in ALL_OBJECT_GROUPS["_PICKUPABLES"]).
-
-        Args:
-            task_args (list[V] | V): Task argument or list of task arguments to develop.
-
-        Returns:
-            developed_task_arg (frozenset[V]): Developed task arguments.
-        """
-        if not isinstance(task_args, list):
-            task_args = [task_args]
-        developed_task_arg = set()
-        for arg_value in task_args:
-            if isinstance(arg_value, str) and arg_value in ALL_OBJECT_GROUPS:
-                developed_task_arg.update([obj_type_member.value for obj_type_member in ALL_OBJECT_GROUPS[arg_value]])
-            else:
-                developed_task_arg.add(arg_value)
-        return frozenset(developed_task_arg)
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"
@@ -454,14 +429,13 @@ class ITHOREnv(
             task_blueprint (TaskBlueprint): Task blueprint to sample from.
 
         Returns:
-            Event: Initial event of the environment.
-            BaseTask: Sampled task.
+            initial_event (Event): Initial event of the environment.
+            task (BaseTask): Sampled task.
         """
         compatible_arguments = []
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
         while not compatible_arguments:
-            print(f"Sampling a task from the task blueprint {task_blueprint.task_type.__name__}.")
-            # Sample a scene from the task blueprint
+            print(f"Sampling a scene from the task blueprint {task_blueprint.task_type.__name__}.")
             sorted_scenes = sorted(task_blueprint.scenes)
             sampled_scene = self.np_random.choice(sorted_scenes)
             print(f"Sampled scene: {sampled_scene}.")

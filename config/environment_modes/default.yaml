@@ -92,24 +92,24 @@ action_parameter_data:
     # discrete_value: 1 # ! Should not be used in discrete environment mode
 
 # === Tasks ===
-globally_excluded_scenes: [] # List of scene names to exclude for all tasks(e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
+globally_excluded_scenes: [] # List of scene names to exclude for all tasks(only full names like "FloorPlan1", "FloorPlan201", ...)
 # TODO: Verify and improve this
 # TODO: Add exclude object types for each task?
 tasks:
   - type: PlaceIn
     args:
-      placed_object_type: [_PICKUPABLES] # Sim object type or sim object group (e.g. "PICKUPABLES", "RECEPTACLES", "Apple", "Bowl")
-      receptacle_type: [_RECEPTACLES]
+      placed_object_type: Apple
+      receptacle_type: CounterTop
     scenes: &ALL_SCENES [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups like "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
   - type: PlaceNSameIn
     args:
       n: 2
-      placed_object_type: [_PICKUPABLES]
-      receptacle_type: [_RECEPTACLES]
+      placed_object_type: Apple
+      receptacle_type: CounterTop
     scenes: *ALL_SCENES
   - type: PlaceWithMoveableRecepIn
     args:
-      placed_object_type: [_PICKUPABLES]
-      pickupable_receptacle_type: [_PICKUPABLE_RECEPTACLES]
-      receptacle_type: [_RECEPTACLES]
+      placed_object_type: Apple
+      pickupable_receptacle_type: Plate
+      receptacle_type: CounterTop
     scenes: *ALL_SCENES
