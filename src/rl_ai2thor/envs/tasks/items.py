@@ -686,12 +686,14 @@ class ItemOverlapClass[T: Hashable]:
             compatible_global_assignments (list[Assignment[T]]): List of global
                 compatible (for the whole task and not only this overlap class).
         """
-        compatible_valid_assignment = []
-        for assignment in self.valid_assignments:
-            for global_assignment in compatible_global_assignments:
-                if all(assignment[item] == global_assignment[item] for item in self.items):
-                    compatible_valid_assignment.append(assignment)
-                    break
+        compatible_global_assignments_set = {
+            tuple(global_assignment[item] for item in self.items) for global_assignment in compatible_global_assignments
+        }
+
+        self.valid_assignments = [
+            dict(zip(self.items, assignment_tuple, strict=True))
+            for assignment_tuple in compatible_global_assignments_set
+        ]
 
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
