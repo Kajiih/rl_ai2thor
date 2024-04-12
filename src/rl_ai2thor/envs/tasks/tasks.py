@@ -4,11 +4,6 @@ Tasks in AI2-THOR RL environment.
 TODO: Finish module docstring.
 """
 
-# TODO: Add a way to handle the fact that not every object can be placed in every receptacle in the task advancement computation
-# -> Need to add a list of object types to the receptacle required properties (its object type has to be in this list)
-# -> Need to implement handling properties where the value is a list of possible values instead of a single value
-# -> Then compute_compatible_args_from_blueprint can be more simply implemented using the candidates of the items
-
 # %% === Imports ===
 from __future__ import annotations
 
@@ -160,26 +155,6 @@ class BaseTask(ABC):
             info (dict[str, Any]): Additional information about the task advancement.
         """
 
-    # TODO: Delete
-    @classmethod
-    @abstractmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-
     def get_reward_handler(self) -> BaseRewardHandler:
         """Return the reward handler for the task."""
         return self._reward_handler_type(self)
@@ -208,19 +183,6 @@ class UndefinableTask(BaseTask):
     ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
         return 0.0, False, {}
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """Compute the compatible task arguments from the task blueprint and the event."""
-        raise NotImplementedError
-
-    def text_description(self) -> str:  # noqa: PLR6301
-        """Return a text description of the task."""
-        return ""
 
 
 type TaskArg = PropValue | int
@@ -308,28 +270,6 @@ class GraphTask[T: Hashable](BaseTask):
         self._items_by_id: dict[T, TaskItem[T]] = {item.id: item for item in self.items}
 
         self.overlap_classes: list[ItemOverlapClass] = []
-
-    # TODO: Implement this
-    @staticmethod
-    def compute_compatible_args_from_blueprint(
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        raise NotImplementedError
-        # Implement checking which object types are present in the scene
-        # Implement checking which pairs of object types are compatible with the relations
-        # Merge this with the task reset?
 
     # TODO? Add check to make sure the task is feasible?
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
@@ -731,19 +671,6 @@ class TaskBlueprint:
     scenes: set[SceneId]
     task_args: Mapping[str, TaskArg] = field(default_factory=dict)
 
-    def compute_compatible_task_args(self, event: Event) -> list[tuple[TaskArg, ...]]:
-        """
-        Compute the compatible task arguments from the event.
-
-        Args:
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[TaskArg, ...]]): List of compatible task arguments.
-        """
-        return self.task_type.compute_compatible_args_from_blueprint(self, event)
-
 
 # %% == Alfred tasks ==
 class PlaceNSameIn(GraphTask[str]):
@@ -806,53 +733,6 @@ class PlaceNSameIn(GraphTask[str]):
         """
         return f"Place {self.n} {self.placed_object_type} in {self.receptacle_type}"
 
-    # TODO: Create a generalized version of this that works for all tasks
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
-        min_n = min(task_blueprint.task_args["n"])
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"]
-            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= min_n},
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-
-        # Create a list with all the compatible combinations of placed_object_type and receptacle_types and with enough instances of placed_object_type in the scene
-        compatible_args = [
-            (placed_object_type, compatible_receptacle, n)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            for n in task_blueprint.task_args["n"]
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-            and scene_object_types_count[placed_object_type] >= n
-        ]
-
-        return compatible_args
-
 
 class PlaceNSameInSubclass(PlaceNSameIn, ABC):
     """Abstract subclass of PlaceNSameIn for tasks with a specific number of objects to place."""
@@ -875,50 +755,6 @@ class PlaceNSameInSubclass(PlaceNSameIn, ABC):
 
         # Replace the instance attribute with the class attribute
         del self.n
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"]
-            & {obj_type for obj_type, count in scene_object_types_count.items() if count >= cls.n},
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-
-        # Create a list with all the compatible combinations of placed_object_type and receptacle_types and with enough instances of placed_object_type in the scene
-        compatible_args = [
-            (placed_object_type, compatible_receptacle)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-        ]
-
-        return compatible_args
 
 
 class PlaceIn(PlaceNSameInSubclass):
@@ -1003,49 +839,6 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         """
         return f"Place {self.placed_object_type} in {self.pickupable_receptacle_type} in {self.receptacle_type}"
 
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type', 'pickupable_receptacle_type' and 'receptacle_type'
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
-            "pickupable_receptacle_type": task_blueprint.task_args["pickupable_receptacle_type"]
-            & set(scene_object_types_count),
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-        # Return a list with all the compatible combinations of placed_object_type, pickupable_receptacle_type and receptacle_types
-        return [
-            (placed_object_type, pickupable_receptacle, compatible_receptacle)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            for pickupable_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            if pickupable_receptacle in args_blueprints["pickupable_receptacle_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[pickupable_receptacle].compatible_receptacles
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-        ]
-
 
 class PlaceCleanedIn(PlaceIn):
     """
@@ -1080,7 +873,7 @@ class PlaceCleanedIn(PlaceIn):
 
         return task_description_dict
 
-    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
         Make all instances of placed_object_type dirty.
 
@@ -1115,51 +908,6 @@ class PlaceCleanedIn(PlaceIn):
             description (str): Text description of the task.
         """
         return f"Place cleaned {self.placed_object_type} in {self.receptacle_type}"
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:  # sourcery skip: invert-any-all
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Check if there is a water source in the scene
-        if not any(water_source_type in scene_object_types_count for water_source_type in WATER_SOURCES):
-            return []
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"]
-            & set(scene_object_types_count)
-            & DIRTYABLES,
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-        # Return a list with all the compatible combinations of placed_object_type and receptacle_types
-        return [
-            (placed_object_type, compatible_receptacle)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-        ]
 
 
 class PlaceHeatedIn(PlaceIn):
@@ -1211,50 +959,6 @@ class PlaceHeatedIn(PlaceIn):
         """
         return f"Place heated {self.placed_object_type} in {self.receptacle_type}"
 
-    # TODO: Change this to avoid duplicating code with PlaceIn
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        scene_heat_sources = {heat_source for heat_source in HEAT_SOURCES if heat_source in scene_object_types_count}
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-        # Compute a list with all the compatible combinations of placed_object_type and receptacle_types
-        compatible_args = [
-            (placed_object_type, compatible_receptacle)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            if OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles & scene_heat_sources
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-        ]
-        return compatible_args
-
 
 class PlaceCooledIn(PlaceIn):
     """
@@ -1304,49 +1008,6 @@ class PlaceCooledIn(PlaceIn):
             description (str): Text description of the task.
         """
         return f"Place cooled {self.placed_object_type} in {self.receptacle_type}"
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        scene_cold_sources = {cold_source for cold_source in COLD_SOURCES if obj_type in scene_object_types_count}
-
-        # Keep only the object types that are present in the scene for the blueprint of both 'placed_object_type' and 'receptacle_type'
-        args_blueprints = {
-            "placed_object_type": task_blueprint.task_args["placed_object_type"] & set(scene_object_types_count),
-            "receptacle_type": task_blueprint.task_args["receptacle_type"] & set(scene_object_types_count),
-        }
-        # Compute a list with all the compatible combinations of placed_object_type and receptacle_types
-        compatible_args = [
-            (placed_object_type, compatible_receptacle)
-            for placed_object_type in args_blueprints["placed_object_type"]
-            if OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles & scene_cold_sources
-            for compatible_receptacle in OBJECT_TYPES_DATA[placed_object_type].compatible_receptacles
-            if compatible_receptacle in args_blueprints["receptacle_type"]
-        ]
-        return compatible_args
 
 
 class LookInLight(GraphTask[str]):
@@ -1399,7 +1060,7 @@ class LookInLight(GraphTask[str]):
             ),
         }
 
-    def reset(self, controller: Controller) -> tuple[float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
         Switch of all light sources in the scene.
 
@@ -1434,44 +1095,6 @@ class LookInLight(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Look at {self.looked_at_object_type} in light"
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Check that there is at least one light source in the scene
-        # TODO: Test this
-        if not (LIGHT_SOURCES & set(scene_object_types_count)):
-            return []
-
-        # Keep only the object types that are present in the scene for the blueprint of 'looked_at_object_type'
-        args_blueprints = {
-            "looked_at_object_type": task_blueprint.task_args["looked_at_object_type"] & set(scene_object_types_count),
-        }
-        # Return a list with all the compatible combinations of looked_at_object_type
-        return [(looked_at_object_type,) for looked_at_object_type in args_blueprints["looked_at_object_type"]]
 
 
 # %% === Custom tasks ===
@@ -1519,39 +1142,6 @@ class Pickup(GraphTask[str]):
         """
         return f"Pick up {self.picked_up_object_type}"
 
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Keep only the object types that are present in the scene for the blueprint of 'picked_up_object_type'
-        args_blueprints = {
-            "picked_up_object_type": task_blueprint.task_args["picked_up_object_type"] & set(scene_object_types_count),
-        }
-        # Return a list with all the compatible combinations of picked_up_object_type
-        return [(picked_up_object_type,) for picked_up_object_type in args_blueprints["picked_up_object_type"]]
-
 
 # TODO: Fix this because you can't load tasks without arguments
 class OpenAny(GraphTask[str]):
@@ -1584,34 +1174,6 @@ class OpenAny(GraphTask[str]):
             description (str): Text description of the task.
         """
         return "Open any object"
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,  # noqa: ARG003
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        for obj_metadata in event.metadata["objects"]:
-            if obj_metadata[SimObjFixedProp.OPENABLE]:
-                return [
-                    (obj_metadata[SimObjFixedProp.OBJECT_TYPE],)
-                ]  # TODO: Fix this because you can't load tasks without arguments
-
-        # Return a list with all the object types in the scene
-        return []
 
 
 class Open(GraphTask[str]):
@@ -1657,39 +1219,6 @@ class Open(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Open {self.opened_object_type}"
-
-    @classmethod
-    def compute_compatible_args_from_blueprint(
-        cls,
-        task_blueprint: TaskBlueprint,
-        event: Event,
-    ) -> list[tuple[PropValue, ...]]:
-        """
-        Compute the compatible task arguments from the task blueprint and the event.
-
-        Note: The order of the returned list is not deterministic.
-
-        Args:
-            task_blueprint (TaskBlueprint): Task blueprint.
-            event (Event): Event corresponding to the state of the scene
-                at the beginning of the episode.
-
-        Returns:
-            compatible_args (list[tuple[PropValue, ...]]): List of compatible task arguments.
-        """
-        scene_object_types_count = {}
-        for obj_metadata in event.metadata["objects"]:
-            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-            if obj_type not in scene_object_types_count:
-                scene_object_types_count[obj_type] = 0
-            scene_object_types_count[obj_type] += 1
-
-        # Keep only the object types that are present in the scene for the blueprint of 'opened_object_type'
-        args_blueprints = {
-            "opened_object_type": task_blueprint.task_args["opened_object_type"] & set(scene_object_types_count),
-        }
-        # Return a list with all the compatible combinations of opened_object_type
-        return [(opened_object_type,) for opened_object_type in args_blueprints["opened_object_type"]]
 
 
 # %%  === Exceptions ===
