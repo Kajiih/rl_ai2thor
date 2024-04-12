@@ -399,14 +399,12 @@ class ITHOREnv(
         task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
         self.current_task_type = task_blueprint.task_type
 
-        # Initialize controller and sample task
-        self.last_event, self.task = self._initialize_controller_and_task(task_blueprint)
-
+        self.task = task_blueprint.task_type(**task_blueprint.task_args)
         # TODO: Support more than one reward handler
         self.reward_handler = self.task.get_reward_handler()
-        task_completion, task_info = self.reward_handler.reset(self.controller)
 
-        # TODO: Check if this is correct
+        # Reset the controller, task and reward handler
+        self.last_event, task_completion, task_info = self._reset_controller_task_reward(task_blueprint)
         if task_completion:
             self.reset()
 
@@ -421,7 +419,7 @@ class ITHOREnv(
 
         return observation, info
 
-    def _initialize_controller_and_task(self, task_blueprint: TaskBlueprint) -> tuple[Event, BaseTask]:
+    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[Event, bool, dict[str, Any]]:
         """
         Sample a task from the task blueprint compatible with the given event.
 
@@ -429,35 +427,36 @@ class ITHOREnv(
             task_blueprint (TaskBlueprint): Task blueprint to sample from.
 
         Returns:
-            initial_event (Event): Initial event of the environment.
-            task (BaseTask): Sampled task.
+            initial_event (Event): Initial event of the episode.
+            task_completion (bool): Whether the task is completed.
+            task_info (dict[str, Any]): Additional information about the task.
+
         """
-        compatible_arguments = []
+        successful_reset = False
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
-        while not compatible_arguments:
+        while not successful_reset:
             print(f"Sampling a scene from the task blueprint {task_blueprint.task_type.__name__}.")
             sorted_scenes = sorted(task_blueprint.scenes)
             sampled_scene = self.np_random.choice(sorted_scenes)
             print(f"Sampled scene: {sampled_scene}.")
+
             # Instantiate the scene
             controller_parameters = self.config["controller_parameters"]
             controller_parameters["scene"] = sampled_scene
             initial_event: Event = self.controller.reset(sampled_scene)  # type: ignore
 
-            compatible_arguments = task_blueprint.compute_compatible_task_args(event=initial_event)
-            if not compatible_arguments:  # TODO: Fix this for tasks with 0 arguments to work
-                print(f"No compatible arguments found for scene {sampled_scene}. Removing it from the task blueprint.")
+            successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
+            if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
+                print(
+                    f"Scene {sampled_scene} is not compatible with the task blueprint {task_blueprint}. Removing it from the task blueprint."
+                )
                 task_blueprint.scenes.remove(sampled_scene)
                 if not task_blueprint.scenes:
                     raise NoCompatibleSceneError(task_blueprint)
-        sorted_compatible_arguments = sorted(compatible_arguments)
-        sampled_task_args = sorted_compatible_arguments[self.np_random.choice(len(compatible_arguments))]
-        print(f"Sampled task arguments: {sampled_task_args}.")
 
         self.current_scene = sampled_scene
-        self.current_task_args = sampled_task_args
 
-        return initial_event, task_blueprint.task_type(*sampled_task_args)
+        return initial_event, task_completion, task_info
 
     def close(self) -> None:
         """
