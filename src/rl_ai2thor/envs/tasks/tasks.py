@@ -29,6 +29,7 @@ from rl_ai2thor.envs.sim_objects import (
 from rl_ai2thor.envs.tasks.item_prop import (
     ItemPropValue,
     MultiValuePSF,
+    PropSatFunction,
     SingleValuePSF,
     TemperatureValue,
     obj_prop_id_to_item_prop,
@@ -36,7 +37,6 @@ from rl_ai2thor.envs.tasks.item_prop import (
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
     ItemOverlapClass,
-    PropSatFunction,
     TaskItem,
 )
 from rl_ai2thor.envs.tasks.relations import RelationParam, RelationTypeId, relation_type_id_to_relation

@@ -2,7 +2,6 @@
 
 import pickle as pkl  # noqa: S403
 from collections.abc import Mapping
-from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import call, patch
@@ -19,7 +18,7 @@ from rl_ai2thor.envs.ai2thor_envs import (
     UnknownActionCategoryError,
     UnknownTaskTypeError,
 )
-from rl_ai2thor.envs.sim_objects import ALL_OBJECT_GROUPS, SimObjectType
+from rl_ai2thor.envs.sim_objects import SimObjectType
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS
 
 if TYPE_CHECKING:
