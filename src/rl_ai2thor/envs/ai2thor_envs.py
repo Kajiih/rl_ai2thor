@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from rl_ai2thor.envs.sim_objects import SimObjId
 
 
-# %% Environment definitions
+# %% === Environment definitions ===
 class BaseAI2THOREnv[ObsType, ActType](gym.Env, ABC):
     """Base class for AI2-THOR environment."""
 
@@ -475,7 +475,7 @@ class ITHOREnv(
         self.controller.stop()
 
 
-# %% Exceptions
+# %% === Exceptions ===
 class UnknownActionCategoryError(ValueError):
     """Exception raised for unknown action categories in environment mode config."""
 

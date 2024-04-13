@@ -16,7 +16,7 @@ soup = BeautifulSoup(data.decode("utf-8"), "html.parser")
 
 data_dict = {}
 table_body = soup.find("tbody")
-items = table_body.find_all("tr")[1:]
+items = table_body.find_all("tr")[1:]  # type: ignore
 
 
 def strip_and_uncapitalize(s: str) -> str:

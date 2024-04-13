@@ -435,7 +435,7 @@ def test_reset_not_same_scene(ithor_env: ITHOREnv):
     assert not are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
 
-# %% Utils
+# %% === Utils ===
 def split_assert_dicts(d1, d2, abs_tol=None, rel_tol=None, nan_ok=False):
     keys_or_indices = range(len(d1)) if isinstance(d1, list) else d1.keys()
     for k in keys_or_indices:

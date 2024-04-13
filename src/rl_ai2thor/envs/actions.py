@@ -16,6 +16,8 @@ Constants:
 - ACTION_CATEGORIES: Set of unique action categories.
 - ACTIONS_BY_CATEGORY: Dictionary mapping action categories to corresponding actions.
 - ACTIONS_BY_NAME: Dictionary mapping action names to their corresponding definitions.
+
+TODO: Update the module docstring
 """
 
 # %% === Imports ===
@@ -27,8 +29,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from rl_ai2thor.envs.sim_objects import WATER_SOURCES, SimObjectType
-from rl_ai2thor.envs.tasks.items import SimObjFixedProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import WATER_SOURCES, SimObjectType, SimObjFixedProp, SimObjVariableProp
 from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:

@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any
 from rl_ai2thor.agents.callbacks import BaseCallback
 
 if TYPE_CHECKING:
-    import gymnasium as gym
-
     from rl_ai2thor.envs.ai2thor_envs import BaseAI2THOREnv
 
 

@@ -26,16 +26,18 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjFixedProp,
     SimObjVariableProp,
 )
+from rl_ai2thor.envs.tasks.item_prop import (
+    ItemPropValue,
+    MultiValuePSF,
+    SingleValuePSF,
+    TemperatureValue,
+    obj_prop_id_to_item_prop,
+)
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
     ItemOverlapClass,
-    MultiValuePSF,
     PropSatFunction,
-    PropValue,
-    SingleValuePSF,
     TaskItem,
-    TemperatureValue,
-    obj_prop_id_to_item_prop,
 )
 from rl_ai2thor.envs.tasks.relations import RelationParam, RelationTypeId, relation_type_id_to_relation
 
@@ -189,7 +191,7 @@ class UndefinedTask(BaseTask):
         raise NotImplementedError("Undefined task")
 
 
-type TaskArg = PropValue | int
+type TaskArg = ItemPropValue | int
 type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
 type PropertiesDict = dict[SimObjProp, PropSatFunction]
 type TaskDict[T: Hashable] = dict[T, TaskItemData[T]]
