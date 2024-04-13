@@ -124,8 +124,7 @@ type PropSatFunction[T: PropValue] = BasePSF[T] | Callable[[T], bool]
 
 
 # %% === Properties  ===
-# TODO: Add support for automatic scene validity and action validity checking (action group, etc)
-# TODO: Add support for allowing property checking with other ways than equality.
+# TODO: Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
 class ItemPropOld:
     """
@@ -170,7 +169,7 @@ class ItemProp[T1: PropValue, T2: PropValue](ABC):
     """
 
     target_ai2thor_property: SimObjProp
-    candidate_required_prop: SimObjFixedProp
+    candidate_required_prop: SimObjFixedProp | None = None
 
     def __init__(
         self,
@@ -178,11 +177,7 @@ class ItemProp[T1: PropValue, T2: PropValue](ABC):
     ) -> None:
         """Initialize the Property object."""
         self.target_satisfaction_function = target_satisfaction_function
-
-    @property
-    @abstractmethod
-    def candidate_required_prop_sat_function(self) -> PropSatFunction[T2]:
-        """Return the satisfaction function of the candidate required property."""
+        self.candidate_required_prop_sat_function: PropSatFunction[T2] | None = None
 
     def __call__(self, prop_value: T1) -> bool:
         """Return True if the value satisfies the property."""
@@ -200,6 +195,9 @@ class ItemFixedProp[T: PropValue](ItemProp[T, T]):
     Base class for fixed item properties in the definition of a task.
 
     Fixed properties are properties that cannot be changed by the agent.
+
+    For fixed properties, the candidate_required_prop is set to the property itself and the
+    candidate_required_prop_sat_function is set to the target satisfaction function.
     """
 
     target_ai2thor_property: SimObjFixedProp
@@ -211,11 +209,7 @@ class ItemFixedProp[T: PropValue](ItemProp[T, T]):
         """Initialize the FixedProperty object."""
         super().__init__(target_satisfaction_function)
         self.candidate_required_prop = self.target_ai2thor_property
-
-    @property
-    def candidate_required_prop_sat_function(self) -> PropSatFunction[T]:
-        """Return the satisfaction function of the candidate required property."""
-        return self.target_satisfaction_function
+        self.candidate_required_prop_sat_function = self.target_satisfaction_function
 
 
 class ItemVariableProp[T1: PropValue, T2: PropValue](ItemProp[T1, T2]):
@@ -226,7 +220,7 @@ class ItemVariableProp[T1: PropValue, T2: PropValue](ItemProp[T1, T2]):
     """
 
     target_ai2thor_property: SimObjVariableProp
-    target_satisfaction_function: PropSatFunction[T1]
+    candidate_required_prop: SimObjFixedProp
     candidate_required_prop_sat_function: PropSatFunction[T2]
 
     def __init__(
@@ -235,6 +229,9 @@ class ItemVariableProp[T1: PropValue, T2: PropValue](ItemProp[T1, T2]):
     ) -> None:
         """Initialize the VariableProperty object."""
         super().__init__(target_satisfaction_function)
+
+        # Delete the instance attribute since it is now a class attribute
+        del self.candidate_required_prop_sat_function
 
 
 class ObjectTypeProp(ItemFixedProp[SimObjectType]):
@@ -327,7 +324,7 @@ class MoveableProp(ItemFixedProp[bool]):
     target_ai2thor_property = SimObjFixedProp.MOVEABLE
 
 
-class VisibleProp(ItemVariableProp[bool]):
+class VisibleProp(ItemVariableProp[bool, Any]):
     """Visible item property."""
 
     target_ai2thor_property = SimObjVariableProp.VISIBLE
@@ -389,7 +386,7 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
     candidate_required_prop_sat_function = SingleValuePSF(True)
 
 
-class TemperatureProp(ItemVariableProp[TemperatureValue]):
+class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
     """Temperature item property."""
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
