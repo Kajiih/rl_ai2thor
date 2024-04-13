@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rl_ai2thor"
-version = "0.6.0"
+version = "0.6.1"
 description = "RL environment for AI2-THOR"
 readme = "README.md"
 license = "MIT"
@@ -34,7 +34,11 @@ classifiers = [
     "matplotlib",
     # pygraphviz, # https://pygraphviz.github.io/documentation/stable/install.html
   ]
-  dev = ["pytest", "beautifsoup4"]
+  dev = [
+    "pytest",
+    "beautifsoup4",
+    #  "garage" 
+  ]
 
   [project.urls] # TODO: Add these
   Homepage = "https://example.com"

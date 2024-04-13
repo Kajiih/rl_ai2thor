@@ -43,8 +43,8 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-type PropValue = int | float | bool | TemperatureValue | SimObjectType
-type Assignment[T] = dict[TaskItem[T], SimObjId]
+type PropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
+type Assignment[T: Hashable] = dict[TaskItem[T], SimObjId]
 
 
 # %% === Property satisfaction functions ===
@@ -127,7 +127,7 @@ type PropSatFunction[T: PropValue] = BasePSF[T] | Callable[[T], bool]
 # TODO: Add support for automatic scene validity and action validity checking (action group, etc)
 # TODO: Add support for allowing property checking with other ways than equality.
 # TODO: Check if we need to add a hash
-class ItemProp:
+class ItemPropOld:
     """
     Property of an item in the definition of a task.
 
@@ -158,6 +158,275 @@ class ItemProp:
         return f"ItemProp({self.target_ai2thor_property})"
 
 
+class ItemProp[T1: PropValue, T2: PropValue](ABC):
+    """
+    Base class for item properties in the definition of a task.
+
+    If the property is fixed (cannot be changed by the agent), the candidate_required_prop
+    attribute is set to the property itself and the candidate_required_prop_sat_function is set to
+    the target satisfaction function.
+
+    T is the type that the property value can take.
+    """
+
+    target_ai2thor_property: SimObjProp
+    candidate_required_prop: SimObjFixedProp
+
+    def __init__(
+        self,
+        target_satisfaction_function: PropSatFunction[T1],
+    ) -> None:
+        """Initialize the Property object."""
+        self.target_satisfaction_function = target_satisfaction_function
+
+    @property
+    @abstractmethod
+    def candidate_required_prop_sat_function(self) -> PropSatFunction[T2]:
+        """Return the satisfaction function of the candidate required property."""
+
+    def __call__(self, prop_value: T1) -> bool:
+        """Return True if the value satisfies the property."""
+        return self.target_satisfaction_function(prop_value)
+
+    def __str__(self) -> str:
+        return f"{self.target_ai2thor_property}({self.target_satisfaction_function})"
+
+    def __repr__(self) -> str:
+        return f"ItemProp({self.target_ai2thor_property}={self.target_satisfaction_function})"
+
+
+class ItemFixedProp[T: PropValue](ItemProp[T, T]):
+    """
+    Base class for fixed item properties in the definition of a task.
+
+    Fixed properties are properties that cannot be changed by the agent.
+    """
+
+    target_ai2thor_property: SimObjFixedProp
+
+    def __init__(
+        self,
+        target_satisfaction_function: PropSatFunction[T],
+    ) -> None:
+        """Initialize the FixedProperty object."""
+        super().__init__(target_satisfaction_function)
+        self.candidate_required_prop = self.target_ai2thor_property
+
+    @property
+    def candidate_required_prop_sat_function(self) -> PropSatFunction[T]:
+        """Return the satisfaction function of the candidate required property."""
+        return self.target_satisfaction_function
+
+
+class ItemVariableProp[T1: PropValue, T2: PropValue](ItemProp[T1, T2]):
+    """
+    Base class for variable item properties in the definition of a task.
+
+    Variable properties are properties that can be changed by the agent.
+    """
+
+    target_ai2thor_property: SimObjVariableProp
+    target_satisfaction_function: PropSatFunction[T1]
+    candidate_required_prop_sat_function: PropSatFunction[T2]
+
+    def __init__(
+        self,
+        target_satisfaction_function: PropSatFunction[T1],
+    ) -> None:
+        """Initialize the VariableProperty object."""
+        super().__init__(target_satisfaction_function)
+
+
+class ObjectTypeProp(ItemFixedProp[SimObjectType]):
+    """Object type item property."""
+
+    target_ai2thor_property = SimObjFixedProp.OBJECT_TYPE
+
+
+class IsInteractableProp(ItemFixedProp[bool]):
+    """Is interactable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.IS_INTERACTABLE
+
+
+class ReceptacleProp(ItemFixedProp[bool]):
+    """Is receptacle item property."""
+
+    target_ai2thor_property = SimObjFixedProp.RECEPTACLE
+
+
+class ToggleableProp(ItemFixedProp[bool]):
+    """Is toggleable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.TOGGLEABLE
+
+
+class BreakableProp(ItemFixedProp[bool]):
+    """Is breakable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.BREAKABLE
+
+
+class CanFillWithLiquidProp(ItemFixedProp[bool]):
+    """Can fill with liquid item property."""
+
+    target_ai2thor_property = SimObjFixedProp.CAN_FILL_WITH_LIQUID
+
+
+class DirtyableProp(ItemFixedProp[bool]):
+    """Is dirtyable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.DIRTYABLE
+
+
+class CanBeUsedUpProp(ItemFixedProp[bool]):
+    """Can be used up item property."""
+
+    target_ai2thor_property = SimObjFixedProp.CAN_BE_USED_UP
+
+
+class CookableProp(ItemFixedProp[bool]):
+    """Is cookable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.COOKABLE
+
+
+class IsHeatSourceProp(ItemFixedProp[bool]):
+    """Is heat source item property."""
+
+    target_ai2thor_property = SimObjFixedProp.IS_HEAT_SOURCE
+
+
+class IsColdSourceProp(ItemFixedProp[bool]):
+    """Is cold source item property."""
+
+    target_ai2thor_property = SimObjFixedProp.IS_COLD_SOURCE
+
+
+class SliceableProp(ItemFixedProp[bool]):
+    """Is sliceable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.SLICEABLE
+
+
+class OpenableProp(ItemFixedProp[bool]):
+    """Is openable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.OPENABLE
+
+
+class PickupableProp(ItemFixedProp[bool]):
+    """Is pickupable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.PICKUPABLE
+
+
+class MoveableProp(ItemFixedProp[bool]):
+    """Is moveable item property."""
+
+    target_ai2thor_property = SimObjFixedProp.MOVEABLE
+
+
+class VisibleProp(ItemVariableProp[bool]):
+    """Visible item property."""
+
+    target_ai2thor_property = SimObjVariableProp.VISIBLE
+
+
+class IsToggledProp(ItemVariableProp[bool, bool]):
+    """Is toggled item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_TOGGLED
+    candidate_required_prop = SimObjFixedProp.TOGGLEABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsBrokenProp(ItemVariableProp[bool, bool]):
+    """Is broken item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_BROKEN
+    candidate_required_prop = SimObjFixedProp.BREAKABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
+    """Is filled with liquid item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
+    candidate_required_prop = SimObjFixedProp.CAN_FILL_WITH_LIQUID
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
+    """Fill liquid item property."""
+
+    target_ai2thor_property = SimObjVariableProp.FILL_LIQUID
+    candidate_required_prop = SimObjFixedProp.CAN_FILL_WITH_LIQUID
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsDirtyProp(ItemVariableProp[bool, bool]):
+    """Is dirty item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_DIRTY
+    candidate_required_prop = SimObjFixedProp.DIRTYABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsUsedUpProp(ItemVariableProp[bool, bool]):
+    """Is used up item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_USED_UP
+    candidate_required_prop = SimObjFixedProp.CAN_BE_USED_UP
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsCookedProp(ItemVariableProp[bool, bool]):
+    """Is cooked item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_COOKED
+    candidate_required_prop = SimObjFixedProp.COOKABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class TemperatureProp(ItemVariableProp[TemperatureValue]):
+    """Temperature item property."""
+
+    target_ai2thor_property = SimObjVariableProp.TEMPERATURE
+
+
+class IsSlicedProp(ItemVariableProp[bool, bool]):
+    """Is sliced item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_SLICED
+    candidate_required_prop = SimObjFixedProp.SLICEABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsOpenProp(ItemVariableProp[bool, bool]):
+    """Is open item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_OPEN
+    candidate_required_prop = SimObjFixedProp.OPENABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class OpennessProp(ItemVariableProp[float, bool]):
+    """Openness item property."""
+
+    target_ai2thor_property = SimObjVariableProp.OPENNESS
+    candidate_required_prop = SimObjFixedProp.OPENABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
+class IsPickedUpProp(ItemVariableProp[bool, bool]):
+    """Is picked up item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
+    candidate_required_prop = SimObjFixedProp.PICKUPABLE
+    candidate_required_prop_sat_function = SingleValuePSF(True)
+
+
 # %% === Items ===
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
 # TODO: Store relation in a list and store the results using the id of the relation to simplify the code
@@ -172,7 +441,7 @@ class TaskItem[T: Hashable]:
     def __init__(
         self,
         t_id: T,
-        properties: dict[ItemProp, PropSatFunction],
+        properties: dict[ItemPropOld, PropSatFunction],
     ) -> None:
         """
         Initialize the TaskItem object.
@@ -807,150 +1076,150 @@ class NoValidAssignmentError(Exception):
 
 
 # %% === Property Definitions ===
-object_type_prop = ItemProp(
+object_type_prop = ItemPropOld(
     SimObjFixedProp.OBJECT_TYPE,
     value_type=str,
     is_fixed=True,
 )
-is_interactable_prop = ItemProp(
+is_interactable_prop = ItemPropOld(
     SimObjFixedProp.IS_INTERACTABLE,
     value_type=bool,
     is_fixed=True,
 )
-receptacle_prop = ItemProp(
+receptacle_prop = ItemPropOld(
     SimObjFixedProp.RECEPTACLE,
     value_type=bool,
     is_fixed=True,
 )
-toggleable_prop = ItemProp(
+toggleable_prop = ItemPropOld(
     SimObjFixedProp.TOGGLEABLE,
     value_type=bool,
     is_fixed=True,
 )
-breakable_prop = ItemProp(
+breakable_prop = ItemPropOld(
     SimObjFixedProp.BREAKABLE,
     value_type=bool,
     is_fixed=True,
 )
-can_fill_with_liquid_prop = ItemProp(
+can_fill_with_liquid_prop = ItemPropOld(
     SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     value_type=bool,
     is_fixed=True,
 )
-dirtyable_prop = ItemProp(
+dirtyable_prop = ItemPropOld(
     SimObjFixedProp.DIRTYABLE,
     value_type=bool,
     is_fixed=True,
 )
-can_be_used_up_prop = ItemProp(
+can_be_used_up_prop = ItemPropOld(
     SimObjFixedProp.CAN_BE_USED_UP,
     value_type=bool,
     is_fixed=True,
 )
-cookable_prop = ItemProp(
+cookable_prop = ItemPropOld(
     SimObjFixedProp.COOKABLE,
     value_type=bool,
     is_fixed=True,
 )
-is_heat_source_prop = ItemProp(
+is_heat_source_prop = ItemPropOld(
     SimObjFixedProp.IS_HEAT_SOURCE,
     value_type=bool,
     is_fixed=True,
 )
-is_cold_source_prop = ItemProp(
+is_cold_source_prop = ItemPropOld(
     SimObjFixedProp.IS_COLD_SOURCE,
     value_type=bool,
     is_fixed=True,
 )
-sliceable_prop = ItemProp(
+sliceable_prop = ItemPropOld(
     SimObjFixedProp.SLICEABLE,
     value_type=bool,
     is_fixed=True,
 )
-openable_prop = ItemProp(
+openable_prop = ItemPropOld(
     SimObjFixedProp.OPENABLE,
     value_type=bool,
     is_fixed=True,
 )
-pickupable_prop = ItemProp(
+pickupable_prop = ItemPropOld(
     SimObjFixedProp.PICKUPABLE,
     value_type=bool,
     is_fixed=True,
 )
-moveable_prop = ItemProp(
+moveable_prop = ItemPropOld(
     SimObjFixedProp.MOVEABLE,
     value_type=bool,
     is_fixed=True,
 )
-visible_prop = ItemProp(
+visible_prop = ItemPropOld(
     SimObjVariableProp.VISIBLE,
     value_type=bool,
 )
-is_toggled_prop = ItemProp(
+is_toggled_prop = ItemPropOld(
     SimObjVariableProp.IS_TOGGLED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.TOGGLEABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_broken_prop = ItemProp(
+is_broken_prop = ItemPropOld(
     SimObjVariableProp.IS_BROKEN,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.BREAKABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_filled_with_liquid_prop = ItemProp(
+is_filled_with_liquid_prop = ItemPropOld(
     SimObjVariableProp.IS_FILLED_WITH_LIQUID,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-fill_liquid_prop = ItemProp(
+fill_liquid_prop = ItemPropOld(
     SimObjVariableProp.FILL_LIQUID,
     value_type=FillableLiquid,
     candidate_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_dirty_prop = ItemProp(
+is_dirty_prop = ItemPropOld(
     SimObjVariableProp.IS_DIRTY,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.DIRTYABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_used_up_prop = ItemProp(
+is_used_up_prop = ItemPropOld(
     SimObjVariableProp.IS_USED_UP,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.CAN_BE_USED_UP,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_cooked_prop = ItemProp(
+is_cooked_prop = ItemPropOld(
     SimObjVariableProp.IS_COOKED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.COOKABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-temperature_prop = ItemProp(
+temperature_prop = ItemPropOld(
     SimObjVariableProp.TEMPERATURE,
     value_type=TemperatureValue,
 )
-is_sliced_prop = ItemProp(
+is_sliced_prop = ItemPropOld(
     SimObjVariableProp.IS_SLICED,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.SLICEABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_open_prop = ItemProp(
+is_open_prop = ItemPropOld(
     SimObjVariableProp.IS_OPEN,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.OPENABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-openness_prop = ItemProp(
+openness_prop = ItemPropOld(
     SimObjVariableProp.OPENNESS,
     value_type=float,
     candidate_required_property=SimObjFixedProp.OPENABLE,
     candidate_required_prop_sat_function=SingleValuePSF(True),
 )
-is_picked_up_prop = ItemProp(
+is_picked_up_prop = ItemPropOld(
     SimObjVariableProp.IS_PICKED_UP,
     value_type=bool,
     candidate_required_property=SimObjFixedProp.PICKUPABLE,
