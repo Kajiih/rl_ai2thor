@@ -48,26 +48,28 @@ type Assignment[T] = dict[TaskItem[T], SimObjId]
 
 
 # %% === Property satisfaction functions ===
-class BasePSF(ABC):
+class BasePSF[T: PropValue](ABC):
     """
     Base class for functions used to define the set of acceptable values for a property to be satisfied.
 
     We call those functions *property satisfaction functions* (PSF).
+
+    T is the type that the property value can take.
     """
 
     @abstractmethod
-    def __call__(self, prop_value: PropValue) -> bool:
+    def __call__(self, prop_value: T) -> bool:
         """Return True if the value satisfies the property."""
 
 
-class SingleValuePSF(BasePSF):
+class SingleValuePSF[T: PropValue](BasePSF[T]):
     """Defines a property satisfaction function that only accepts a single value."""
 
-    def __init__(self, target_value: PropValue) -> None:
+    def __init__(self, target_value: T) -> None:
         """Initialize the target value."""
         self.target_value = target_value
 
-    def __call__(self, prop_value: PropValue) -> bool:
+    def __call__(self, prop_value: T) -> bool:
         """Return True if the value is equal to the target value."""
         return prop_value == self.target_value
 
@@ -75,14 +77,14 @@ class SingleValuePSF(BasePSF):
         return f"{self.__class__.__name__}({self.target_value})"
 
 
-class MultiValuePSF(BasePSF):
+class MultiValuePSF[T: PropValue](BasePSF[T]):
     """Defines a property satisfaction function that accepts a set of values."""
 
-    def __init__(self, target_values: Container[PropValue]) -> None:
+    def __init__(self, target_values: Container[T]) -> None:
         """Initialize the target values."""
         self.target_values = target_values
 
-    def __call__(self, prop_value: PropValue) -> bool:
+    def __call__(self, prop_value: T) -> bool:
         """Return True if the value is in the target values."""
         return prop_value in self.target_values
 
@@ -90,7 +92,7 @@ class MultiValuePSF(BasePSF):
         return f"{self.__class__.__name__}({self.target_values})"
 
 
-class RangePSF(BasePSF):
+class RangePSF(BasePSF[float | int]):
     """Defines a property satisfaction function that accepts a range of values."""
 
     def __init__(self, min_value: float | int, max_value: float | int) -> None:
@@ -106,19 +108,19 @@ class RangePSF(BasePSF):
         return f"{self.__class__.__name__}({self.min_value}, {self.max_value})"
 
 
-class GenericPSF(BasePSF):
+class GenericPSF[T: PropValue](BasePSF[T]):
     """Defines a property satisfaction function with a custom function."""
 
-    def __init__(self, func: Callable[[PropValue], bool]) -> None:
+    def __init__(self, func: Callable[[T], bool]) -> None:
         """Initialize the property satisfaction function."""
         self.func = func
 
-    def __call__(self, prop_value: PropValue) -> bool:
+    def __call__(self, prop_value: T) -> bool:
         """Return the result of the custom function."""
         return self.func(prop_value)
 
 
-type PropSatFunction = BasePSF | Callable[[PropValue], bool]
+type PropSatFunction[T: PropValue] = BasePSF[T] | Callable[[T], bool]
 
 
 # %% === Properties  ===
