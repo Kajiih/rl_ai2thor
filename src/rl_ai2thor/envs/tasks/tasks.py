@@ -604,7 +604,10 @@ class GraphTask[T: Hashable](BaseTask):
         items = {
             item_id: TaskItem(
                 item_id,
-                {obj_prop_id_to_item_prop[prop]: value for prop, value in item_data.properties.items()},
+                {
+                    obj_prop_id_to_item_prop[prop](prop_sat_function)
+                    for prop, prop_sat_function in item_data.properties.items()
+                },
             )
             for item_id, item_data in task_description_dict.items()
         }

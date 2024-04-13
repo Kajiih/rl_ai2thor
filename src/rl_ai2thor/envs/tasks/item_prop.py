@@ -9,7 +9,7 @@ from collections.abc import Callable, Container
 from enum import StrEnum
 from typing import Any
 
-from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
 
 
 # %% === Property value enums ==
@@ -43,9 +43,21 @@ class BasePSF[T: ItemPropValue](ABC):
     T is the type that the property value can take.
     """
 
+    def __init__(self, *args: Any) -> None:
+        self._init_args = args
+
     @abstractmethod
     def __call__(self, prop_value: T) -> bool:
         """Return True if the value satisfies the property."""
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{self._init_args}"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._init_args == other._init_args
+
+    def __hash__(self) -> int:
+        return hash(self._init_args)
 
 
 class SingleValuePSF[T: ItemPropValue](BasePSF[T]):
@@ -53,14 +65,12 @@ class SingleValuePSF[T: ItemPropValue](BasePSF[T]):
 
     def __init__(self, target_value: T) -> None:
         """Initialize the target value."""
+        super().__init__(target_value)
         self.target_value = target_value
 
     def __call__(self, prop_value: T) -> bool:
         """Return True if the value is equal to the target value."""
         return prop_value == self.target_value
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.target_value})"
 
 
 class MultiValuePSF[T: ItemPropValue](BasePSF[T]):
@@ -68,14 +78,12 @@ class MultiValuePSF[T: ItemPropValue](BasePSF[T]):
 
     def __init__(self, target_values: Container[T]) -> None:
         """Initialize the target values."""
+        super().__init__(target_values)
         self.target_values = target_values
 
     def __call__(self, prop_value: T) -> bool:
         """Return True if the value is in the target values."""
         return prop_value in self.target_values
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.target_values})"
 
 
 class RangePSF(BasePSF[float | int]):
@@ -83,6 +91,7 @@ class RangePSF(BasePSF[float | int]):
 
     def __init__(self, min_value: float | int, max_value: float | int) -> None:
         """Initialize the range."""
+        super().__init__(min_value, max_value)
         self.min_value = min_value
         self.max_value = max_value
 
@@ -90,20 +99,26 @@ class RangePSF(BasePSF[float | int]):
         """Return True if the value is in the range."""
         return self.min_value <= prop_value <= self.max_value
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.min_value}, {self.max_value})"
-
 
 class GenericPSF[T: ItemPropValue](BasePSF[T]):
     """Defines a property satisfaction function with a custom function."""
 
     def __init__(self, func: Callable[[T], bool]) -> None:
         """Initialize the property satisfaction function."""
+        super().__init__(func)
         self.func = func
 
     def __call__(self, prop_value: T) -> bool:
         """Return the result of the custom function."""
         return self.func(prop_value)
+
+
+class UndefinedPSF(BasePSF[Any]):
+    """Defines a property satisfaction function that always returns False."""
+
+    def __call__(self, prop_value: Any) -> bool:
+        """Return False."""
+        raise CalledUndefinedPSFError(prop_value)
 
 
 type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
@@ -112,35 +127,35 @@ type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 # %% === Item properties  ===
 # TODO: Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
-class ItemPropOld:
-    """
-    Property of an item in the definition of a task.
+# class ItemPropOld:
+#     """
+#     Property of an item in the definition of a task.
 
-    If the property is fixed (cannot be changed by the agent), the candidate_required_property
-    attribute is set to the property itself and the candidate_required_property_value is set to
-    the value of the property.
-    """
+#     If the property is fixed (cannot be changed by the agent), the candidate_required_property
+#     attribute is set to the property itself and the candidate_required_property_value is set to
+#     the value of the property.
+#     """
 
-    def __init__(
-        self,
-        target_ai2thor_property: SimObjProp,
-        value_type: type,
-        is_fixed: bool = False,
-        candidate_required_property: SimObjFixedProp | None = None,
-        candidate_required_prop_sat_function: PropSatFunction | None = None,
-    ) -> None:
-        """Initialize the Property object."""
-        self.target_ai2thor_property = target_ai2thor_property
-        self.value_type = value_type
-        self.is_fixed = is_fixed
-        self.candidate_required_prop = target_ai2thor_property if is_fixed else candidate_required_property
-        self.candidate_required_prop_sat_function = candidate_required_prop_sat_function
+#     def __init__(
+#         self,
+#         target_ai2thor_property: SimObjProp,
+#         value_type: type,
+#         is_fixed: bool = False,
+#         candidate_required_property: SimObjFixedProp | None = None,
+#         candidate_required_prop_sat_function: PropSatFunction | None = None,
+#     ) -> None:
+#         """Initialize the Property object."""
+#         self.target_ai2thor_property = target_ai2thor_property
+#         self.value_type = value_type
+#         self.is_fixed = is_fixed
+#         self.candidate_required_prop = target_ai2thor_property if is_fixed else candidate_required_property
+#         self.candidate_required_prop_sat_function = candidate_required_prop_sat_function
 
-    def __str__(self) -> str:
-        return f"{self.target_ai2thor_property}"
+#     def __str__(self) -> str:
+#         return f"{self.target_ai2thor_property}"
 
-    def __repr__(self) -> str:
-        return f"ItemProp({self.target_ai2thor_property})"
+#     def __repr__(self) -> str:
+#         return f"ItemProp({self.target_ai2thor_property})"
 
 
 class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
@@ -151,7 +166,18 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     attribute is set to the property itself and the candidate_required_prop_sat_function is set to
     the target satisfaction function.
 
-    T is the type that the property value can take.
+    T1 is the type that the property value can take and T2 is the type that the candidate required
+    property value can take.
+
+    Attributes:
+        target_ai2thor_property (SimObjProp): The target AI2-THOR property.
+        target_satisfaction_function (PropSatFunction[T1]): The target property satisfaction
+            function.
+        candidate_required_prop (SimObjFixedProp | None): The candidate required property.
+        candidate_required_prop_sat_function (PropSatFunction[T2] | None): The candidate required
+            property satisfaction function.
+
+
     """
 
     target_ai2thor_property: SimObjProp
@@ -163,17 +189,31 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     ) -> None:
         """Initialize the Property object."""
         self.target_satisfaction_function = target_satisfaction_function
-        self.candidate_required_prop_sat_function: PropSatFunction[T2] | None = None
+        self.candidate_required_prop_sat_function: PropSatFunction[T2] = UndefinedPSF()
 
     def __call__(self, prop_value: T1) -> bool:
         """Return True if the value satisfies the property."""
         return self.target_satisfaction_function(prop_value)
+
+    def is_object_satisfying(self, obj_metadata: SimObjMetadata) -> bool:
+        """Return True if the object satisfies the property."""
+        return self(obj_metadata[self.target_ai2thor_property])
 
     def __str__(self) -> str:
         return f"{self.target_ai2thor_property}({self.target_satisfaction_function})"
 
     def __repr__(self) -> str:
         return f"ItemProp({self.target_ai2thor_property}={self.target_satisfaction_function})"
+
+    # def __eq__(self, other: Any) -> bool:
+    #     return (
+    #         isinstance(other, ItemProp)
+    #         and self.target_ai2thor_property == other.target_ai2thor_property
+    #         and self.target_satisfaction_function == other.target_satisfaction_function
+    #     )
+
+    # def __hash__(self) -> int:
+    #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
 
 
 class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
@@ -442,3 +482,14 @@ obj_prop_id_to_item_prop = {
     SimObjVariableProp.OPENNESS: OpennessProp,
     SimObjVariableProp.IS_PICKED_UP: IsPickedUpProp,
 }
+
+
+# %% === Exceptions ===
+class CalledUndefinedPSFError(Exception):
+    """Exception raised when an UndefinedPSF is called."""
+
+    def __init__(self, prop_value: Any) -> None:
+        self.prop_value = prop_value
+
+    def __str__(self) -> str:
+        return f"UndefinedPSF should not be called, if the candidate_required_prop attribute of an item property is not None, a property satisfaction function should be properly defined. UndefinedPSF called with value: {self.prop_value}"

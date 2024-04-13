@@ -18,7 +18,7 @@ from rl_ai2thor.envs.sim_objects import (
 )
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.item_prop import ItemPropOld, PropSatFunction
+    from rl_ai2thor.envs.tasks.item_prop import ItemProp, ItemPropValue, PropSatFunction
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
 
@@ -38,7 +38,7 @@ class TaskItem[T: Hashable]:
     def __init__(
         self,
         t_id: T,
-        properties: dict[ItemPropOld, PropSatFunction],
+        properties: set[ItemProp[ItemPropValue, ItemPropValue]],
     ) -> None:
         """
         Initialize the TaskItem object.
@@ -51,13 +51,10 @@ class TaskItem[T: Hashable]:
         self.properties = properties
 
         # Infer the candidate required properties from the item properties
-        self._prop_candidate_required_properties: dict[  # TODO: Check why there is a reportAttributeAccessIssue
-            SimObjFixedProp, PropSatFunction
-        ] = {
-            prop.candidate_required_prop: (
-                prop_satisfaction_function if prop.is_fixed else prop.candidate_required_prop_sat_function
-            )
-            for prop, prop_satisfaction_function in self.properties.items()
+        # TODO? Replace this with actual item properties
+        self._prop_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {
+            prop.candidate_required_prop: prop.candidate_required_prop_sat_function
+            for prop in self.properties
             if prop.candidate_required_prop is not None
         }
 
@@ -129,6 +126,7 @@ class TaskItem[T: Hashable]:
             for prop_id, prop_sat_function in self.candidate_required_properties.items()
         )
 
+    # TODO? Replace keys by the actual properties?
     def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
         """
         Return a dictionary indicating which properties are satisfied by the given object.
@@ -139,10 +137,7 @@ class TaskItem[T: Hashable]:
         Returns:
             prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are satisfied by the given object.
         """
-        return {
-            prop.target_ai2thor_property: prop_sat_function(obj_metadata[prop.target_ai2thor_property])
-            for prop, prop_sat_function in self.properties.items()
-        }
+        return {prop.target_ai2thor_property: prop.is_object_satisfying(obj_metadata) for prop in self.properties}
 
     def _get_relations_semi_satisfying_objects(
         self,
@@ -223,10 +218,9 @@ class TaskItem[T: Hashable]:
         """
         candidates_properties_results = {
             prop.target_ai2thor_property: {
-                obj_id: prop_sat_function(scene_objects_dict[obj_id][prop.target_ai2thor_property])
-                for obj_id in self.candidate_ids
+                obj_id: prop.is_object_satisfying(scene_objects_dict[obj_id]) for obj_id in self.candidate_ids
             }
-            for prop, prop_sat_function in self.properties.items()
+            for prop in self.properties
         }
 
         candidates_relations_results = {
