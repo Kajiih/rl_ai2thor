@@ -4,6 +4,8 @@ Item Properties for AI2-THOR RL environment.
 TODO: Finish module docstring.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Container
 from enum import StrEnum
@@ -72,6 +74,9 @@ class SingleValuePSF[T: ItemPropValue](BasePSF[T]):
         """Return True if the value is equal to the target value."""
         return prop_value == self.target_value
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.target_value})"
+
 
 class MultiValuePSF[T: ItemPropValue](BasePSF[T]):
     """Defines a property satisfaction function that accepts a set of values."""
@@ -113,6 +118,7 @@ class GenericPSF[T: ItemPropValue](BasePSF[T]):
         return self.func(prop_value)
 
 
+# Unused
 class UndefinedPSF(BasePSF[Any]):
     """Defines a property satisfaction function that always returns False."""
 
@@ -124,47 +130,34 @@ class UndefinedPSF(BasePSF[Any]):
 type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 
 
+# %% === Item property auxiliary goals ===
+class ItemPropAuxGoals(ABC):
+    """
+    Base class for auxiliary goals associated with item properties in the definition of a task.
+
+    Examples of auxiliary goals include:
+    - A knife should be picked up to slice an object
+    - The item should be picked up before cooking or cleaning it
+    Similar auxiliary goals for relations:
+    - The item should be picked up before placing it in a receptacle
+    """
+
+    # TODO: Implement
+    same_item_props: Any
+    other_objects_prop: Any
+
+
 # %% === Item properties  ===
-# TODO: Add action validity checking (action group, etc)
+# TODO? Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
-# class ItemPropOld:
-#     """
-#     Property of an item in the definition of a task.
-
-#     If the property is fixed (cannot be changed by the agent), the candidate_required_property
-#     attribute is set to the property itself and the candidate_required_property_value is set to
-#     the value of the property.
-#     """
-
-#     def __init__(
-#         self,
-#         target_ai2thor_property: SimObjProp,
-#         value_type: type,
-#         is_fixed: bool = False,
-#         candidate_required_property: SimObjFixedProp | None = None,
-#         candidate_required_prop_sat_function: PropSatFunction | None = None,
-#     ) -> None:
-#         """Initialize the Property object."""
-#         self.target_ai2thor_property = target_ai2thor_property
-#         self.value_type = value_type
-#         self.is_fixed = is_fixed
-#         self.candidate_required_prop = target_ai2thor_property if is_fixed else candidate_required_property
-#         self.candidate_required_prop_sat_function = candidate_required_prop_sat_function
-
-#     def __str__(self) -> str:
-#         return f"{self.target_ai2thor_property}"
-
-#     def __repr__(self) -> str:
-#         return f"ItemProp({self.target_ai2thor_property})"
-
-
+# TODO: Support multiple candidate required properties
 class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     """
     Base class for item properties in the definition of a task.
 
     If the property is fixed (cannot be changed by the agent), the candidate_required_prop
-    attribute is set to the property itself and the candidate_required_prop_sat_function is set to
-    the target satisfaction function.
+    attribute is the instance itself. If the property is variable (can be changed by the agent),
+    the candidate_required_prop attribute has to be defined in the subclass.
 
     T1 is the type that the property value can take and T2 is the type that the candidate required
     property value can take.
@@ -173,15 +166,14 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         target_ai2thor_property (SimObjProp): The target AI2-THOR property.
         target_satisfaction_function (PropSatFunction[T1]): The target property satisfaction
             function.
-        candidate_required_prop (SimObjFixedProp | None): The candidate required property.
-        candidate_required_prop_sat_function (PropSatFunction[T2] | None): The candidate required
-            property satisfaction function.
-
-
+        candidate_required_prop (ItemFixedProp[T2] | None): The candidate required property.
+        auxiliary_goals (ItemPropAuxGoals | None): The auxiliary goals associated with the
+            realization of the property.
     """
 
     target_ai2thor_property: SimObjProp
-    candidate_required_prop: SimObjFixedProp | None = None
+    candidate_required_prop: ItemFixedProp[T2] | None = None
+    auxiliary_goals: ItemPropAuxGoals | None = None  # TODO: Implement
 
     def __init__(
         self,
@@ -189,7 +181,6 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     ) -> None:
         """Initialize the Property object."""
         self.target_satisfaction_function = target_satisfaction_function
-        self.candidate_required_prop_sat_function: PropSatFunction[T2] = UndefinedPSF()
 
     def __call__(self, prop_value: T1) -> bool:
         """Return True if the value satisfies the property."""
@@ -222,8 +213,7 @@ class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
 
     Fixed properties are properties that cannot be changed by the agent.
 
-    For fixed properties, the candidate_required_prop is set to the property itself and the
-    candidate_required_prop_sat_function is set to the target satisfaction function.
+    The candidate_required_prop attribute is the instance itself.
     """
 
     target_ai2thor_property: SimObjFixedProp
@@ -234,8 +224,7 @@ class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
     ) -> None:
         """Initialize the FixedProperty object."""
         super().__init__(target_satisfaction_function)
-        self.candidate_required_prop = self.target_ai2thor_property
-        self.candidate_required_prop_sat_function = self.target_satisfaction_function
+        self.candidate_required_prop = self
 
 
 class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
@@ -243,11 +232,12 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
     Base class for variable item properties in the definition of a task.
 
     Variable properties are properties that can be changed by the agent.
+
+    The candidate_required_prop attribute has to be defined in the subclass.
     """
 
     target_ai2thor_property: SimObjVariableProp
-    candidate_required_prop: SimObjFixedProp
-    candidate_required_prop_sat_function: PropSatFunction[T2]
+    # candidate_required_prop: ItemFixedProp[T2]  # TODO: Delete?
 
     def __init__(
         self,
@@ -255,9 +245,6 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
     ) -> None:
         """Initialize the VariableProperty object."""
         super().__init__(target_satisfaction_function)
-
-        # Delete the instance attribute since it is now a class attribute
-        del self.candidate_required_prop_sat_function
 
 
 # %% === Item property definitions ===
@@ -361,56 +348,49 @@ class IsToggledProp(ItemVariableProp[bool, bool]):
     """Is toggled item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_TOGGLED
-    candidate_required_prop = SimObjFixedProp.TOGGLEABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = ToggleableProp(SingleValuePSF(True))
 
 
 class IsBrokenProp(ItemVariableProp[bool, bool]):
     """Is broken item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_BROKEN
-    candidate_required_prop = SimObjFixedProp.BREAKABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = BreakableProp(SingleValuePSF(True))
 
 
 class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     """Is filled with liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
-    candidate_required_prop = SimObjFixedProp.CAN_FILL_WITH_LIQUID
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = CanFillWithLiquidProp(SingleValuePSF(True))
 
 
 class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
     """Fill liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.FILL_LIQUID
-    candidate_required_prop = SimObjFixedProp.CAN_FILL_WITH_LIQUID
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = CanFillWithLiquidProp(SingleValuePSF(True))
 
 
 class IsDirtyProp(ItemVariableProp[bool, bool]):
     """Is dirty item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_DIRTY
-    candidate_required_prop = SimObjFixedProp.DIRTYABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = DirtyableProp(SingleValuePSF(True))
 
 
 class IsUsedUpProp(ItemVariableProp[bool, bool]):
     """Is used up item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_USED_UP
-    candidate_required_prop = SimObjFixedProp.CAN_BE_USED_UP
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = CanBeUsedUpProp(SingleValuePSF(True))
 
 
 class IsCookedProp(ItemVariableProp[bool, bool]):
     """Is cooked item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_COOKED
-    candidate_required_prop = SimObjFixedProp.COOKABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = CookableProp(SingleValuePSF(True))
 
 
 class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
@@ -423,32 +403,28 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
     """Is sliced item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_SLICED
-    candidate_required_prop = SimObjFixedProp.SLICEABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = SliceableProp(SingleValuePSF(True))
 
 
 class IsOpenProp(ItemVariableProp[bool, bool]):
     """Is open item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_OPEN
-    candidate_required_prop = SimObjFixedProp.OPENABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = OpenableProp(SingleValuePSF(True))
 
 
 class OpennessProp(ItemVariableProp[float, bool]):
     """Openness item property."""
 
     target_ai2thor_property = SimObjVariableProp.OPENNESS
-    candidate_required_prop = SimObjFixedProp.OPENABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = OpenableProp(SingleValuePSF(True))
 
 
 class IsPickedUpProp(ItemVariableProp[bool, bool]):
     """Is picked up item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
-    candidate_required_prop = SimObjFixedProp.PICKUPABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = PickupableProp(SingleValuePSF(True))
 
 
 # %% === Item property mapping ===

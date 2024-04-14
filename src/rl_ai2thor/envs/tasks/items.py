@@ -16,6 +16,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjMetadata,
     SimObjProp,
 )
+from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop import ItemProp, ItemPropValue, PropSatFunction
@@ -45,21 +46,19 @@ class TaskItem[T: Hashable]:
 
         Args:
             t_id (T): The ID of the item as defined in the task description.
-            properties (dict[ItemProp, PropSatFunction]): The properties of the item.
+            properties (set[ItemProp[ItemPropValue, ItemPropValue]]): Set of properties of the item.
         """
         self.id = t_id
         self.properties = properties
 
         # Infer the candidate required properties from the item properties
-        # TODO? Replace this with actual item properties
-        self._prop_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {
-            prop.candidate_required_prop: prop.candidate_required_prop_sat_function
-            for prop in self.properties
-            if prop.candidate_required_prop is not None
+        # TODO: Replace this with actual item properties
+        self._prop_candidate_required_properties: set[ItemFixedProp[ItemPropValue]] = {
+            prop.candidate_required_prop for prop in self.properties if prop.candidate_required_prop is not None
         }
 
         # Other attributes
-        self._rel_candidate_required_properties: dict[SimObjFixedProp, PropSatFunction] = {}
+        self._rel_candidate_required_properties: set[ItemFixedProp[ItemPropValue]] = set()
         self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
         self.candidate_ids: set[SimObjId] = set()
 
@@ -87,10 +86,8 @@ class TaskItem[T: Hashable]:
             }
             for relation in relations
         })
-        self._rel_candidate_required_properties.update({  # TODO: Check why there is a reportCallIssue
-            relation.candidate_required_prop: relation.candidate_required_prop_sat_function
-            for relation in relations
-            if relation.candidate_required_prop is not None
+        self._rel_candidate_required_properties.update({
+            relation.candidate_required_prop for relation in relations if relation.candidate_required_prop is not None
         })
 
         # Delete duplicate relations if any
@@ -99,17 +96,15 @@ class TaskItem[T: Hashable]:
         }
 
     @property
-    def candidate_required_properties(self) -> dict[SimObjProp, PropSatFunction]:
+    def candidate_required_properties(self) -> set[ItemProp[ItemPropValue, ItemPropValue]]:
         """
         Return a dictionary containing the properties required for an object to be a candidate for the item.
 
         Returns:
-            candidate_properties (dict[ObjPropId, PropSatFunction]): Dictionary containing the candidate required properties.
+            candidate_properties (set[ItemProp[ItemPropValue, ItemPropValue]]): Set of the item's
+                candidate required properties.
         """
-        return {
-            **self._prop_candidate_required_properties,
-            **self._rel_candidate_required_properties,
-        }
+        return self._prop_candidate_required_properties | self._rel_candidate_required_properties
 
     def is_candidate(self, obj_metadata: SimObjMetadata) -> bool:
         """
@@ -121,12 +116,9 @@ class TaskItem[T: Hashable]:
         Returns:
             is_candidate (bool): True if the given object is a valid candidate for the item.
         """
-        return all(
-            prop_sat_function(obj_metadata[prop_id])
-            for prop_id, prop_sat_function in self.candidate_required_properties.items()
-        )
+        return all(prop.is_object_satisfying(obj_metadata) for prop in self.candidate_required_properties)
 
-    # TODO? Replace keys by the actual properties?
+    # TODO: Replace keys by the actual properties
     def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
         """
         Return a dictionary indicating which properties are satisfied by the given object.

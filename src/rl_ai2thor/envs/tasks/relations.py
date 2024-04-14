@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
-from rl_ai2thor.envs.tasks.item_prop import SingleValuePSF
+from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, PickupableProp, ReceptacleProp, SingleValuePSF
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
@@ -39,12 +39,15 @@ class Relation(ABC):
     Attributes:
         main_item (TaskItem): The main item in the relation.
         related_item (TaskItem): The related item to which the main item is related.
+        type_id (RelationTypeId): The type of the relation.
+        inverse_relation_type_id (RelationTypeId): The type of the inverse relation.
+        candidate_required_prop (ItemFixedProp | None): The candidate required property for the main
+            item.
     """
 
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
-    candidate_required_prop: SimObjFixedProp | None = None
-    candidate_required_prop_sat_function: PropSatFunction | None = None
+    candidate_required_prop: ItemFixedProp | None = None
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         self.main_item = main_item
@@ -219,8 +222,7 @@ class ReceptacleOfRelation(Relation):
 
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
-    candidate_required_prop = SimObjFixedProp.RECEPTACLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = ReceptacleProp(SingleValuePSF(True))
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         super().__init__(main_item, related_item)
@@ -265,8 +267,7 @@ class ContainedInRelation(Relation):
 
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
-    candidate_required_prop = SimObjFixedProp.PICKUPABLE
-    candidate_required_prop_sat_function = SingleValuePSF(True)
+    candidate_required_prop = PickupableProp(SingleValuePSF(True))
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         super().__init__(main_item, related_item)
@@ -311,8 +312,6 @@ class CloseToRelation(Relation):
 
     type_id = RelationTypeId.CLOSE_TO
     inverse_relation_type_id = RelationTypeId.CLOSE_TO
-    candidate_required_prop = None
-    candidate_required_prop_sat_function = None
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem, distance: float) -> None:
         super().__init__(main_item, related_item)
