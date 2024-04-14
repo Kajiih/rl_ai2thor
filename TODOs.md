@@ -39,11 +39,15 @@
     - [ ] `CONTAINED_IN` -> None
     - [ ] `CLOSE_TO` -> None
   - [ ] Add other indirect intermediate tasks (like the need to open a container if the all the candidates for an item are in the container)
--
+- [ ] Intermediate/auxiliary goals with custom property satisfaction function being: the goal auxiliary goal is satisfied OR the main goal is satisfied (property satisfied or relation satisfied)
+- [ ] Adding auxiliary goals to the properties of the item IF they are goals directly for the item (e.g. `is_picked_up` for `contained_in` items) (so they are also part of the assignment)
+- [ ] Adding extra goal not depending on the assignment for the others
+
+- [ ] Implement a more general item prop class that doesn't directly depend on an ai2thor object's property
 - [x] Change `OBJECT_TYPES_DATA` to be a dataclass
 - [ ] Delete the main and related item information from the relations
 - [ ] Implement a way to define tasks directly from config with task dictionaries
-- [ ] Add an order to item properties and relations (only properties?) so that the agent doesn't receive reward for a property of order n if it all properties of orders n-1 of the item are not satisfied
+- [ ] Add an order to item properties and relations (only properties?) so that the agent doesn't receive reward for a property of order n if all properties of orders n-1 of the item are not satisfied
 - [ ] Implement the fact that relations count only if the all properties of both items are satisfied (both in the task advancement and the computation of the task advancement bounds)
 - [ ] Change name of the project and package to RL THOR or THORRL?
 - [ ] Make compatible with python 3.11 (and 3.10?) and update README installation part

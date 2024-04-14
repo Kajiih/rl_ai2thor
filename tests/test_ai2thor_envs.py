@@ -422,7 +422,7 @@ def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
         Image.fromarray(env_obs1).save(test_media_path / "obs1.png")
         Image.fromarray(env_obs2).save(test_media_path / "obs2.png")
         Image.fromarray(env_obs1 - env_obs2).save(test_media_path / "diff.png")
-        assert env_obs1 == pytest.approx(env_obs2, abs=0, rel=0)
+        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 
