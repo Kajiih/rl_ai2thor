@@ -39,7 +39,12 @@ from rl_ai2thor.envs.tasks.items import (
     ItemOverlapClass,
     TaskItem,
 )
-from rl_ai2thor.envs.tasks.relations import RelationParam, RelationTypeId, relation_type_id_to_relation
+from rl_ai2thor.envs.tasks.relations import (
+    DuplicateRelationsError,
+    RelationParam,
+    RelationTypeId,
+    relation_type_id_to_relation,
+)
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
@@ -302,13 +307,14 @@ class GraphTask[T: Hashable](BaseTask):
         event: Event = controller.last_event  # type: ignore
         # Initialize the candidates of the items
         for item in self.items:
-            item.candidate_ids = set()
+            candidate_ids = set()
             for obj_metadata in event.metadata["objects"]:
                 if item.is_candidate(obj_metadata):
-                    item.candidate_ids.add(obj_metadata["objectId"])
-            if not item.candidate_ids:
+                    candidate_ids.add(obj_metadata["objectId"])
+            if not candidate_ids:
                 print(f"No candidate found for item {item.id}")
                 return False, 0, False, {}
+            item.candidate_ids = candidate_ids
 
         scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
         compatible_assignments = self._compute_compatible_assignments(scene_objects_dict)
@@ -626,11 +632,10 @@ class GraphTask[T: Hashable](BaseTask):
                     organized_relations[related_item_id][main_item_id] = {}
                 for relation_type_id, relation_parameters in relations_dict.items():
                     if relation_type_id in organized_relations[main_item_id][related_item_id]:
-                        raise IncompatibleRelationsError(
+                        raise DuplicateRelationsError(
                             relation_type_id,
                             main_item_id,
                             related_item_id,
-                            task_description_dict,
                         )
 
                     # === Add direct relations ===
@@ -644,11 +649,10 @@ class GraphTask[T: Hashable](BaseTask):
                     # === Add inverse relations ===
                     inverse_relation_type_id = relation.inverse_relation_type_id
                     if inverse_relation_type_id in organized_relations[related_item_id][main_item_id]:
-                        raise IncompatibleRelationsError(
+                        raise DuplicateRelationsError(
                             relation_type_id=inverse_relation_type_id,
                             main_item_id=related_item_id,
                             related_item_id=main_item_id,
-                            task_description_dict=task_description_dict,
                         )
                     organized_relations[related_item_id][main_item_id][inverse_relation_type_id] = (
                         relation.create_inverse_relation()
@@ -1228,45 +1232,6 @@ class Open(GraphTask[str]):
             description (str): Text description of the task.
         """
         return f"Open {self.opened_object_type}"
-
-
-# %%  === Exceptions ===
-class IncompatibleRelationsError[T](Exception):
-    """
-    Exception raised when the two relations of the same type involving the same main and related items are detected.
-
-    Such case is not allowed because combining relations and keeping only the most restrictive is
-    not supported yet. In particular, one should not add one relation and its opposite relation
-    (e.g. `receptacle is_receptacle_of object` and `object is_contained_in receptacle`) because it
-    is done automatically when instantiating the task.
-    """
-
-    def __init__(
-        self,
-        relation_type_id: RelationTypeId,
-        main_item_id: T,
-        related_item_id: T,
-        task_description_dict: TaskDict[T],
-    ) -> None:
-        """
-        Initialize the exception.
-
-        Args:
-            relation_type_id (RelationTypeId): The type of relation.
-            main_item_id (T): The id of the main item.
-            related_item_id (T): The id of the related item.
-            task_description_dict (TaskDict[T]): Full task description dictionary.
-        """
-        self.relation_type_id = relation_type_id
-        self.main_item_id = main_item_id
-        self.related_item_id = related_item_id
-        self.task_description_dict = task_description_dict
-
-        super().__init__(
-            f"Two relations of the same type involving the same main and related items are detected: "
-            f"{relation_type_id}({main_item_id}, {related_item_id})\n"
-            f"Full task description dictionary: {task_description_dict}"
-        )
 
 
 # %% === Constants ===

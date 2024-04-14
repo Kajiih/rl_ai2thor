@@ -11,15 +11,14 @@ from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, Literal
 
 from rl_ai2thor.envs.sim_objects import (
-    SimObjFixedProp,
     SimObjId,
     SimObjMetadata,
     SimObjProp,
 )
-from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp
+from rl_ai2thor.envs.tasks.relations import DuplicateRelationsError
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.item_prop import ItemProp, ItemPropValue, PropSatFunction
+    from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, ItemProp, ItemPropValue
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
 
@@ -58,9 +57,7 @@ class TaskItem[T: Hashable]:
         }
 
         # Other attributes
-        self._rel_candidate_required_properties: set[ItemFixedProp[ItemPropValue]] = set()
-        self.organized_relations: dict[T, dict[RelationTypeId, Relation]] = {}
-        self.candidate_ids: set[SimObjId] = set()
+        self.candidate_ids: set[SimObjId]
 
     @property
     def relations(self) -> set[Relation]:
@@ -77,31 +74,56 @@ class TaskItem[T: Hashable]:
         """
         Setter for the relations of the item.
 
-        Automatically update the organized_relations and candidate_required_properties
-        attributes.
+        Check that there are no duplicate relations of the same type and related item.
         """
-        self.organized_relations.update({
+        existing_relations = {}
+        for relation in relations:
+            if relation.related_item.id not in existing_relations:
+                existing_relations[relation.related_item.id] = {}
+            elif relation.type_id in existing_relations[relation.related_item.id]:
+                raise DuplicateRelationsError(relation.type_id, self.id, relation.related_item.id)
+
+        self._relations = relations
+
+    # TODO: Replace to hold a set of relations instead of dict of relation id -> relation
+    @property
+    def organized_relations(self) -> dict[T, dict[RelationTypeId, Relation]]:
+        """
+        Get the organized relations of the item.
+
+        Returns:
+            dict[T, dict[RelationTypeId, Relation]]: Dictionary containing the relations of the main
+                item organized by related item id and relation type id.
+        """
+        return {
             relation.related_item.id: {
                 relation.type_id: relation,
             }
-            for relation in relations
-        })
-        self._rel_candidate_required_properties.update({
-            relation.candidate_required_prop for relation in relations if relation.candidate_required_prop is not None
-        })
-
-        # Delete duplicate relations if any
-        self._relations = {
-            relation for relation_set in self.organized_relations.values() for relation in relation_set.values()
+            for relation in self.relations
         }
 
     @property
-    def candidate_required_properties(self) -> set[ItemProp[ItemPropValue, ItemPropValue]]:
+    def _rel_candidate_required_properties(self) -> set[ItemFixedProp[ItemPropValue]]:
+        """
+        Get the candidate required properties of the relations of the item.
+
+        Returns:
+            set[ItemFixedProp[ItemPropValue]]: Set of the item's candidate required properties
+                coming from the relations.
+        """
+        return {
+            relation.candidate_required_prop
+            for relation in self.relations
+            if relation.candidate_required_prop is not None
+        }
+
+    @property
+    def candidate_required_properties(self) -> set[ItemFixedProp[ItemPropValue]]:
         """
         Return a dictionary containing the properties required for an object to be a candidate for the item.
 
         Returns:
-            candidate_properties (set[ItemProp[ItemPropValue, ItemPropValue]]): Set of the item's
+            candidate_properties (set[ItemFixedProp[ItemPropValue]]): Set of the item's
                 candidate required properties.
         """
         return self._prop_candidate_required_properties | self._rel_candidate_required_properties

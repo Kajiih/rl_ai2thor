@@ -15,7 +15,7 @@ from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, PickupableProp, Recep
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.items import PropSatFunction, TaskItem
+    from rl_ai2thor.envs.tasks.items import TaskItem
 
 
 # %% === Enums ===
@@ -177,15 +177,11 @@ class Relation(ABC):
         Returns:
             set[SimObjId]: The ids of the related item's candidate's that satisfy the relation.
         """
-        # TODO: Delete try-except block
-        try:
-            satisfying_related_object_ids = {
-                related_object_id
-                for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
-                if related_object_id in self.related_item.candidate_ids
-            }
-        except TypeError:
-            print(f"main_obj_metadata: {main_obj_metadata}")
+        satisfying_related_object_ids = {
+            related_object_id
+            for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
+            if related_object_id in self.related_item.candidate_ids
+        }
         return satisfying_related_object_ids
 
     def __str__(self) -> str:
@@ -355,3 +351,39 @@ relation_type_id_to_relation = {
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
     RelationTypeId.CLOSE_TO: CloseToRelation,
 }
+
+
+# %% === Exceptions ===
+class DuplicateRelationsError[T](Exception):
+    """
+    Exception raised when the two relations of the same type involving the same main and related items are detected.
+
+    Such case is not allowed because combining relations and keeping only the most restrictive is
+    not supported yet. In particular, one should not add one relation and its opposite relation
+    (e.g. `receptacle is_receptacle_of object` and `object is_contained_in receptacle`) because it
+    is done automatically when instantiating the task.
+    """
+
+    def __init__(
+        self,
+        relation_type_id: RelationTypeId,
+        main_item_id: T,
+        related_item_id: T,
+    ) -> None:
+        """
+        Initialize the exception.
+
+        Args:
+            relation_type_id (RelationTypeId): The type of relation.
+            main_item_id (T): The id of the main item.
+            related_item_id (T): The id of the related item.
+            task_description_dict (TaskDict[T]): Full task description dictionary.
+        """
+        self.relation_type_id = relation_type_id
+        self.main_item_id = main_item_id
+        self.related_item_id = related_item_id
+
+        super().__init__(
+            f"Two relations of the same type involving the same main and related items are detected: "
+            f"{relation_type_id}({main_item_id}, {related_item_id})"
+        )
