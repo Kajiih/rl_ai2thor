@@ -27,7 +27,9 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjVariableProp,
 )
 from rl_ai2thor.envs.tasks.item_prop import (
+    ItemProp,
     ItemPropValue,
+    ItemVariableProp,
     MultiValuePSF,
     PropSatFunction,
     SingleValuePSF,
@@ -249,9 +251,15 @@ class GraphTask[T: Hashable](BaseTask):
     to add them manually when creating the task.
 
     Attributes:
-        items (List[T]): List of items representing unique objects in the scene.
+        task_description_dict (TaskDict[T]): Dictionary describing the items and their
+            properties and relations.
+        items (List[TaskItem]): List of items of the task.
+        items_by_id (Dict[T, TaskItem]): Dictionary mapping item ids to their corresponding TaskItem.
         overlap_classes (List[ItemOverlapClass]): List of overlap classes containing items
             with overlapping candidates.
+        auxiliary_items (FrozenSet[TaskItem[str]]): Set of items that are not part of the task
+            but that are necessary for certain item's properties or relations to be satisfied.
+        max_task_advancement (float): Maximum task advancement possible for the task.
 
     Methods:
         reset(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
@@ -260,7 +268,6 @@ class GraphTask[T: Hashable](BaseTask):
             Return the task advancement and whether the task is completed.
         full_initialize_items_and_relations_from_dict(task_description_dict: TaskDict) -> list[TaskItem[T]]
             Create and initialize TaskItems for the graph task.
-
     """
 
     _reward_handler_type = GraphTaskRewardHandler
@@ -273,14 +280,20 @@ class GraphTask[T: Hashable](BaseTask):
         Initialize the task graph as defined in the task description dictionary.
 
         Args:
-            task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
-                Dictionary describing the items and their properties and relations.
+            task_description_dict (TaskDict[T]): Dictionary describing the items and their
+                properties and relations.
         """
         self.task_description_dict = task_description_dict
-        self.items: list[TaskItem[T]] = self.full_initialize_items_and_relations_from_dict(task_description_dict)
-        self._items_by_id: dict[T, TaskItem[T]] = {item.id: item for item in self.items}
+        self.items = self.full_initialize_items_and_relations_from_dict(task_description_dict)
+        self.items_by_id = {item.id: item for item in self.items}
 
-        self.overlap_classes: list[ItemOverlapClass] = []
+        # === Type annotations ===
+        self.task_description_dict: TaskDict[T]
+        self.items: list[TaskItem[T]]
+        self.items_by_id: dict[T, TaskItem[T]]
+        self.overlap_classes: list[ItemOverlapClass[T]]
+        self.auxiliary_items: frozenset[TaskItem[str]]
+        self.max_task_advancement: float
 
     # TODO? Add check to make sure the task is feasible?
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
@@ -305,20 +318,28 @@ class GraphTask[T: Hashable](BaseTask):
             info (dict[str, Any]): Additional information about the task advancement.
         """
         event: Event = controller.last_event  # type: ignore
+        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+
         # Initialize the candidates of the items
         for item in self.items:
-            candidate_ids = set()
-            for obj_metadata in event.metadata["objects"]:
-                if item.is_candidate(obj_metadata):
-                    candidate_ids.add(obj_metadata["objectId"])
-            if not candidate_ids:
+            item.candidate_ids = item.get_candidate_ids(scene_objects_dict)
+            if not item.candidate_ids:
                 print(f"No candidate found for item {item.id}")
                 return False, 0, False, {}
-            item.candidate_ids = candidate_ids
 
-        scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+        # Initialize the auxiliary items
+        self.auxiliary_items = frozenset().union(
+            *(auxiliary_items for item in self.items for auxiliary_items in item.props_auxiliary_items.values())
+        )
+        for auxiliary_item in self.auxiliary_items:
+            auxiliary_item.relations = set()
+            auxiliary_item.candidate_ids = auxiliary_item.get_candidate_ids(scene_objects_dict)
+            if not auxiliary_item.candidate_ids:
+                print(f"No candidate found for auxiliary item {auxiliary_item.id}")
+                return False, 0, False, {}
+
+        # Make sure that there is at least one relation compatible assignment
         compatible_assignments = self._compute_compatible_assignments(scene_objects_dict)
-
         if not compatible_assignments:
             print("No compatible assignment found")
             return False, 0, False, {}
@@ -327,9 +348,9 @@ class GraphTask[T: Hashable](BaseTask):
         for item in self.items:
             item.candidate_ids = {assignment[item] for assignment in compatible_assignments}
 
+        # Initialize overlap classes and keep only assignments that are part of one of the global
+        # compatible assignments
         self.overlap_classes = self._compute_overlap_classes(self.items)
-
-        # For each overlap_class, keep only valid assignments if they are part of one of the compatible assignments
         # TODO: Check if this is necessary
         for overlap_class in self.overlap_classes:
             overlap_class.prune_assignments(compatible_assignments)
@@ -338,7 +359,6 @@ class GraphTask[T: Hashable](BaseTask):
         # TODO: Make it compatible with weighted properties and relations
         self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
 
-        # Return initial task advancement
         return True, *self.compute_task_advancement(event, scene_objects_dict)
 
     def _compute_compatible_assignments(
@@ -578,7 +598,7 @@ class GraphTask[T: Hashable](BaseTask):
         for item, obj_id in global_assignment.items():
             item_relations_results = all_relation_results[item]
             for related_item_id, relations in item_relations_results.items():
-                related_item_assigned_obj_id = global_assignment[self._items_by_id[related_item_id]]
+                related_item_assigned_obj_id = global_assignment[self.items_by_id[related_item_id]]
                 for relations_by_obj_id in relations.values():
                     satisfying_obj_ids = relations_by_obj_id[obj_id]
                     if related_item_assigned_obj_id in satisfying_obj_ids:

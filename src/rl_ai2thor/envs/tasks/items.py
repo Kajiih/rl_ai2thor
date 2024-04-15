@@ -15,7 +15,6 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjMetadata,
     SimObjProp,
 )
-from rl_ai2thor.envs.tasks.item_prop import ItemProp
 from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
@@ -30,7 +29,19 @@ class TaskItem[T: Hashable]:
     """
     An item in the definition of a task.
 
-    TODO: Finish docstring.
+    Attributes:
+        t_id (T): The ID of the item as defined in the task description.
+        properties (set[ItemProp]): Set of properties of the item.
+        relations (set[Relation]): Set of relations of the item.
+        organized_relations (dict[T, dict[RelationTypeId, Relation]]): Relations of the item
+            organized by related item id and relation type id.
+        props_auxiliary_items (dict[ItemProp, frozenset[TaskItem]]): Map of the item's properties to
+            their auxiliary items.
+        props_auxiliary_properties (dict[ItemProp, frozenset[ItemVariableProp]]): Map of the item's
+            properties to their auxiliary properties.
+        candidate_ids (set[SimObjId]): Set of candidate ids of the item.
+        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
+            to be a candidate for the item.
     """
 
     def __init__(
@@ -44,17 +55,6 @@ class TaskItem[T: Hashable]:
         Args:
             t_id (T): The ID of the item as defined in the task description.
             properties (set[ItemProp]): Set of properties of the item.
-            relations (set[Relation]): Set of relations of the item.
-            organized_relations (dict[T, dict[RelationTypeId, Relation]]): Relations of the item
-                organized by related item id and relation type id.
-            props_auxiliary_items (dict[ItemProp, frozenset[TaskItem]]): Map of the item's
-                properties to their auxiliary items.
-            props_auxiliary_properties (dict[ItemProp, frozenset[ItemVariableProp]]): Map of the
-                item's properties to their auxiliary properties.
-            candidate_ids (set[SimObjId]): Set of candidate ids of the item.
-            candidate_required_properties (set[ItemFixedProp]): Set of properties required for an
-                object to be a candidate for the item.
-
         """
         self.id = t_id
         self.properties = properties
@@ -161,6 +161,19 @@ class TaskItem[T: Hashable]:
             is_candidate (bool): True if the given object is a valid candidate for the item.
         """
         return all(prop.is_object_satisfying(obj_metadata) for prop in self.candidate_required_properties)
+
+    def get_candidate_ids(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> set[SimObjId]:
+        """
+        Return the set of candidate ids of the item.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+                of the objects in the scene to their metadata.
+
+        Returns:
+            candidate_ids (set[SimObjId]): Set of candidate ids of the item.
+        """
+        return {obj_id for obj_id in scene_objects_dict if self.is_candidate(scene_objects_dict[obj_id])}
 
     # TODO: Replace keys by the actual properties
     def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
@@ -539,7 +552,15 @@ type Assignment[T: Hashable] = dict[TaskItem[T], SimObjId]
 
 
 class ItemOverlapClass[T: Hashable]:
-    """A group of items whose sets of candidates overlap."""
+    """
+    A group of items whose sets of candidates overlap.
+
+    Attributes:
+        items (list[TaskItem[T]]): The items in the overlap class.
+        candidate_ids (list[SimObjId]): The candidate ids of candidates in the overlap class.
+        valid_assignments (list[Assignment[T]]): List of valid assignments of objects to the items
+            in the overlap class.
+    """
 
     def __init__(
         self,
@@ -547,13 +568,11 @@ class ItemOverlapClass[T: Hashable]:
         candidate_ids: list[SimObjId],
     ) -> None:
         """
-        Initialize the overlap class with the given items and candidate ids.
+        Initialize the overlap class' items, candidate ids and valid assignments.
 
         Args:
             items (list[TaskItem[T]]): The items in the overlap class.
             candidate_ids (list[SimObjId]): The candidate ids of candidates in the overlap class.
-            valid_assignments (list[Assignment[T]]): List of valid assignments of objects to the
-                items in the overlap class.
         """
         self.items = items
         self.candidate_ids = candidate_ids
