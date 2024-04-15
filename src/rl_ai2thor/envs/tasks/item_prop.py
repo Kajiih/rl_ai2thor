@@ -13,6 +13,8 @@ from enum import StrEnum
 from typing import Any
 
 from rl_ai2thor.envs.sim_objects import (
+    COOKING_SOURCES,
+    HEAT_SOURCES,
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
@@ -394,7 +396,7 @@ class IsBrokenProp(ItemVariableProp[bool, bool]):
     auxiliary_properties = frozenset({IsPickedUpProp(True)})
 
 
-# TODO: Support filling with other liquids
+# TODO: Support filling with other liquids and contextual interactions
 class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     """Is filled with liquid item property."""
 
@@ -411,7 +413,8 @@ class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     })
 
 
-# TODO: Support filling with other liquids
+# TODO: Support filling with other liquids and contextual interactions
+# TODO: Add IsFilledWithLiquidProp as auxiliary property
 class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
     """Fill liquid item property."""
 
@@ -435,19 +438,52 @@ class IsDirtyProp(ItemVariableProp[bool, bool]):
     })
 
 
+# TODO: Implement contextual cooking interactions (e.g. toaster...)
+# TODO: Implement cooking with Microwave that requires to be open to put the object inside first.
 class IsCookedProp(ItemVariableProp[bool, bool]):
-    """Is cooked item property."""
+    """
+    Property for cooked items.
+
+    Currently only supports cooking with a StoveBurner.
+    """
 
     target_ai2thor_property = SimObjVariableProp.IS_COOKED
     candidate_required_prop = CookableProp(True)
+    auxiliary_properties = frozenset({IsPickedUpProp(True)})
+    auxiliary_items = frozenset({
+        TaskItem(
+            t_id="cooking_source",
+            properties={
+                ObjectTypeProp(MultiValuePSF(COOKING_SOURCES)),
+                IsToggledProp(True),
+            },
+        )
+    })
 
 
+# TODO: Implement contextual temperature interactions (e.g. coffee machine and mugs...)
+# TODO: Add the fact that the Microwave has to be open to put the object inside first then closed then turned on.
 class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
-    """Temperature item property."""
+    """
+    Property for items with a certain temperature.
+
+    Currently only supports StoveBurner and Microwave as heat sources and Fridge as a cold source.
+    """
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
+    auxiliary_properties = frozenset({IsPickedUpProp(True)})
+    auxiliary_items = frozenset({
+        TaskItem(
+            t_id="heat_source",
+            properties={
+                ObjectTypeProp(MultiValuePSF(HEAT_SOURCES)),
+                IsToggledProp(True),
+            },
+        )
+    })
 
 
+# TODO: Implement the fact that Eggs can be sliced (cracked) without a knife.
 class IsSlicedProp(ItemVariableProp[bool, bool]):
     """Is sliced item property."""
 
@@ -464,7 +500,7 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
     })
 
 
-# %% === Item property mapping ===
+## %% === Item property mapping ===
 obj_prop_id_to_item_prop = {
     SimObjFixedProp.OBJECT_TYPE: ObjectTypeProp,
     SimObjFixedProp.IS_INTERACTABLE: IsInteractableProp,

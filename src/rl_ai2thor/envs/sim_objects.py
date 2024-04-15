@@ -201,6 +201,8 @@ type SimObjMetadata = dict[SimObjMetadataKey, SimObjPropValue]
 
 
 # %% === Sim Object Types Data ===
+# TODO: Add compatible cooking sources and heat sources.
+# TODO: Double check with the controller which heat and cooking sources are actually compatible with which objects.
 @dataclass(frozen=True)
 class ObjTypeData:
     """Data for a sim object type in AI2-THOR."""
@@ -284,6 +286,7 @@ LIGHT_SOURCES = {
     # SimObjectType.LIGHT_SWITCH,
 }
 
+# TODO: Support other liquid sources
 WATER_SOURCES = {
     SimObjectType.FAUCET,
     SimObjectType.SHOWER_HEAD,
@@ -293,18 +296,19 @@ COLD_SOURCES = {
     SimObjectType.FRIDGE,
 }
 
+# TODO: Support contextual heat sources
 HEAT_SOURCES = {
-    SimObjectType.COFFEE_MACHINE,  # Only Mug
+    # SimObjectType.COFFEE_MACHINE,  # Only Mug
     SimObjectType.MICROWAVE,
-    SimObjectType.STOVE_BURNER,  # Turned on by StoveKnob
+    SimObjectType.STOVE_BURNER,  # Cooks every cookable; Turned on by StoveKnob but it doesn't change anything for us
     # SimObjectType.TOASTER,  # Only BreadSlice // Not sure it actually heats the bread and not only cooks it
 }
 
+# TODO: Support contextual cooking sources
 COOKING_SOURCES = {
-    SimObjectType.COFFEE_MACHINE,  # Only Mug
-    SimObjectType.MICROWAVE,
-    SimObjectType.STOVE_BURNER,  # Turned on by StoveKnob
-    SimObjectType.TOASTER,  # Only BreadSlice
+    # SimObjectType.MICROWAVE,  # Only Potato, PotatoSliced, EggCracked # TODO: Check for BreadSlice
+    SimObjectType.STOVE_BURNER,  # Cooks every cookable; Turned on by StoveKnob but it doesn't change anything for us
+    # SimObjectType.TOASTER,  # Only BreadSlice
 }
 
 
