@@ -44,7 +44,7 @@
 - [ ] Adding auxiliary goals to the properties of the item IF they are goals directly for the item (e.g. `is_picked_up` for `contained_in` items) (so they are also part of the assignment)
 - [ ] Adding extra goal not depending on the assignment for the others
 
-Implementing auxiliary goals:
+#### Implementing auxiliary goals
 
 - [ ] Adding auxiliary properties' candidate required prop
 - [ ] Adding auxiliary items candidates during scene reset

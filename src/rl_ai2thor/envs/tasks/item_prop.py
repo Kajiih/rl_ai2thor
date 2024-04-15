@@ -467,21 +467,12 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
     auxiliary_properties = frozenset({IsPickedUpProp(True)})
-    auxiliary_items = frozenset({
-        TaskItem(
-            t_id="heat_source",
-            properties={
-                ObjectTypeProp(MultiValuePSF(HEAT_SOURCES)),
-                IsToggledProp(True),
-            },
-        )
-    })
 
     def __init__(self, target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue) -> None:
         """Initialize the Property object."""
         super().__init__(target_satisfaction_function)
         self.target_satisfaction_function: SingleValuePSF[TemperatureValue]
-        
+
         if self.target_satisfaction_function.target_value == TemperatureValue.HOT:
             self.auxiliary_items = frozenset({
                 TaskItem(
