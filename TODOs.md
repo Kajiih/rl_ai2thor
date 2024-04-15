@@ -17,6 +17,7 @@
 - [x] Test enabling cloud rendering from config
 - [ ] Test with the `startx.py` script and add it to the README if necessary
 - [ ] Create a docker image to simplify the Xorg setup
+
 - [ ] Add indirect candidate requirement for certain item prop (`water_source` necessary when `dirty=True`). Eventually make it at the same time than adding intermediate goals (toggling a `water_source`)
   - [ ] `VISIBLE` -> some dense reward function of the distance to the object and the angle to the object in the field of view
   - [x] `IS_TOGGLED` -> None
@@ -42,6 +43,12 @@
 - [ ] Intermediate/auxiliary goals with custom property satisfaction function being: the goal auxiliary goal is satisfied OR the main goal is satisfied (property satisfied or relation satisfied)
 - [ ] Adding auxiliary goals to the properties of the item IF they are goals directly for the item (e.g. `is_picked_up` for `contained_in` items) (so they are also part of the assignment)
 - [ ] Adding extra goal not depending on the assignment for the others
+
+Implementing auxiliary goals:
+
+- [ ] Adding auxiliary properties' candidate required prop
+- [ ] Adding auxiliary items candidates during scene reset
+- [ ] More....
 
 - [ ] Implement a more general item prop class that doesn't directly depend on an ai2thor object's property
 - [x] Change `OBJECT_TYPES_DATA` to be a dataclass

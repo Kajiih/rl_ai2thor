@@ -230,7 +230,7 @@ class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
         self,
         target_satisfaction_function: PropSatFunction[T] | ItemPropValue,
     ) -> None:
-        """Initialize the FixedProperty object."""
+        """Initialize the candidate_required_prop attribute with self."""
         super().__init__(target_satisfaction_function)
         self.candidate_required_prop = self
 
@@ -246,13 +246,6 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
 
     target_ai2thor_property: SimObjVariableProp
     # candidate_required_prop: ItemFixedProp[T2]  # TODO: Delete?
-
-    def __init__(
-        self,
-        target_satisfaction_function: PropSatFunction[T1] | ItemPropValue,
-    ) -> None:
-        """Initialize the VariableProperty object."""
-        super().__init__(target_satisfaction_function)
 
 
 # %% === Item property definitions ===
@@ -462,11 +455,14 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
 
 # TODO: Implement contextual temperature interactions (e.g. coffee machine and mugs...)
 # TODO: Add the fact that the Microwave has to be open to put the object inside first then closed then turned on.
+# TODO: Add the fact that the Fridge has to be open to put the object inside first then closed.
 class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
     """
     Property for items with a certain temperature.
 
     Currently only supports StoveBurner and Microwave as heat sources and Fridge as a cold source.
+
+    Note: can currently only be used with a target property_function that is a SingleValuePSF.
     """
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
@@ -480,6 +476,31 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
             },
         )
     })
+
+    def __init__(self, target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue) -> None:
+        """Initialize the Property object."""
+        super().__init__(target_satisfaction_function)
+        self.target_satisfaction_function: SingleValuePSF[TemperatureValue]
+        
+        if self.target_satisfaction_function.target_value == TemperatureValue.HOT:
+            self.auxiliary_items = frozenset({
+                TaskItem(
+                    t_id="heat_source",
+                    properties={
+                        ObjectTypeProp(MultiValuePSF(HEAT_SOURCES)),
+                        IsToggledProp(True),
+                    },
+                )
+            })
+        elif self.target_satisfaction_function.target_value == TemperatureValue.COLD:
+            self.auxiliary_items = frozenset({
+                TaskItem(
+                    t_id="cold_source",
+                    properties={
+                        ObjectTypeProp(MultiValuePSF([SimObjectType.FRIDGE])),
+                    },
+                )
+            })
 
 
 # TODO: Implement the fact that Eggs can be sliced (cracked) without a knife.
