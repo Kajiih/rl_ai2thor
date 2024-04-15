@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Container
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
 from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
+from rl_ai2thor.envs.tasks.items import TaskItem
 
 
 # %% === Property value enums ==
@@ -32,7 +34,7 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-type ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
+ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
 
 
 # %% === Property satisfaction functions ===
@@ -131,7 +133,8 @@ type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 
 
 # %% === Item property auxiliary goals ===
-class ItemPropAuxGoals(ABC):
+@dataclass
+class ItemPropAuxGoals:
     """
     Base class for auxiliary goals associated with item properties in the definition of a task.
 
@@ -140,11 +143,24 @@ class ItemPropAuxGoals(ABC):
     - The item should be picked up before cooking or cleaning it
     Similar auxiliary goals for relations:
     - The item should be picked up before placing it in a receptacle
+
+    Those auxiliary goals are used to define the conditions that should be satisfied either by the
+    same item the main property belongs to or by any other items in order to satisfy the main
+    property.
+    Those auxiliary goals are satisfied if their required property is satisfied or if the main
+    property is satisfied.
+
+    Attributes:
+        same_item_props (set[ItemVariableProp[ItemPropValue, ItemPropValue]]): The set of properties
+            that should be satisfied by the same item the main property belongs to in order to
+            satisfy the main property.
+        other_items_prop (list[set[ItemProp[ItemPropValue, ItemPropValue]]]): The list of sets of
+            properties that should be satisfied by any other items in order to satisfy the main
+            property.
     """
 
-    # TODO: Implement
-    same_item_props: Any
-    other_objects_prop: Any
+    same_item_props: set[ItemVariableProp[ItemPropValue, ItemPropValue]] = field(default_factory=set)
+    other_items_prop: list[set[ItemProp[ItemPropValue, ItemPropValue]]] = field(default_factory=list)
 
 
 # %% === Item properties  ===
@@ -175,11 +191,10 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     candidate_required_prop: ItemFixedProp[T2] | None = None
     auxiliary_goals: ItemPropAuxGoals | None = None  # TODO: Implement
 
-    def __init__(
-        self,
-        target_satisfaction_function: PropSatFunction[T1],
-    ) -> None:
+    def __init__(self, target_satisfaction_function: PropSatFunction[T1] | ItemPropValue) -> None:
         """Initialize the Property object."""
+        if isinstance(target_satisfaction_function, ItemPropValue):
+            target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
         self.target_satisfaction_function = target_satisfaction_function
 
     def __call__(self, prop_value: T1) -> bool:
@@ -220,7 +235,7 @@ class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
 
     def __init__(
         self,
-        target_satisfaction_function: PropSatFunction[T],
+        target_satisfaction_function: PropSatFunction[T] | ItemPropValue,
     ) -> None:
         """Initialize the FixedProperty object."""
         super().__init__(target_satisfaction_function)
@@ -241,7 +256,7 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
 
     def __init__(
         self,
-        target_satisfaction_function: PropSatFunction[T1],
+        target_satisfaction_function: PropSatFunction[T1] | ItemPropValue,
     ) -> None:
         """Initialize the VariableProperty object."""
         super().__init__(target_satisfaction_function)
@@ -348,49 +363,49 @@ class IsToggledProp(ItemVariableProp[bool, bool]):
     """Is toggled item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_TOGGLED
-    candidate_required_prop = ToggleableProp(SingleValuePSF(True))
+    candidate_required_prop = ToggleableProp(True)
 
 
 class IsBrokenProp(ItemVariableProp[bool, bool]):
     """Is broken item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_BROKEN
-    candidate_required_prop = BreakableProp(SingleValuePSF(True))
+    candidate_required_prop = BreakableProp(True)
 
 
 class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     """Is filled with liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
-    candidate_required_prop = CanFillWithLiquidProp(SingleValuePSF(True))
+    candidate_required_prop = CanFillWithLiquidProp(True)
 
 
 class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
     """Fill liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.FILL_LIQUID
-    candidate_required_prop = CanFillWithLiquidProp(SingleValuePSF(True))
+    candidate_required_prop = CanFillWithLiquidProp(True)
 
 
 class IsDirtyProp(ItemVariableProp[bool, bool]):
     """Is dirty item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_DIRTY
-    candidate_required_prop = DirtyableProp(SingleValuePSF(True))
+    candidate_required_prop = DirtyableProp(True)
 
 
 class IsUsedUpProp(ItemVariableProp[bool, bool]):
     """Is used up item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_USED_UP
-    candidate_required_prop = CanBeUsedUpProp(SingleValuePSF(True))
+    candidate_required_prop = CanBeUsedUpProp(True)
 
 
 class IsCookedProp(ItemVariableProp[bool, bool]):
     """Is cooked item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_COOKED
-    candidate_required_prop = CookableProp(SingleValuePSF(True))
+    candidate_required_prop = CookableProp(True)
 
 
 class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
@@ -403,28 +418,28 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
     """Is sliced item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_SLICED
-    candidate_required_prop = SliceableProp(SingleValuePSF(True))
+    candidate_required_prop = SliceableProp(True)
 
 
 class IsOpenProp(ItemVariableProp[bool, bool]):
     """Is open item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_OPEN
-    candidate_required_prop = OpenableProp(SingleValuePSF(True))
+    candidate_required_prop = OpenableProp(True)
 
 
 class OpennessProp(ItemVariableProp[float, bool]):
     """Openness item property."""
 
     target_ai2thor_property = SimObjVariableProp.OPENNESS
-    candidate_required_prop = OpenableProp(SingleValuePSF(True))
+    candidate_required_prop = OpenableProp(True)
 
 
 class IsPickedUpProp(ItemVariableProp[bool, bool]):
     """Is picked up item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
-    candidate_required_prop = PickupableProp(SingleValuePSF(True))
+    candidate_required_prop = PickupableProp(True)
 
 
 # %% === Item property mapping ===
