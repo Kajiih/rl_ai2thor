@@ -12,7 +12,14 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from rl_ai2thor.envs.sim_objects import SimObjectType, SimObjFixedProp, SimObjMetadata, SimObjProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import (
+    WATER_SOURCES,
+    SimObjectType,
+    SimObjFixedProp,
+    SimObjMetadata,
+    SimObjProp,
+    SimObjVariableProp,
+)
 from rl_ai2thor.envs.tasks.items import TaskItem
 
 
@@ -132,37 +139,6 @@ class UndefinedPSF(BasePSF[Any]):
 type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 
 
-# %% === Item property auxiliary goals ===
-@dataclass
-class ItemPropAuxGoals:
-    """
-    Base class for auxiliary goals associated with item properties in the definition of a task.
-
-    Examples of auxiliary goals include:
-    - A knife should be picked up to slice an object
-    - The item should be picked up before cooking or cleaning it
-    Similar auxiliary goals for relations:
-    - The item should be picked up before placing it in a receptacle
-
-    Those auxiliary goals are used to define the conditions that should be satisfied either by the
-    same item the main property belongs to or by any other items in order to satisfy the main
-    property.
-    Those auxiliary goals are satisfied if their required property is satisfied or if the main
-    property is satisfied.
-
-    Attributes:
-        same_item_props (set[ItemVariableProp[ItemPropValue, ItemPropValue]]): The set of properties
-            that should be satisfied by the same item the main property belongs to in order to
-            satisfy the main property.
-        other_items_prop (list[set[ItemProp[ItemPropValue, ItemPropValue]]]): The list of sets of
-            properties that should be satisfied by any other items in order to satisfy the main
-            property.
-    """
-
-    same_item_props: set[ItemVariableProp[ItemPropValue, ItemPropValue]] = field(default_factory=set)
-    other_items_prop: list[set[ItemProp[ItemPropValue, ItemPropValue]]] = field(default_factory=list)
-
-
 # %% === Item properties  ===
 # TODO? Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
@@ -178,18 +154,34 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     T1 is the type that the property value can take and T2 is the type that the candidate required
     property value can take.
 
+    auxiliary_properties and auxiliary_items are used to define auxiliary goals: the conditions that
+    should be satisfied either by the same item this property belongs to or by any other items in
+    order to satisfy this property.
+
+    Examples of auxiliary goals include:
+    - A knife should be picked up to slice an object
+    - The item should be picked up before cooking or cleaning it
+    Similar auxiliary goals for relations:
+    - The item should be picked up before placing it in a receptacle
+
     Attributes:
         target_ai2thor_property (SimObjProp): The target AI2-THOR property.
         target_satisfaction_function (PropSatFunction[T1]): The target property satisfaction
             function.
         candidate_required_prop (ItemFixedProp[T2] | None): The candidate required property.
-        auxiliary_goals (ItemPropAuxGoals | None): The auxiliary goals associated with the
-            realization of the property.
+        auxiliary_properties (set[ItemVariableProp] | None): The set of auxiliary properties that
+            should be first satisfied in order to satisfy the main property.
+        auxiliary_items (set[TaskItem[str]] | None): The set of auxiliary items whose properties
+            should be first satisfied by any object in the scene in order to satisfy the main
+            property. Those items are not considered in the item-candidates assignments of the task
+            since they don't represent a unique task item but only an auxiliary item for a property.
+
     """
 
     target_ai2thor_property: SimObjProp
     candidate_required_prop: ItemFixedProp[T2] | None = None
-    auxiliary_goals: ItemPropAuxGoals | None = None  # TODO: Implement
+    auxiliary_properties: frozenset[ItemVariableProp] | None = None
+    auxiliary_items: frozenset[TaskItem[str]] | None = None
 
     def __init__(self, target_satisfaction_function: PropSatFunction[T1] | ItemPropValue) -> None:
         """Initialize the Property object."""
@@ -359,6 +351,13 @@ class VisibleProp(ItemVariableProp[bool, Any]):
     target_ai2thor_property = SimObjVariableProp.VISIBLE
 
 
+class IsPickedUpProp(ItemVariableProp[bool, bool]):
+    """Is picked up item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
+    candidate_required_prop = PickupableProp(True)
+
+
 class IsToggledProp(ItemVariableProp[bool, bool]):
     """Is toggled item property."""
 
@@ -366,20 +365,53 @@ class IsToggledProp(ItemVariableProp[bool, bool]):
     candidate_required_prop = ToggleableProp(True)
 
 
+class IsUsedUpProp(ItemVariableProp[bool, bool]):
+    """Is used up item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_USED_UP
+    candidate_required_prop = CanBeUsedUpProp(True)
+
+
+class IsOpenProp(ItemVariableProp[bool, bool]):
+    """Is open item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_OPEN
+    candidate_required_prop = OpenableProp(True)
+
+
+class OpennessProp(ItemVariableProp[float, bool]):
+    """Openness item property."""
+
+    target_ai2thor_property = SimObjVariableProp.OPENNESS
+    candidate_required_prop = OpenableProp(True)
+
+
 class IsBrokenProp(ItemVariableProp[bool, bool]):
     """Is broken item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_BROKEN
     candidate_required_prop = BreakableProp(True)
+    auxiliary_properties = frozenset({IsPickedUpProp(True)})
 
 
+# TODO: Support filling with other liquids
 class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     """Is filled with liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
     candidate_required_prop = CanFillWithLiquidProp(True)
+    auxiliary_items = frozenset({
+        TaskItem(
+            t_id="water_source",
+            properties={
+                ObjectTypeProp(MultiValuePSF(WATER_SOURCES)),
+                IsToggledProp(True),
+            },
+        )
+    })
 
 
+# TODO: Support filling with other liquids
 class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
     """Fill liquid item property."""
 
@@ -392,13 +424,15 @@ class IsDirtyProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_DIRTY
     candidate_required_prop = DirtyableProp(True)
-
-
-class IsUsedUpProp(ItemVariableProp[bool, bool]):
-    """Is used up item property."""
-
-    target_ai2thor_property = SimObjVariableProp.IS_USED_UP
-    candidate_required_prop = CanBeUsedUpProp(True)
+    auxiliary_items = frozenset({
+        TaskItem(
+            t_id="water_source",
+            properties={
+                ObjectTypeProp(MultiValuePSF(WATER_SOURCES)),
+                IsToggledProp(True),
+            },
+        )
+    })
 
 
 class IsCookedProp(ItemVariableProp[bool, bool]):
@@ -419,27 +453,15 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_SLICED
     candidate_required_prop = SliceableProp(True)
-
-
-class IsOpenProp(ItemVariableProp[bool, bool]):
-    """Is open item property."""
-
-    target_ai2thor_property = SimObjVariableProp.IS_OPEN
-    candidate_required_prop = OpenableProp(True)
-
-
-class OpennessProp(ItemVariableProp[float, bool]):
-    """Openness item property."""
-
-    target_ai2thor_property = SimObjVariableProp.OPENNESS
-    candidate_required_prop = OpenableProp(True)
-
-
-class IsPickedUpProp(ItemVariableProp[bool, bool]):
-    """Is picked up item property."""
-
-    target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
-    candidate_required_prop = PickupableProp(True)
+    auxiliary_items = frozenset({
+        TaskItem(
+            t_id="knife",
+            properties={
+                ObjectTypeProp(SimObjectType.KNIFE),
+                IsPickedUpProp(True),
+            },
+        )
+    })
 
 
 # %% === Item property mapping ===

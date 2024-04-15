@@ -38,14 +38,14 @@ class TaskItem[T: Hashable]:
     def __init__(
         self,
         t_id: T,
-        properties: set[ItemProp[ItemPropValue, ItemPropValue]],
+        properties: set[ItemProp],
     ) -> None:
         """
         Initialize the TaskItem object.
 
         Args:
             t_id (T): The ID of the item as defined in the task description.
-            properties (set[ItemProp[ItemPropValue, ItemPropValue]]): Set of properties of the item.
+            properties (set[ItemProp]): Set of properties of the item.
         """
         self.id = t_id
         self.properties = properties
