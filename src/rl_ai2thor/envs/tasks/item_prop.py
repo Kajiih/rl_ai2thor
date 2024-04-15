@@ -43,6 +43,8 @@ class FillableLiquid(StrEnum):
 
 
 ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
+# type AuxItems = frozenset[TaskItem[str]]
+# type AuxProps = frozenset[ItemVariableProp]
 
 
 # %% === Property satisfaction functions ===
