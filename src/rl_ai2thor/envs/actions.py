@@ -791,3 +791,15 @@ for action in ALL_ACTIONS:
     ACTIONS_BY_CATEGORY[category].append(action)
 
 ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
+
+
+# %% === Exceptions ===
+class UnknownActionCategoryError(ValueError):
+    """Exception raised for unknown action categories in environment mode config."""
+
+    def __init__(self, action_category: str) -> None:
+        self.action_category = action_category
+        super().__init__(
+            f"Unknown action category '{action_category}' in environment mode config. "
+            f"Available action categories are {[category.value for category in ActionCategory]}."
+        )

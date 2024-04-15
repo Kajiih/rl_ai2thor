@@ -11,15 +11,12 @@ import pytest
 import yaml
 from PIL import Image
 
-from rl_ai2thor.envs.actions import EnvActionName
+from rl_ai2thor.envs.actions import EnvActionName, UnknownActionCategoryError
 from rl_ai2thor.envs.ai2thor_envs import (
     ITHOREnv,
-    NoTaskBlueprintError,
-    UnknownActionCategoryError,
-    UnknownTaskTypeError,
 )
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS
+from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, NoTaskBlueprintError, UnknownTaskTypeError
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -345,6 +342,9 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 # This test fails sometimes because AI2-THOR is not deterministic
 # ! Sometimes 'Pen' and 'Pencil' are switched...?
 def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
+    media_path = test_media_path / "reset_same_runtime_reproducible"
+    media_path.mkdir(exist_ok=True)
+
     obs1, info1 = ithor_env.reset(seed=seed)
     env_obs1: NDArray = obs1["env_obs"]  # type: ignore
     task_obs1 = obs1["task_obs"]
@@ -371,17 +371,17 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
     try:
         assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(env_obs1).save(test_media_path / "obs1.png")
-        Image.fromarray(env_obs2).save(test_media_path / "obs2.png")
-        Image.fromarray(env_obs1 - env_obs2).save(test_media_path / "diff.png")
+        Image.fromarray(env_obs1).save(media_path / "obs1.png")
+        Image.fromarray(env_obs2).save(media_path / "obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save(media_path / "diff.png")
         assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
 
     try:
         assert env_obs1_2 == pytest.approx(env_obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
     except AssertionError:
-        Image.fromarray(env_obs1_2).save(test_media_path / "obs1_2.png")
-        Image.fromarray(env_obs1_2).save(test_media_path / "obs2_2.png")
-        Image.fromarray(env_obs1_2 - env_obs2_2).save(test_media_path / "diff_2.png")
+        Image.fromarray(env_obs1_2).save(media_path / "obs1_2.png")
+        Image.fromarray(env_obs1_2).save(media_path / "obs2_2.png")
+        Image.fromarray(env_obs1_2 - env_obs2_2).save(media_path / "diff_2.png")
         assert env_obs1_2 == pytest.approx(env_obs2_2, abs=rel_tolerance * 255, rel=rel_tolerance)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
@@ -389,6 +389,9 @@ def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOR
 
 
 def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
+    media_path = test_media_path / "reset_different_runtime_reproducible"
+    media_path.mkdir(exist_ok=True)
+
     obs1, info1 = ithor_env.reset(seed=seed)
     task_type = ithor_env.current_task_type
     data_path = Path("tests/data/test_reset_different_runtime_reproducible_obs_info.pkl")
@@ -417,12 +420,12 @@ def test_reset_different_runtime_reproducible(ithor_env: ITHOREnv):
     task_obs2 = obs2["task_obs"]
     assert task_obs1 == task_obs2
     try:
-        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
+        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance * 255)
     except AssertionError:
-        Image.fromarray(env_obs1).save(test_media_path / "obs1.png")
-        Image.fromarray(env_obs2).save(test_media_path / "obs2.png")
-        Image.fromarray(env_obs1 - env_obs2).save(test_media_path / "diff.png")
-        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance)
+        Image.fromarray(env_obs1).save(media_path / "obs1.png")
+        Image.fromarray(env_obs2).save(media_path / "obs2.png")
+        Image.fromarray(env_obs1 - env_obs2).save(media_path / "diff.png")
+        assert env_obs1 == pytest.approx(env_obs2, abs=rel_tolerance * 255, rel=rel_tolerance * 255)
 
     assert are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
 

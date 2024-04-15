@@ -24,9 +24,16 @@ from rl_ai2thor.envs.actions import (
     ActionCategory,
     EnvActionName,
     EnvironmentAction,
+    UnknownActionCategoryError,
 )
 from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, TaskBlueprint, UndefinedTask
+from rl_ai2thor.envs.tasks.tasks import (
+    ALL_TASKS,
+    NoTaskBlueprintError,
+    TaskBlueprint,
+    UndefinedTask,
+    UnknownTaskTypeError,
+)
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
@@ -476,39 +483,6 @@ class ITHOREnv(
 
 
 # %% === Exceptions ===
-class UnknownActionCategoryError(ValueError):
-    """Exception raised for unknown action categories in environment mode config."""
-
-    def __init__(self, action_category: str) -> None:
-        self.action_category = action_category
-        super().__init__(
-            f"Unknown action category '{action_category}' in environment mode config. "
-            f"Available action categories are {[category.value for category in ActionCategory]}."
-        )
-
-
-class UnknownTaskTypeError(ValueError):
-    """Exception raised for unknown task types in environment mode config."""
-
-    def __init__(self, task_type: str) -> None:
-        self.task_type = task_type
-        super().__init__(
-            f"Unknown task type '{task_type}' in environment mode config."
-            f"Available tasks are {list(ALL_TASKS.keys())}."
-            f"If you have defined a new task, make sure to add it to the ALL_TASKS dictionary of the envs.tasks.tasks module."
-        )
-
-
-class NoTaskBlueprintError(Exception):
-    """Exception raised when no task blueprint is found in the environment mode config."""
-
-    def __init__(self, config: dict[str, Any]) -> None:
-        self.config = config
-
-    def __str__(self) -> str:
-        return f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {self.config}."
-
-
 class NoCompatibleSceneError(ValueError):
     """
     Exception raised when no compatible scene is found to instantiate a task from a task blueprint.

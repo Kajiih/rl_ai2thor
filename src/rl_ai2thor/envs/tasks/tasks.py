@@ -40,11 +40,11 @@ from rl_ai2thor.envs.tasks.items import (
     TaskItem,
 )
 from rl_ai2thor.envs.tasks.relations import (
-    DuplicateRelationsError,
     RelationParam,
     RelationTypeId,
     relation_type_id_to_relation,
 )
+from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
@@ -1248,3 +1248,26 @@ ALL_TASKS = {
     "Pickup": Pickup,
     "Open": Open,
 }
+
+
+# %% === Exceptions ===
+class UnknownTaskTypeError(ValueError):
+    """Exception raised for unknown task types in environment mode config."""
+
+    def __init__(self, task_type: str) -> None:
+        self.task_type = task_type
+        super().__init__(
+            f"Unknown task type '{task_type}' in environment mode config."
+            f"Available tasks are {list(ALL_TASKS.keys())}."
+            f"If you have defined a new task, make sure to add it to the ALL_TASKS dictionary of the envs.tasks.tasks module."
+        )
+
+
+class NoTaskBlueprintError(Exception):
+    """Exception raised when no task blueprint is found in the environment mode config."""
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        self.config = config
+
+    def __str__(self) -> str:
+        return f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {self.config}."

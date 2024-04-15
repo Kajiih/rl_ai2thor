@@ -7,7 +7,6 @@ import pytest
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 from rl_ai2thor.envs.wrappers import (
     ChannelFirstObservationWrapper,
-    MoreThanOneArgumentValueError,
     MoreThanOneTaskBlueprintError,
     NormalizeActionWrapper,
     NotSimpleActionEnvironmentMode,

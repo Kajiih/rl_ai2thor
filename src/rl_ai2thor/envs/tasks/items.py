@@ -15,7 +15,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjMetadata,
     SimObjProp,
 )
-from rl_ai2thor.envs.tasks.relations import DuplicateRelationsError
+from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, ItemProp, ItemPropValue
@@ -640,6 +640,7 @@ class ItemOverlapClass[T: Hashable]:
 
 
 # %% === Exceptions ===
+# TODO: Unused; Replace by a warning?
 class NoCandidateError(Exception):
     """
     Exception raised when no candidate is found for an item.

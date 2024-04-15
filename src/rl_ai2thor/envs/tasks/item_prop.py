@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Container
-from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -135,7 +134,7 @@ class UndefinedPSF(BasePSF[Any]):
 
     def __call__(self, prop_value: Any) -> bool:
         """Return False."""
-        raise CalledUndefinedPSFError(prop_value)
+        raise UndefinedPSFCalledError(prop_value)
 
 
 type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
@@ -534,7 +533,7 @@ obj_prop_id_to_item_prop = {
 
 
 # %% === Exceptions ===
-class CalledUndefinedPSFError(Exception):
+class UndefinedPSFCalledError(Exception):
     """Exception raised when an UndefinedPSF is called."""
 
     def __init__(self, prop_value: Any) -> None:
