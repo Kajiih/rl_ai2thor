@@ -295,7 +295,6 @@ class GraphTask[T: Hashable](BaseTask):
         self.auxiliary_items: frozenset[TaskItem[str]]
         self.max_task_advancement: float
 
-    # TODO? Add check to make sure the task is feasible?
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
@@ -470,7 +469,7 @@ class GraphTask[T: Hashable](BaseTask):
 
         To compute the task advancement, we consider every interesting global assignment
         of objects to the items. A global assignment is a dictionary mapping each item of
-        the task to an object in the scene (as opposed to a a overlap class assignment).
+        the task to an object in the scene (as opposed to a an overlap class assignment).
         To construct the set of global assignments, we take the cartesian product of the
         assignments of the overlap classes. Interesting global assignments are the ones
         constructed with only interesting overlap class assignments.
@@ -493,6 +492,7 @@ class GraphTask[T: Hashable](BaseTask):
         # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
         if scene_objects_dict is None:
             scene_objects_dict = {obj["objectId"]: obj for obj in event.metadata["objects"]}
+
         overlap_classes_assignment_data = [
             overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]

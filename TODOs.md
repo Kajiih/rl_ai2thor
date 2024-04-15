@@ -47,7 +47,7 @@
 #### Implementing auxiliary goals
 
 - [ ] Adding auxiliary properties' candidate required prop
-- [ ] Adding auxiliary items candidates during scene reset
+- [x] Adding auxiliary items candidates during scene reset
 - [ ] More....
 
 - [ ] Implement a more general item prop class that doesn't directly depend on an ai2thor object's property

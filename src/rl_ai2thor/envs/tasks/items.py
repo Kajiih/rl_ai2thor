@@ -260,8 +260,8 @@ class TaskItem[T: Hashable]:
             of the objects in the scene to their metadata.
 
         Returns:
-            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
-                Results of each object for the item properties.
+            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]): Results of each
+                object for the item properties.
             candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
         """
@@ -357,14 +357,14 @@ class TaskItem[T: Hashable]:
 
         Returns:
             interesting_candidates (set[SimObjId]): Set of interesting candidates for the item.
-            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
-                Results of each object for the item properties.
+            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]): Results of each
+                object for the item properties.
             candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            candidates_properties_scores (dict[SimObjId, int]):
-                Property scores of each object for the item.
-            candidates_relations_scores (dict[SimObjId, int]):
-                Relation scores of each object for the item.
+            candidates_properties_scores (dict[SimObjId, int]): Property scores of each object for
+                the item.
+            candidates_relations_scores (dict[SimObjId, int]): Relation scores of each object for
+                the item.
         """
         # Compute the results of each object for the item
         candidates_properties_results, candidates_relations_results = self._compute_all_candidates_results(
@@ -375,6 +375,12 @@ class TaskItem[T: Hashable]:
         candidates_properties_scores, candidates_relations_scores = self._compute_all_candidates_scores(
             candidates_properties_results, candidates_relations_results
         )
+
+        # Compute the results of each auxiliary item for the items
+        # TODO: Implement this
+
+        # Compute the results of each auxiliary property for the items
+        # TODO: Implement this
 
         # Remove the candidates that have a stronger alternative
         interesting_candidates = list(self.candidate_ids)
@@ -622,6 +628,9 @@ class ItemOverlapClass[T: Hashable]:
             for assignment_tuple in compatible_global_assignments_set
         ]
 
+    # I think there is a mistake in the computation of interesting candidates because it also
+    # depends on the other items of the overlap class and not the item and its related items.
+    # TODO: Check this and fix if needed
     def compute_interesting_assignments(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
