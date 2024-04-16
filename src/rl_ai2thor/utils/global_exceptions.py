@@ -34,8 +34,8 @@ class DuplicateRelationsError[T](Exception):
 
         Args:
             relation_type_id (RelationTypeId): The type of relation.
-            main_item_id (T): The id of the main item.
-            related_item_id (T): The id of the related item.
+            main_item_id (ItemId): The id of the main item.
+            related_item_id (ItemId): The id of the related item.
             task_description_dict (TaskDict[T]): Full task description dictionary.
         """
         self.relation_type_id = relation_type_id

@@ -7,12 +7,12 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Hashable
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, PickupableProp, ReceptacleProp, SingleValuePSF
+from rl_ai2thor.envs.tasks.items import CandidateId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ type RelationParam = int | float | bool
 
 # %% === Relations ===
 # TODO? Add main_candidates_ids and related_candidates_ids attributes to the relation and remove the dependency on the items?
-class Relation[T: Hashable](ABC):
+class Relation(ABC):
     """
     A relation between two items in the definition of a task.
 
@@ -51,14 +51,14 @@ class Relation[T: Hashable](ABC):
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: ItemFixedProp | None = None
 
-    def __init__(self, main_item: TaskItem[T], related_item: TaskItem[T]) -> None:
+    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         self.main_item = main_item
         self.related_item = related_item
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
         # === Type Annotations ===
-        self.main_item: TaskItem[T]
-        self.related_item: TaskItem[T]
+        self.main_item: TaskItem
+        self.related_item: TaskItem
 
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
@@ -177,7 +177,7 @@ class Relation[T: Hashable](ABC):
         self,
         main_obj_metadata: SimObjMetadata,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> set[SimObjId]:
+    ) -> set[CandidateId]:
         """
         Return related item's candidate's ids that satisfy the relation with the given main object.
 
@@ -187,7 +187,7 @@ class Relation[T: Hashable](ABC):
             of the objects in the scene to their metadata.
 
         Returns:
-            set[SimObjId]: The ids of the related item's candidate's that satisfy the relation.
+            set[CandidateId]: The ids of the related item's candidate's that satisfy the relation.
         """
         satisfying_related_object_ids = {
             related_object_id
@@ -200,7 +200,7 @@ class Relation[T: Hashable](ABC):
     def compute_main_candidates_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[SimObjId, set[SimObjId]]:
+    ) -> dict[CandidateId, set[CandidateId]]:
         """
         Return the set of related item's candidate's ids that satisfy the relation for each main object's candidate.
 
@@ -209,7 +209,7 @@ class Relation[T: Hashable](ABC):
                 of the objects in the scene to their metadata.
 
         Returns:
-            main_candidates_results (dict[SimObjId, set[SimObjId]]): The set of related item's
+            main_candidates_results (dict[CandidateId, set[CandidateId]]): The set of related item's
                 candidate's ids that satisfy the relation for each main object's candidate.
         """
         return {
@@ -223,8 +223,8 @@ class Relation[T: Hashable](ABC):
     # TODO: Implement a weighted score
     @staticmethod
     def compute_main_candidates_scores(
-        main_candidates_results: dict[SimObjId, set[SimObjId]],
-    ) -> dict[SimObjId, float]:
+        main_candidates_results: dict[CandidateId, set[CandidateId]],
+    ) -> dict[CandidateId, float]:
         """
         Return the score of each main object's candidate based on the related item's candidate's ids that satisfy the relation.
 

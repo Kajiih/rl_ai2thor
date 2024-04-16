@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -38,6 +37,8 @@ from rl_ai2thor.envs.tasks.item_prop import (
 )
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
+    CandidateId,
+    ItemId,
     ItemOverlapClass,
     TaskItem,
 )
@@ -49,6 +50,8 @@ from rl_ai2thor.envs.tasks.relations import (
 from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from ai2thor.controller import Controller
     from ai2thor.server import Event
 
@@ -199,22 +202,22 @@ class UndefinedTask(BaseTask):
 
 
 type TaskArg = ItemPropValue | int
-type RelationsDict[T: Hashable] = dict[T, dict[RelationTypeId, dict[str, RelationParam]]]
-type PropertiesDict = dict[SimObjProp, PropSatFunction]
-type TaskDict[T: Hashable] = dict[T, TaskItemData[T]]
+type RelationsDict = dict[ItemId, dict[RelationTypeId, dict[str, RelationParam]]]
+type PropertiesDict = dict[SimObjProp, PropSatFunction[ItemPropValue]]
+type TaskDict = dict[ItemId, TaskItemData]
 
 
 @dataclass
-class TaskItemData[T]:
+class TaskItemData:
     """Description of a task item."""
 
     properties: PropertiesDict = field(default_factory=dict)
-    relations: RelationsDict[T] = field(default_factory=dict)
+    relations: RelationsDict = field(default_factory=dict)
 
 
 # TODO: Add support for weighted properties and relations
 # TODO: Add support for agent properties
-class GraphTask[T: Hashable](BaseTask):
+class GraphTask(BaseTask):
     """
     Base class for graph tasks.
 
@@ -242,22 +245,24 @@ class GraphTask[T: Hashable](BaseTask):
             },
         }
 
-    This task contains 2 items defined by their unique identifiers (of generic type "T")
-    in the description dictionary; "receptacle_plate" and "placed_apple". Both items have
-    a required type (others available properties are available in ObjFixedPropId and
-    ObjVariablePropId enums) and placed_apple is related to receptacle_plate one relation
-    by the "contained_in relation (other relations available in RelationTypeId enum).
-    Note: Inverse relations are automatically added to the graph, so it is not necessary
-    to add them manually when creating the task.
+    This task contains 2 items defined by their unique identifiers in the description dictionary;
+    "receptacle_plate" and "placed_apple". Both items have a required type (others available
+    properties are available in ObjFixedPropId and ObjVariablePropId enums) and placed_apple is
+    related to receptacle_plate one relation by the "contained_in relation (other relations
+    available in RelationTypeId enum).
+
+    Note: Inverse relation
+    Inverse relations are automatically added to the graph, so you should not add them in the task
+    description dictionary because it will raise an error.
 
     Attributes:
-        task_description_dict (TaskDict[T]): Dictionary describing the items and their
+        task_description_dict (TaskDict): Dictionary describing the items and their
             properties and relations.
         items (List[TaskItem]): List of items of the task.
-        items_by_id (Dict[T, TaskItem]): Dictionary mapping item ids to their corresponding TaskItem.
+        items_by_id (Dict[ItemId, TaskItem]): Dictionary mapping item ids to their corresponding TaskItem.
         overlap_classes (List[ItemOverlapClass]): List of overlap classes containing items
             with overlapping candidates.
-        auxiliary_items (FrozenSet[TaskItem[str]]): Set of items that are not part of the task
+        auxiliary_items (FrozenSet[TaskItem]): Set of items that are not part of the task
             but that are necessary for certain item's properties or relations to be satisfied.
         max_task_advancement (float): Maximum task advancement possible for the task.
 
@@ -266,7 +271,7 @@ class GraphTask[T: Hashable](BaseTask):
             Reset the task with the information of the event.
         get_task_advancement(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
             Return the task advancement and whether the task is completed.
-        full_initialize_items_and_relations_from_dict(task_description_dict: TaskDict) -> list[TaskItem[T]]
+        full_initialize_items_and_relations_from_dict(task_description_dict: TaskDict) -> list[TaskItem]
             Create and initialize TaskItems for the graph task.
     """
 
@@ -274,13 +279,13 @@ class GraphTask[T: Hashable](BaseTask):
 
     def __init__(
         self,
-        task_description_dict: TaskDict[T],
+        task_description_dict: TaskDict,
     ) -> None:
         """
         Initialize the task graph as defined in the task description dictionary.
 
         Args:
-            task_description_dict (TaskDict[T]): Dictionary describing the items and their
+            task_description_dict (TaskDict): Dictionary describing the items and their
                 properties and relations.
         """
         self.task_description_dict = task_description_dict
@@ -288,11 +293,11 @@ class GraphTask[T: Hashable](BaseTask):
         self.items_by_id = {item.id: item for item in self.items}
 
         # === Type annotations ===
-        self.task_description_dict: TaskDict[T]
-        self.items: list[TaskItem[T]]
-        self.items_by_id: dict[T, TaskItem[T]]
-        self.overlap_classes: list[ItemOverlapClass[T]]
-        self.auxiliary_items: frozenset[TaskItem[str]]
+        self.task_description_dict: TaskDict
+        self.items: list[TaskItem]
+        self.items_by_id: dict[ItemId, TaskItem]
+        self.overlap_classes: list[ItemOverlapClass]
+        self.auxiliary_items: frozenset[TaskItem]
         self.max_task_advancement: float
 
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
@@ -345,7 +350,7 @@ class GraphTask[T: Hashable](BaseTask):
 
         # Keep only candidates that are in at least one compatible assignment
         for item in self.items:
-            item.candidate_ids = {assignment[item] for assignment in compatible_assignments}
+            item.candidate_ids = {CandidateId(assignment[item]) for assignment in compatible_assignments}
 
         # Initialize overlap classes and keep only assignments that are part of one of the global
         # compatible assignments
@@ -360,9 +365,7 @@ class GraphTask[T: Hashable](BaseTask):
 
         return True, *self.compute_task_advancement(event, scene_objects_dict)
 
-    def _compute_compatible_assignments(
-        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
-    ) -> list[Assignment[T]]:
+    def _compute_compatible_assignments(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> list[Assignment]:
         """
         Compute the compatible assignments of the items in the scene.
 
@@ -371,7 +374,7 @@ class GraphTask[T: Hashable](BaseTask):
                 their metadata.
 
         Returns:
-            compatible_assignments (list[Assignment[T]]): List of compatible assignments.
+            compatible_assignments (list[Assignment]): List of compatible assignments.
         """
         temp_overlap_classes = self._compute_overlap_classes(self.items)
         if not all(overlap_class.valid_assignments for overlap_class in temp_overlap_classes):
@@ -382,7 +385,7 @@ class GraphTask[T: Hashable](BaseTask):
         )
         compatible_assignments = []
         for assignment_product in valid_assignments_product:
-            global_assignment: Assignment[T] = {
+            global_assignment: Assignment = {
                 item: candidate_id
                 for overlap_class_assignment in assignment_product
                 for item, candidate_id in overlap_class_assignment.items()
@@ -411,17 +414,17 @@ class GraphTask[T: Hashable](BaseTask):
         return compatible_assignments
 
     @staticmethod
-    def _compute_overlap_classes(items: list[TaskItem[T]]) -> list[ItemOverlapClass[T]]:
+    def _compute_overlap_classes(items: list[TaskItem]) -> list[ItemOverlapClass]:
         """
         Compute the overlap classes of the items in the scene.
 
         Items must have their candidates initialized before calling this method.
 
         Args:
-            items (list[TaskItem[T]]): List of items.
+            items (list[TaskItem]): List of items.
 
         Returns:
-            overlap_classes (list[ItemOverlapClass[T]]): List of overlap classes.
+            overlap_classes (list[ItemOverlapClass]): List of overlap classes.
         """
         overlap_classes: dict[int, dict[str, Any]] = {}
         for item in items:
@@ -451,7 +454,7 @@ class GraphTask[T: Hashable](BaseTask):
                 }
 
         return [
-            ItemOverlapClass[T](
+            ItemOverlapClass(
                 items=overlap_class["items"],
                 candidate_ids=list(overlap_class["candidate_ids"]),
             )
@@ -499,12 +502,12 @@ class GraphTask[T: Hashable](BaseTask):
         # Extract the interesting assignments, results and scores
         interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
         # Merge the results and scores of the items
-        all_relation_results: dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]] = {
+        all_relation_results: dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]] = {
             item: item_relation_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_relation_results in overlap_class_assignment_data[2].items()
         }
-        all_properties_scores: dict[TaskItem[T], dict[SimObjId, float]] = {
+        all_properties_scores: dict[TaskItem, dict[CandidateId, float]] = {
             item: item_property_score
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_property_score in overlap_class_assignment_data[3].items()
@@ -520,7 +523,7 @@ class GraphTask[T: Hashable](BaseTask):
         # Compute the task advancement for each global assignment
         for assignment_product in assignment_products:
             # Merge the assignments of the overlap classes
-            global_assignment: Assignment[T] = {
+            global_assignment: Assignment = {
                 item: obj_id
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
@@ -537,7 +540,7 @@ class GraphTask[T: Hashable](BaseTask):
                     break
 
         # === Construct the results dictionary ===
-        all_properties_results: dict[TaskItem[T], dict[ItemProp, dict[SimObjId, bool]]] = {
+        all_properties_results: dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]] = {
             item: item_properties_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_properties_results in overlap_class_assignment_data[1].items()
@@ -572,18 +575,18 @@ class GraphTask[T: Hashable](BaseTask):
 
     def compute_assignment_advancement(
         self,
-        global_assignment: Assignment[T],
-        all_relation_results: dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]],
-        all_properties_scores: dict[TaskItem[T], dict[SimObjId, float]],
+        global_assignment: Assignment,
+        all_relation_results: dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]],
+        all_properties_scores: dict[TaskItem, dict[CandidateId, float]],
     ) -> float:
         """
         Compute the task advancement for a given assignment.
 
         Args:
-            global_assignment (Assignment[T]): Assignment of objects to the items.
-            all_relation_results (dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]]):
+            global_assignment (Assignment): Assignment of objects to the items.
+            all_relation_results (dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]]):
                 Results of each object for the relation of each item.
-            all_properties_scores (dict[TaskItem[T], dict[SimObjId, float]]):
+            all_properties_scores (dict[TaskItem, dict[CandidateId, float]]):
                 Property scores of each object for each item.
 
         Returns:
@@ -609,8 +612,8 @@ class GraphTask[T: Hashable](BaseTask):
     # TODO: Add support for overriding relations and keep the most restrictive one
     @staticmethod
     def full_initialize_items_and_relations_from_dict(
-        task_description_dict: TaskDict[T],
-    ) -> list[TaskItem[T]]:
+        task_description_dict: TaskDict,
+    ) -> list[TaskItem]:
         """
         Create and initialize TaskItems for the graph task.
 
@@ -620,8 +623,8 @@ class GraphTask[T: Hashable](BaseTask):
         relations are also added.
 
         Args:
-            task_description_dict (dict[T, dict[Literal["properties", "relations"], dict]]):
-                Dictionary describing the items and their properties and relations.
+            task_description_dict (TaskDict): Dictionary describing the items and their properties
+                and relations.
 
         Returns:
             items (list[TaskItem]): List of the items of the task.
@@ -639,7 +642,7 @@ class GraphTask[T: Hashable](BaseTask):
         }
 
         # === Instantiate relations ===
-        organized_relations: dict[T, dict[T, dict[RelationTypeId, Relation]]] = {
+        organized_relations: dict[ItemId, dict[ItemId, dict[RelationTypeId, Relation]]] = {
             main_item_id: {} for main_item_id in items
         }
 
@@ -706,7 +709,7 @@ class TaskBlueprint:
 
 
 # %% == Alfred tasks ==
-class PlaceNSameIn(GraphTask[str]):
+class PlaceNSameIn(GraphTask):
     """
     Task for placing n objects of the same type in a receptacle.
 
@@ -734,7 +737,7 @@ class PlaceNSameIn(GraphTask[str]):
     @classmethod
     def _create_task_description_dict(
         cls, placed_object_type: SimObjectType, receptacle_type: SimObjectType, n: int = 1
-    ) -> TaskDict[str]:
+    ) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -744,15 +747,16 @@ class PlaceNSameIn(GraphTask[str]):
             n (int): The number of objects to place.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
-        task_description_dict: TaskDict[str] = {
-            "receptacle": TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}),
+        receptacle_id = ItemId("receptacle")
+        task_description_dict: TaskDict = {
+            receptacle_id: TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}),
         }
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"] = TaskItemData(
+            task_description_dict[ItemId(f"placed_object_{i}")] = TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
-                relations={f"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+                relations={receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
             )
 
         return task_description_dict
@@ -800,7 +804,7 @@ class PlaceIn(PlaceNSameInSubclass):
     n = 1
 
 
-class PlaceWithMoveableRecepIn(GraphTask[str]):
+class PlaceWithMoveableRecepIn(GraphTask):
     """
     Task for placing an given object with a given moveable receptacle in a given receptacle.
 
@@ -837,7 +841,7 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
         placed_object_type: SimObjectType,
         pickupable_receptacle_type: SimObjectType,
         receptacle_type: SimObjectType,
-    ) -> TaskDict[str]:
+    ) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -847,19 +851,22 @@ class PlaceWithMoveableRecepIn(GraphTask[str]):
             receptacle_type (SimObjectType): The type of receptacle to place the object in.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
+        receptacle_id = ItemId("receptacle")
+        pickupable_receptacle_id = ItemId("pickupable_receptacle")
+        placed_object_id = ItemId("placed_object")
         return {
-            "receptacle": TaskItemData(
+            receptacle_id: TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)},
             ),
-            "pickupable_receptacle": TaskItemData(
+            pickupable_receptacle_id: TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(pickupable_receptacle_type)},
-                relations={"receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+                relations={receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
             ),
-            "placed_object": TaskItemData(
+            placed_object_id: TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
-                relations={"pickupable_receptacle": {RelationTypeId.CONTAINED_IN: {}}},
+                relations={pickupable_receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
             ),
         }
 
@@ -888,7 +895,7 @@ class PlaceCleanedIn(PlaceIn):
         placed_object_type: SimObjectType,
         receptacle_type: SimObjectType,
         n: int,
-    ) -> TaskDict[str]:
+    ) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -898,11 +905,13 @@ class PlaceCleanedIn(PlaceIn):
             n (int): The number of objects to place.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.IS_DIRTY] = SingleValuePSF(False)
+            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.IS_DIRTY] = (
+                SingleValuePSF(False)
+            )
 
         return task_description_dict
 
@@ -963,7 +972,7 @@ class PlaceHeatedIn(PlaceIn):
         placed_object_type: SimObjectType,
         receptacle_type: SimObjectType,
         n: int,
-    ) -> TaskDict[str]:
+    ) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -973,12 +982,12 @@ class PlaceHeatedIn(PlaceIn):
             n (int): The number of objects to place.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = SingleValuePSF(
-                TemperatureValue.HOT
+            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.TEMPERATURE] = (
+                SingleValuePSF(TemperatureValue.HOT)
             )
 
         return task_description_dict
@@ -1013,7 +1022,7 @@ class PlaceCooledIn(PlaceIn):
         placed_object_type: SimObjectType,
         receptacle_type: SimObjectType,
         n: int,
-    ) -> TaskDict[str]:
+    ) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -1023,12 +1032,12 @@ class PlaceCooledIn(PlaceIn):
             n (int): The number of objects to place.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[f"placed_object_{i}"].properties[SimObjVariableProp.TEMPERATURE] = SingleValuePSF(
-                TemperatureValue.COLD
+            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.TEMPERATURE] = (
+                SingleValuePSF(TemperatureValue.COLD)
             )
 
         return task_description_dict
@@ -1043,7 +1052,7 @@ class PlaceCooledIn(PlaceIn):
         return f"Place cooled {self.placed_object_type} in {self.receptacle_type}"
 
 
-class LookInLight(GraphTask[str]):
+class LookInLight(GraphTask):
     """
     Task for looking at a given object in light.
 
@@ -1067,7 +1076,7 @@ class LookInLight(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, looked_at_object_type: SimObjectType) -> TaskDict[str]:
+    def _create_task_description_dict(cls, looked_at_object_type: SimObjectType) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -1075,21 +1084,23 @@ class LookInLight(GraphTask[str]):
             looked_at_object_type (SimObjectType): The type of object to look at.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
+        light_source_id = ItemId("light_source")
+        looked_at_object_id = ItemId("looked_at_object")
         return {
-            "light_source": TaskItemData(
+            light_source_id: TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: MultiValuePSF(LIGHT_SOURCES),
                     SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
                 },
             ),
-            "looked_at_object": TaskItemData(
+            looked_at_object_id: TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(looked_at_object_type),
                     SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
                 },
-                relations={"light_source": {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
+                relations={light_source_id: {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
             ),
         }
 
@@ -1131,7 +1142,7 @@ class LookInLight(GraphTask[str]):
 
 
 # %% === Custom tasks ===
-class Pickup(GraphTask[str]):
+class Pickup(GraphTask):
     """Task for picking up a given object."""
 
     def __init__(self, picked_up_object_type: SimObjectType) -> None:
@@ -1147,7 +1158,7 @@ class Pickup(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, picked_up_object_type: SimObjectType) -> TaskDict[str]:
+    def _create_task_description_dict(cls, picked_up_object_type: SimObjectType) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -1155,10 +1166,10 @@ class Pickup(GraphTask[str]):
             picked_up_object_type (SimObjectType): The type of object to pick up.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         return {
-            "picked_up_object": TaskItemData(
+            ItemId("picked_up_object"): TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(picked_up_object_type),
                     SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
@@ -1177,7 +1188,7 @@ class Pickup(GraphTask[str]):
 
 
 # TODO: Fix this because you can't load tasks without arguments
-class OpenAny(GraphTask[str]):
+class OpenAny(GraphTask):
     """Task for opening any object."""
 
     def __init__(self) -> None:
@@ -1186,15 +1197,15 @@ class OpenAny(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls) -> TaskDict[str]:
+    def _create_task_description_dict(cls) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         return {
-            "opened_object": TaskItemData(
+            ItemId("opened_object"): TaskItemData(
                 properties={SimObjVariableProp.IS_OPEN: SingleValuePSF(True)},
             )
         }
@@ -1209,7 +1220,7 @@ class OpenAny(GraphTask[str]):
         return "Open any object"
 
 
-class Open(GraphTask[str]):
+class Open(GraphTask):
     """Task for opening a given object."""
 
     def __init__(self, opened_object_type: SimObjectType) -> None:
@@ -1225,7 +1236,7 @@ class Open(GraphTask[str]):
         super().__init__(task_description_dict)
 
     @classmethod
-    def _create_task_description_dict(cls, opened_object_type: SimObjectType) -> TaskDict[str]:
+    def _create_task_description_dict(cls, opened_object_type: SimObjectType) -> TaskDict:
         """
         Create the task description dictionary for the task.
 
@@ -1233,10 +1244,10 @@ class Open(GraphTask[str]):
             opened_object_type (SimObjectType): The type of object to open.
 
         Returns:
-            task_description_dict (TaskDict[str]): Task description dictionary.
+            task_description_dict (TaskDict): Task description dictionary.
         """
         return {
-            "opened_object": TaskItemData(
+            ItemId("opened_object"): TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(opened_object_type),
                     SimObjVariableProp.IS_OPEN: SingleValuePSF(True),

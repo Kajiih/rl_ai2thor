@@ -22,7 +22,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjProp,
     SimObjVariableProp,
 )
-from rl_ai2thor.envs.tasks.items import TaskItem
+from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
 # %% === Property value enums ==
@@ -44,7 +44,7 @@ class FillableLiquid(StrEnum):
 
 
 ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
-# type AuxItems = frozenset[TaskItem[str]]
+# type AuxItems = frozenset[TaskItem]
 # type AuxProps = frozenset[ItemVariableProp]
 
 
@@ -175,7 +175,7 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         candidate_required_prop (ItemFixedProp[T2] | None): The candidate required property.
         auxiliary_properties (set[ItemVariableProp] | None): The set of auxiliary properties that
             should be first satisfied in order to satisfy the main property.
-        auxiliary_items (set[TaskItem[str]] | None): The set of auxiliary items whose properties
+        auxiliary_items (set[TaskItem] | None): The set of auxiliary items whose properties
             should be first satisfied by any object in the scene in order to satisfy the main
             property. Those items are not considered in the item-candidates assignments of the task
             since they don't represent a unique task item but only an auxiliary item for a property.
@@ -185,7 +185,7 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     target_ai2thor_property: SimObjProp
     candidate_required_prop: ItemFixedProp[T2] | None = None
     auxiliary_properties: frozenset[ItemVariableProp] | None = None
-    auxiliary_items: frozenset[TaskItem[str]] | None = None
+    auxiliary_items: frozenset[TaskItem] | None = None
 
     def __init__(self, target_satisfaction_function: PropSatFunction[T1] | ItemPropValue) -> None:
         """Initialize the Property object."""
@@ -221,8 +221,8 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     def compute_candidates_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-        candidates_ids: set[SimObjId],
-    ) -> dict[SimObjId, bool]:
+        candidates_ids: set[CandidateId],
+    ) -> dict[CandidateId, bool]:
         """
         Return the results of the property satisfaction for the candidates.
 
@@ -232,10 +232,10 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         Args:
             scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
                 of the objects in the scene to their metadata.
-            candidates_ids (set[SimObjId]): The set of candidate ids.
+            candidates_ids (set[CandidateId]): The set of candidate ids.
 
         Returns:
-            candidates_results (dict[SimObjId, bool]): Dictionary mapping the candidate ids to
+            candidates_results (dict[CandidateId, bool]): Dictionary mapping the candidate ids to
                 a boolean indicating if the candidate satisfies the property.
         """
         return {
@@ -245,7 +245,7 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     # TODO: Delete?
     # TODO: Implement a weighted score
     @staticmethod
-    def compute_candidates_scores(candidates_results: dict[SimObjId, bool]) -> dict[SimObjId, float]:
+    def compute_candidates_scores(candidates_results: dict[CandidateId, bool]) -> dict[CandidateId, float]:
         """
         Return the scores of the candidates based on the properties results.
 
@@ -253,11 +253,11 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         are the scores of the candidates.
 
         Args:
-            candidates_results (dict[SimObjId, bool]): Dictionary mapping the candidate ids to
+            candidates_results (dict[CandidateId, bool]): Dictionary mapping the candidate ids to
                 a boolean indicating if the candidate satisfies the property.
 
         Returns:
-            candidates_scores (dict[SimObjId, float]): Dictionary mapping the candidate ids to
+            candidates_scores (dict[CandidateId, float]): Dictionary mapping the candidate ids to
                 their scores.
         """
         return {
