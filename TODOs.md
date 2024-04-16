@@ -54,6 +54,7 @@
 - [ ] Same with specific TaskItems for auxiliary items
 - [ ] Same with specific ItemProp for auxiliary prop
 - [ ] Use a NewType for candidate id
+- [ ] Stop using generic type [T] in TaskItem
 
 - [ ] Implement a more general item prop class that doesn't directly depend on an ai2thor object's property
 - [x] Change `OBJECT_TYPES_DATA` to be a dataclass

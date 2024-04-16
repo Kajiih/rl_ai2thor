@@ -217,6 +217,7 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     # def __hash__(self) -> int:
     #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
 
+    # TODO: Delete?
     def compute_candidates_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
@@ -241,6 +242,7 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
             candidate_id: self.is_object_satisfying(scene_objects_dict[candidate_id]) for candidate_id in candidates_ids
         }
 
+    # TODO: Delete?
     # TODO: Implement a weighted score
     @staticmethod
     def compute_candidates_scores(candidates_results: dict[SimObjId, bool]) -> dict[SimObjId, float]:

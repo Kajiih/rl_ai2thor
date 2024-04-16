@@ -196,6 +196,7 @@ class Relation[T: Hashable](ABC):
         }
         return satisfying_related_object_ids
 
+    # TODO: Delete?
     def compute_main_candidates_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
@@ -218,6 +219,7 @@ class Relation[T: Hashable](ABC):
             for main_candidate_id in self.main_item.candidate_ids
         }
 
+    # TODO: Delete?
     # TODO: Implement a weighted score
     @staticmethod
     def compute_main_candidates_scores(

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, NewType
 
 from rl_ai2thor.envs.sim_objects import (
     SimObjId,
@@ -23,6 +23,187 @@ if TYPE_CHECKING:
 
 # type PropResults = dict[ItemProp, dict[SimObjId, bool]]
 # type RelationResults[T] = dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]
+
+CandidateId = NewType("CandidateId", SimObjId)
+
+
+class CandidateData:
+    """
+    Class storing the data of an item's candidate.
+
+    Has to be updated at each step to take into account the changes in the scene and compute the
+    results and scores of the candidate.
+
+    TODO: Implement weighted properties
+    TODO: Implement weighted relations
+    TODO: Implement properties and relations order
+
+    Attributes:
+        item (TaskItem): The item of the candidate.
+        id (CandidateId): The ID of the candidate.
+        metadata (SimObjMetadata): The metadata of the candidate.
+        properties_results (dict[ItemProp, bool]): Dictionary mapping the item's properties to the
+            results of the property satisfaction for the candidate.
+        relations_results (dict[Relation, set[SimObjId]]): Dictionary mapping the item's relations
+            to the set of satisfying related item's candidate ids for the candidate.
+        property_score (float): The score of the candidate for the item's properties, sum of the
+            scores of the properties.
+        relation_max_score (float): The maximum score of the candidate for the item's relations,
+            sum of the scores of the relations where there is at least one semi-satisfying related
+            item's candidate (i.e. the set of satisfying objects is not empty but they might not be
+            part of the assignment).
+        relation_min_score (float): The minimum score of the candidate for the item's relations,
+            sum of the scores of the relations where all related item's candidate are satisfying.
+    """
+
+    def __init__(self, c_id: CandidateId, item: TaskItem) -> None:
+        """
+        Initialize the candidate's id and item.
+
+        Args:
+            c_id (CandidateId): The ID of the candidate.
+            item (TaskItem): The item of the candidate.
+        """
+        self.item = item
+        self.id = c_id
+
+        # === Type annotations ===
+        self.item: TaskItem
+        self.id: CandidateId
+        self.metadata: SimObjMetadata
+        self.properties_results: dict[ItemProp, bool]
+        self.relations_results: dict[Relation, set[SimObjId]]
+        self.property_score: float
+        self.relation_max_score: float
+        self.relation_min_score: float
+
+    @property
+    def _properties(self) -> set[ItemProp]:
+        """
+        Get the properties of the item.
+
+        Returns:
+            set[ItemProp]: The properties of the item.
+        """
+        return self.item.properties
+
+    @property
+    def _relations(self) -> set[Relation]:
+        """
+        Get the relations of the item.
+
+        Returns:
+            set[Relation]: The relations of the item.
+        """
+        return self.item.relations
+
+    def update(self, scene_object_dict: dict[SimObjId, SimObjMetadata]) -> None:
+        """
+        Update the candidate data with the given scene object dictionary.
+
+        Args:
+            scene_object_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
+        """
+        self.metadata = scene_object_dict[self.id]
+        self.properties_results = self._compute_properties_results()
+        self.relations_results = self._compute_relations_results(scene_object_dict)
+        self.property_score = self._compute_property_score(self.properties_results)
+        self.relation_max_score = self._compute_relation_max_score(self.relations_results)
+        self.relation_min_score = self._compute_relation_min_score(self.relations_results)
+
+    def _compute_properties_results(self) -> dict[ItemProp, bool]:
+        """
+        Return the results dictionary of each properties for the candidate.
+
+        Returns:
+            properties_results (dict[ItemProp, bool]): Dictionary mapping the item properties to the
+                results of the property satisfaction for the candidate.
+        """
+        return {prop: prop.is_object_satisfying(self.metadata) for prop in self._properties}
+
+    def _compute_relations_results(
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> dict[Relation, set[SimObjId]]:
+        """
+        Return the results dictionary of each relations for the candidate as the main item.
+
+        Returns:
+            relations_results (dict[Relation, set[SimObjId]]): Dictionary mapping the item's relations
+                to the set of satisfying related item's candidate ids for the candidate.
+        """
+        return {
+            relation: relation.compute_satisfying_related_object_ids(self.metadata, scene_objects_dict)
+            for relation in self._relations
+        }
+
+    # TODO: Implement weighted properties
+    @staticmethod
+    def _compute_property_score(properties_results: dict[ItemProp, bool]) -> float:
+        """
+        Return the score of the candidate for the item's properties.
+
+        Args:
+            properties_results (dict[ItemProp, bool]): Dictionary mapping the item properties to the
+                results of the property satisfaction for the candidate.
+
+        Returns:
+            property_score (float): The score of the candidate for the item's properties, sum of the
+                scores of the properties.
+        """
+        return sum(properties_results.values())
+
+    # TODO: Implement weighted relations
+    @staticmethod
+    def _compute_relation_max_score(relations_results: dict[Relation, set[SimObjId]]) -> float:
+        """
+        Return the maximum score of the candidate for the item's relations.
+
+        The maximum score of the candidate for the item's relations is the sum of the scores of the
+        relations where there is at least one semi-satisfying related item's candidate (i.e. the set
+        of satisfying objects is not empty but they might not be part of the assignment).
+
+        Args:
+            relations_results (dict[Relation, set[SimObjId]]): Dictionary mapping the item's relations
+                to the set of satisfying related item's candidate ids for the candidate.
+
+        Returns:
+            relation_max_score (float): The maximum score of the candidate for the item's relations,
+            sum of the scores of the relations where there is at least one semi-satisfying related
+            item's candidate (i.e. the set of satisfying objects is not empty but they might not be
+            part of the assignment).
+        """
+        return sum(1 for relation in relations_results if relations_results[relation])
+
+    # TODO: Implement weighted relations
+    @staticmethod
+    def _compute_relation_min_score(relations_results: dict[Relation, set[SimObjId]]) -> float:
+        """
+        Return the minimum score of the candidate for the item's relations.
+
+        The minimum score of the candidate for the item's relations is the sum of the scores of the
+        relations where all related item's candidate are satisfying (so the relation will be
+        satisfied whatever the assignment).
+
+        Args:
+            relations_results (dict[Relation, set[SimObjId]]): Dictionary mapping the item's relations
+                to the set of satisfying related item's candidate ids for the candidate.
+
+        Returns:
+            relation_min_score (float): The minimum score of the candidate for the item's relations,
+            sum of the scores of the relations where all related item's candidate are satisfying.
+        """
+        return sum(
+            1
+            for relation in relations_results
+            if len(relations_results[relation]) == len(relation.related_item.candidate_ids)
+        )
+
+    def __str__(self) -> str:
+        return f"CandidateData({self.id})"
+
+    def __repr__(self) -> str:
+        return f"CandidateData({self.item.id}, {self.id})"
 
 
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
@@ -359,7 +540,7 @@ class TaskItem[T: Hashable]:
             interesting_candidates (set[SimObjId]): Set of interesting candidates for the item.
             candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]): Results of each
                 object for the item properties.
-            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[Relation, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
             candidates_properties_scores (dict[SimObjId, float]): Property scores of each object for
                 the item.
