@@ -51,6 +51,10 @@
 - [ ] More....
 
 - [ ] In TaskItem class, separate FixedItemProp which are used only as candidate required property and the variable props which are used only for advancement computation
+- [ ] Same with specific TaskItems for auxiliary items
+- [ ] Same with specific ItemProp for auxiliary prop
+- [ ] Use a NewType for candidate id
+
 - [ ] Implement a more general item prop class that doesn't directly depend on an ai2thor object's property
 - [x] Change `OBJECT_TYPES_DATA` to be a dataclass
 - [ ] Delete the main and related item information from the relations

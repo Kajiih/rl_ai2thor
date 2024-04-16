@@ -218,10 +218,12 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
 
     def compute_candidates_results(
-        self, scene_objects_dict: dict[SimObjId, SimObjMetadata], candidates_ids: set[SimObjId]
+        self,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+        candidates_ids: set[SimObjId],
     ) -> dict[SimObjId, bool]:
         """
-        Compute the results of the property satisfaction for the candidates.
+        Return the results of the property satisfaction for the candidates.
 
         The results are stored in a dictionary where the keys are the candidates ids and the values
         are booleans indicating if the candidate satisfies the property.
@@ -237,6 +239,27 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         """
         return {
             candidate_id: self.is_object_satisfying(scene_objects_dict[candidate_id]) for candidate_id in candidates_ids
+        }
+
+    # TODO: Implement a weighted score
+    @staticmethod
+    def compute_candidates_scores(candidates_results: dict[SimObjId, bool]) -> dict[SimObjId, float]:
+        """
+        Return the scores of the candidates based on the properties results.
+
+        The scores are stored in a dictionary where the keys are the candidates ids and the values
+        are the scores of the candidates.
+
+        Args:
+            candidates_results (dict[SimObjId, bool]): Dictionary mapping the candidate ids to
+                a boolean indicating if the candidate satisfies the property.
+
+        Returns:
+            candidates_scores (dict[SimObjId, float]): Dictionary mapping the candidate ids to
+                their scores.
+        """
+        return {
+            candidate_id: int(candidate_satisfies) for candidate_id, candidate_satisfies in candidates_results.items()
         }
 
 

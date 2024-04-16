@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, ItemProp, ItemPropValue, ItemVariableProp
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
-type PropResults = dict[SimObjProp, dict[SimObjId, bool]]
-type RelationResults[T] = dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]
+# type PropResults = dict[ItemProp, dict[SimObjId, bool]]
+# type RelationResults[T] = dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]
 
 
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
@@ -148,8 +148,8 @@ class TaskItem[T: Hashable]:
         Return a dictionary containing the properties required for an object to be a candidate for the item.
 
         Returns:
-            candidate_properties (set[ItemFixedProp[ItemPropValue]]): Set of the item's
-                candidate required properties.
+            candidate_properties (set[ItemFixedProp[ItemPropValue]]): Set of the item's candidate
+                required properties.
         """
         return self._prop_candidate_required_properties | self._rel_candidate_required_properties
 
@@ -170,8 +170,8 @@ class TaskItem[T: Hashable]:
         Return the set of candidate ids of the item.
 
         Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-                of the objects in the scene to their metadata.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
 
         Returns:
             candidate_ids (set[SimObjId]): Set of candidate ids of the item.
@@ -187,7 +187,8 @@ class TaskItem[T: Hashable]:
             obj_metadata (SimObjMetadata): Object metadata.
 
         Returns:
-            prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are satisfied by the given object.
+            prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are
+                satisfied by the given object.
         """
         return {prop.target_ai2thor_property: prop.is_object_satisfying(obj_metadata) for prop in self.properties}
 
@@ -203,160 +204,136 @@ class TaskItem[T: Hashable]:
 
         Args:
             candidate_metadata (SimObjMetadata): Metadata of the candidate.
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-                of the objects in the scene to their metadata.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
 
         Returns:
-            semi_satisfying_objects (dict[T, dict[RelationTypeId, set[SimObjId]]]): Dictionary indicating which objects are semi-satisfying the relations with the given object.
+            semi_satisfying_objects (dict[T, dict[RelationTypeId, set[SimObjId]]]): Dictionary
+                indicating which objects are semi-satisfying the relations with the given object.
         """
         return {
             related_item_id: {
-                relation.type_id: relation.get_satisfying_related_object_ids(candidate_metadata, scene_objects_dict)
+                relation.type_id: relation.compute_satisfying_related_object_ids(candidate_metadata, scene_objects_dict)
                 for relation in self.organized_relations[related_item_id].values()
             }
             for related_item_id in self.organized_relations
         }
 
-    # TODO? Remove; unused
-    def _compute_obj_results(
+    def compute_candidates_props_results(
         self,
-        obj_metadata: SimObjMetadata,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[
-        Literal["properties", "relations"],
-        dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
-    ]:  # TODO: Simplify this big type after finish the implementation
+    ) -> dict[ItemProp[ItemPropValue, ItemPropValue], dict[SimObjId, bool]]:
         """
-        Return the results dictionary of the object for the item.
-
-        The results are the satisfaction of each property and the satisfying
-        objects of each relation of the item.
+        Return the results dictionary of each properties for the candidates of the item.
 
         Args:
-            obj_metadata (SimObjMetadata): Object metadata.
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-                of the objects in the scene to their metadata.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
 
         Returns:
-            results (dict[Literal["properties", "relations"], dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]]]): Results of the object for the item.
+            candidates_props_results (dict[ItemProp[ItemPropValue, ItemPropValue], dict[SimObjId, bool]]):
+                Dictionary mapping the item properties to the results of each candidates for the properties.
         """
-        results: dict[
-            Literal["properties", "relations"],
-            dict[SimObjProp, bool] | dict[T, dict[RelationTypeId, set[SimObjId]]],
-        ] = {
-            "properties": self._get_properties_satisfaction(obj_metadata),
-            "relations": self._get_relations_semi_satisfying_objects(obj_metadata, scene_objects_dict),
+        return {
+            prop: prop.compute_candidates_results(scene_objects_dict, self.candidate_ids) for prop in self.properties
         }
-        return results
 
-    def compute_all_candidates_results(
-        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
-    ) -> tuple[
-        dict[SimObjProp, dict[SimObjId, bool]],
-        dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-    ]:
+    def compute_candidates_relations_results(
+        self,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+    ) -> dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]:
         """
-        Return the results dictionary with the results of each candidate of the item.
+        Return the results dictionary of each relations for the candidates of the item.
+
+        The relations are organized by related item id.
 
         Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-            of the objects in the scene to their metadata.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
 
         Returns:
-            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]): Results of each
-                object for the item properties.
-            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
-                Results of each object for the item relations.
+            candidates_relations_results (dict[T, dict[Relation, dict[SimObjId, set[SimObjId]]]]):
+                Dictionary mapping the related item ids to the results dictionary of each relation,
+                    which maps the candidate ids to the set of satisfying object ids.
         """
-        candidates_properties_results = {
-            prop.target_ai2thor_property: prop.compute_candidates_results(scene_objects_dict, self.candidate_ids)
-            for prop in self.properties
-        }
-
-        candidates_relations_results = {
-            related_item_id: {
-                relation.type_id: {
-                    obj_id: relation.get_satisfying_related_object_ids(scene_objects_dict[obj_id], scene_objects_dict)
-                    for obj_id in self.candidate_ids
-                }
-                for relation in self.organized_relations[related_item_id].values()
+        return {
+            main_item_id: {
+                relation: relation.compute_main_candidates_results(scene_objects_dict)
+                for relation in self.organized_relations[main_item_id].values()
             }
-            for related_item_id in self.organized_relations
+            for main_item_id in self.organized_relations
         }
 
-        return candidates_properties_results, candidates_relations_results
-
-    def _compute_aux_items_results(
+    def compute_candidates_props_scores(
         self,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[ItemProp[ItemPropValue, ItemPropValue], dict[SimObjId, dict[SimObjProp, bool]]]:
+        candidates_props_results: dict[ItemProp, dict[SimObjId, bool]],
+    ) -> dict[SimObjId, float]:
         """
-        Return the results dictionary with the results of each auxiliary item of the item.
+        Return the property scores of each candidate of the item.
 
         Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-            of the objects in the scene to their metadata.
+            candidates_props_results (dict[ItemProp, dict[SimObjId, bool]]): Dictionary mapping the
+                item properties to the results of each candidates for the properties.
 
         Returns:
-            aux_items_results (dict[TaskItem, dict[SimObjId, dict[SimObjProp, bool]]]): Results of each
-                auxiliary item for the item properties.
+            candidates_props_scores (dict[SimObjId, float]): Dictionary mapping the candidate ids to
+                their property scores.
         """
-        aux_items_results = {
-            aux_item: aux_item.compute_all_candidates_results(scene_objects_dict)[0]
-            for aux_item in itertools.chain.from_iterable(self.props_auxiliary_items.values())
+        prop_candidates_scores = {
+            prop: prop.compute_candidates_scores(candidates_props_results[prop]) for prop in candidates_props_results
+        }
+        return {
+            candidate_id: sum(prop_candidates_scores[prop][candidate_id] for prop in prop_candidates_scores)
+            for candidate_id in self.candidate_ids
         }
 
-        return aux_items_results
-
-    def compute_all_candidates_scores(
+    def compute_candidates_relations_scores(
         self,
-        candidates_properties_results: dict[SimObjProp, dict[SimObjId, bool]],
-        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-    ) -> tuple[
-        dict[SimObjId, int],
-        dict[SimObjId, int],
-    ]:
+        candidates_relations_results: dict[T, dict[Relation, dict[SimObjId, set[SimObjId]]]],
+    ) -> dict[SimObjId, float]:
         """
-        Return the property and relation scores of each candidate of the item.
+        Return the relation scores of each candidate of the item.
 
         Args:
-            candidates_properties_results (dict[SimObjProp, dict[SimObjId, bool]]):
-                Results of each object for the item properties.
-            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
-                Results of each object for the item relations.
+            candidates_relations_results (dict[T, dict[Relation, dict[SimObjId, set[SimObjId]]]):
+                Dictionary mapping the related item ids to the results dictionary of each relation,
+                which maps the candidate ids to the set of satisfying object ids.
 
         Returns:
-            candidates_properties_scores (dict[SimObjId, int]):
-                Property scores of each object for the item.
-            candidates_relations_scores (dict[SimObjId, int]):
-                Relation scores of each object for the item.
+            candidates_relations_scores (dict[SimObjId, float]): Dictionary mapping the candidate ids
+                to their relation scores.
         """
-        candidates_properties_scores: dict[SimObjId, int] = {
-            obj_id: sum(
-                bool(candidates_properties_results[prop_id][obj_id]) for prop_id in candidates_properties_results
-            )
-            for obj_id in self.candidate_ids
-        }
-        candidates_relations_scores = {
-            obj_id: sum(
-                1
-                for related_item_id in candidates_relations_results
-                for relation_type_id in candidates_relations_results[related_item_id]
-                if candidates_relations_results[related_item_id][relation_type_id][obj_id]
-            )
-            for obj_id in self.candidate_ids
+        # return {
+        #     candidate_id: sum(
+        #         1
+        #         for related_item_id in candidates_relations_results
+        #         for relation in candidates_relations_results[related_item_id]
+        #         if candidates_relations_results[related_item_id][relation][candidate_id]
+        #     )
+        #     for candidate_id in self.candidate_ids
+        # }
+
+        relations_candidates_scores = {
+            relation: relation.compute_main_candidates_scores(candidates_relations_results[related_item_id][relation])
+            for related_item_id in candidates_relations_results
+            for relation in candidates_relations_results[related_item_id]
         }
 
-        return candidates_properties_scores, candidates_relations_scores
+        return {
+            candidate_id: sum([
+                relations_candidates_scores[relation][candidate_id] for relation in relations_candidates_scores
+            ])
+            for candidate_id in self.candidate_ids
+        }
 
     def compute_interesting_candidates(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         set[SimObjId],
-        dict[SimObjProp, dict[SimObjId, bool]],
-        dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-        dict[SimObjId, int],
-        dict[SimObjId, int],
+        dict[ItemProp, dict[SimObjId, bool]],
+        dict[T, dict[Relation, dict[SimObjId, set[SimObjId]]]],
+        dict[SimObjId, float],
+        dict[SimObjId, float],
     ]:
         """
         Return the set of interesting candidates and the results and scores of each candidate of the item.
@@ -384,41 +361,39 @@ class TaskItem[T: Hashable]:
                 object for the item properties.
             candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            candidates_properties_scores (dict[SimObjId, int]): Property scores of each object for
+            candidates_properties_scores (dict[SimObjId, float]): Property scores of each object for
                 the item.
-            candidates_relations_scores (dict[SimObjId, int]): Relation scores of each object for
+            candidates_relations_scores (dict[SimObjId, float]): Relation scores of each object for
                 the item.
         """
-        # Compute the results of each object for the item
-        candidates_properties_results, candidates_relations_results = self.compute_all_candidates_results(
-            scene_objects_dict
-        )
+        # Compute the properties and relations results of each object for the item
+        candidates_properties_results = self.compute_candidates_props_results(scene_objects_dict)
+        candidates_relations_results = self.compute_candidates_relations_results(scene_objects_dict)
 
         # Compute the scores of each object for the item
-        candidates_properties_scores, candidates_relations_scores = self.compute_all_candidates_scores(
-            candidates_properties_results, candidates_relations_results
-        )
+        candidates_properties_scores = self.compute_candidates_props_scores(candidates_properties_results)
+        candidates_relations_scores = self.compute_candidates_relations_scores(candidates_relations_results)
 
         # Compute the results and scores of each auxiliary item
-        aux_items_results: dict[
-            ItemProp,
-            dict[TaskItem, tuple[PropResults, RelationResults]],
-        ] = {
-            prop: {aux_item: aux_item.compute_all_candidates_results(scene_objects_dict) for aux_item in aux_items}
+        aux_items_candidates_props_results = {
+            prop: {aux_item: aux_item.compute_candidates_props_results(scene_objects_dict) for aux_item in aux_items}
             for prop, aux_items in self.props_auxiliary_items.items()
         }
         aux_items_scores = {
             prop: {
-                aux_item: aux_item.compute_all_candidates_scores(data[0], data[1])
-                for aux_item, data in aux_items_results[prop].items()
+                aux_item: aux_item.compute_candidates_props_scores(aux_items_candidates_props_results[prop][aux_item])
+                for aux_item in aux_items
             }
-            for prop in aux_items_results
+            for prop, aux_items in self.props_auxiliary_items.items()
         }
 
         # Compute the results of each auxiliary property for the items
         aux_props_results: dict[
             ItemProp,
-            dict[ItemVariableProp, dict[SimObjId, bool]],
+            dict[
+                ItemVariableProp,
+                dict[SimObjId, bool],
+            ],
         ] = {
             main_prop: {
                 aux_prop: aux_prop.compute_candidates_results(scene_objects_dict, self.candidate_ids)
@@ -430,12 +405,20 @@ class TaskItem[T: Hashable]:
         # If the main property is satisfied, then its auxiliary properties are satisfied
         for main_prop in aux_props_results:
             for aux_prop in aux_props_results[main_prop]:
-                aux_props_results[main_prop][aux_prop] = {
-                    obj_id: aux_props_results[main_prop][aux_prop][obj_id]
-                    or candidates_properties_results[main_prop.target_ai2thor_property][obj_id]
-                    for obj_id in self.candidate_ids
-                }
+                for candidate_id in aux_props_results[main_prop][aux_prop]:
+                    aux_props_results[main_prop][aux_prop][candidate_id] &= candidates_properties_results[main_prop][
+                        candidate_id
+                    ]
+        aux_props_scores = {
+            main_prop: {
+                aux_prop: aux_prop.compute_candidates_scores(aux_props_results[main_prop][aux_prop])
+                for aux_prop in aux_props
+            }
+            for main_prop, aux_props in self.props_auxiliary_properties.items()
+        }
+        # TODO: Finish
 
+        # TODO: Check that it takes auxiliary properties and items into account
         # Remove the candidates that have a stronger alternative
         interesting_candidates = list(self.candidate_ids)
         for i, candidate_id in enumerate(interesting_candidates):
@@ -480,9 +463,9 @@ class TaskItem[T: Hashable]:
         self,
         obj_1_id: SimObjId,
         obj_2_id: SimObjId,
-        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-        candidates_properties_scores: dict[SimObjId, int],
-        candidates_relations_scores: dict[SimObjId, int],
+        candidates_relations_results: dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]],
+        candidates_properties_scores: dict[SimObjId, float],
+        candidates_relations_scores: dict[SimObjId, float],
     ) -> SimObjId | Literal["equal", "incomparable"]:
         """
         Return the stronger candidate between the two given candidates.
@@ -506,11 +489,11 @@ class TaskItem[T: Hashable]:
         Args:
             obj_1_id (SimObjId): First candidate object id.
             obj_2_id (SimObjId): Second candidate object id.
-            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            candidates_properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, float]):
                 Property scores of each object for the item.
-            candidates_relations_scores (dict[SimObjId, int]):
+            candidates_relations_scores (dict[SimObjId, float]):
                 Relation scores of each object for the item.
 
         Returns:
@@ -551,8 +534,8 @@ class TaskItem[T: Hashable]:
     def _is_stronger_candidate_than(
         obj_1_id: SimObjId,
         obj_2_id: SimObjId,
-        candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
-        candidates_properties_scores: dict[SimObjId, int],
+        candidates_relations_results: dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]],
+        candidates_properties_scores: dict[SimObjId, float],
     ) -> bool:
         """
         Return True if the first candidate is stronger than the second candidate.
@@ -570,9 +553,9 @@ class TaskItem[T: Hashable]:
         Args:
             obj_1_id (SimObjId): First candidate object id.
             obj_2_id (SimObjId): Second candidate object id.
-            candidates_relations_results (dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]):
+            candidates_relations_results (dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]):
                 Results of each object for the item relations.
-            candidates_properties_scores (dict[SimObjId, int]):
+            candidates_properties_scores (dict[SimObjId, float]):
                 Property scores of each object for the item.
 
         Returns:
@@ -585,9 +568,9 @@ class TaskItem[T: Hashable]:
         # Calculate d[x,y]
         d_xy = 0
         for related_item_id in candidates_relations_results:
-            for relation_type_id in candidates_relations_results[related_item_id]:
-                x_sat_obj_ids = candidates_relations_results[related_item_id][relation_type_id][obj_1_id]
-                y_sat_obj_ids = candidates_relations_results[related_item_id][relation_type_id][obj_2_id]
+            for relation in candidates_relations_results[related_item_id]:
+                x_sat_obj_ids = candidates_relations_results[related_item_id][relation][obj_1_id]
+                y_sat_obj_ids = candidates_relations_results[related_item_id][relation][obj_2_id]
                 if y_sat_obj_ids.issubset(x_sat_obj_ids):
                     d_xy += 1
 
@@ -689,10 +672,10 @@ class ItemOverlapClass[T: Hashable]:
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         list[Assignment[T]],
-        dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]],
-        dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]],
-        dict[TaskItem[T], dict[SimObjId, int]],
-        dict[TaskItem[T], dict[SimObjId, int]],
+        dict[TaskItem[T], dict[ItemProp, dict[SimObjId, bool]]],
+        dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]],
+        dict[TaskItem[T], dict[SimObjId, float]],
+        dict[TaskItem[T], dict[SimObjId, float]],
     ]:
         """
         Return the interesting assignments of objects to the items in the overlap class, the items results and items scores.
@@ -712,13 +695,13 @@ class ItemOverlapClass[T: Hashable]:
         Returns:
             interesting_assignments (list[Assignment[T]]):
                 List of the interesting assignments of objects to the items in the overlap class.
-            all_properties_results (dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]]):
+            all_properties_results (dict[TaskItem[T], dict[ItemProp, dict[SimObjId, bool]]]):
                 Results of each object for each property of each item in the overlap class.
-            all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]]):
+            all_relation_results (dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]]):
                 Results of each object for the relation of each item in the overlap class.
-            all_properties_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+            all_properties_scores (dict[TaskItem[T], dict[SimObjId, float]]):
                 Property scores of each object for each item in the overlap class.
-            all_relations_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+            all_relations_scores (dict[TaskItem[T], dict[SimObjId, float]]):
                 Relation scores of each object for each item in the overlap class.
         """
         interesting_candidates_data = {

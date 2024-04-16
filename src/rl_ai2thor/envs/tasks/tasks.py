@@ -396,7 +396,7 @@ class GraphTask[T: Hashable](BaseTask):
 
                     relations = main_item.organized_relations.get(related_item.id, {})
                     for relation in relations.values():
-                        if not relation.are_candidates_compatible(
+                        if not relation._are_candidates_compatible(
                             main_candidate_metadata, related_candidate_metadata
                         ):  # TODO: Use the cached version
                             incompatible_assignment = True
@@ -499,12 +499,12 @@ class GraphTask[T: Hashable](BaseTask):
         # Extract the interesting assignments, results and scores
         interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
         # Merge the results and scores of the items
-        all_relation_results: dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]] = {
+        all_relation_results: dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]] = {
             item: item_relation_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_relation_results in overlap_class_assignment_data[2].items()
         }
-        all_properties_scores: dict[TaskItem[T], dict[SimObjId, int]] = {
+        all_properties_scores: dict[TaskItem[T], dict[SimObjId, float]] = {
             item: item_property_score
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_property_score in overlap_class_assignment_data[3].items()
@@ -537,7 +537,7 @@ class GraphTask[T: Hashable](BaseTask):
                     break
 
         # === Construct the results dictionary ===
-        all_properties_results: dict[TaskItem[T], dict[SimObjProp, dict[SimObjId, bool]]] = {
+        all_properties_results: dict[TaskItem[T], dict[ItemProp, dict[SimObjId, bool]]] = {
             item: item_properties_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_properties_results in overlap_class_assignment_data[1].items()
@@ -573,17 +573,17 @@ class GraphTask[T: Hashable](BaseTask):
     def compute_assignment_advancement(
         self,
         global_assignment: Assignment[T],
-        all_relation_results: dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]],
-        all_properties_scores: dict[TaskItem[T], dict[SimObjId, int]],
+        all_relation_results: dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]],
+        all_properties_scores: dict[TaskItem[T], dict[SimObjId, float]],
     ) -> float:
         """
         Compute the task advancement for a given assignment.
 
         Args:
             global_assignment (Assignment[T]): Assignment of objects to the items.
-            all_relation_results (dict[TaskItem[T], dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]]):
+            all_relation_results (dict[TaskItem[T], dict[T, dict[Relation[T], dict[SimObjId, set[SimObjId]]]]]):
                 Results of each object for the relation of each item.
-            all_properties_scores (dict[TaskItem[T], dict[SimObjId, int]]):
+            all_properties_scores (dict[TaskItem[T], dict[SimObjId, float]]):
                 Property scores of each object for each item.
 
         Returns:

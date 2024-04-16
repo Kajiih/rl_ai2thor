@@ -7,6 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Hashable
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -32,27 +33,32 @@ type RelationParam = int | float | bool
 
 
 # %% === Relations ===
-class Relation(ABC):
+# TODO? Add main_candidates_ids and related_candidates_ids attributes to the relation and remove the dependency on the items?
+class Relation[T: Hashable](ABC):
     """
     A relation between two items in the definition of a task.
 
     Attributes:
-        main_item (TaskItem): The main item in the relation.
-        related_item (TaskItem): The related item to which the main item is related.
         type_id (RelationTypeId): The type of the relation.
         inverse_relation_type_id (RelationTypeId): The type of the inverse relation.
         candidate_required_prop (ItemFixedProp | None): The candidate required property for the main
             item.
+        main_item (TaskItem): The main item in the relation.
+        related_item (TaskItem): The related item to which the main item is related.
     """
 
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: ItemFixedProp | None = None
 
-    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
+    def __init__(self, main_item: TaskItem[T], related_item: TaskItem[T]) -> None:
         self.main_item = main_item
         self.related_item = related_item
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
+
+        # === Type Annotations ===
+        self.main_item: TaskItem[T]
+        self.related_item: TaskItem[T]
 
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:
@@ -83,7 +89,7 @@ class Relation(ABC):
 
     # TODO: Find a way to implement the same thing but without the need to check every pair of candidates
     @abstractmethod
-    def are_candidates_compatible(
+    def _are_candidates_compatible(
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -121,12 +127,14 @@ class Relation(ABC):
         return {
             related_object_id
             for related_object_id in self._extract_related_object_ids(main_candidate_metadata, scene_objects_dict)
-            if self.are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
+            if self._are_candidates_compatible(main_candidate_metadata, scene_objects_dict[related_object_id])
         }
 
     @abstractmethod
     def _extract_related_object_ids(
-        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> list[SimObjId]:
         """
         Return the list of the ids of the main object's related objects according to the relation.
@@ -141,7 +149,9 @@ class Relation(ABC):
         """
 
     def is_semi_satisfied(
-        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> bool:
         """
         Return True if the relation is semi satisfied in the given main object.
@@ -163,8 +173,10 @@ class Relation(ABC):
             for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
         )
 
-    def get_satisfying_related_object_ids(
-        self, main_obj_metadata: SimObjMetadata, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    def compute_satisfying_related_object_ids(
+        self,
+        main_obj_metadata: SimObjMetadata,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> set[SimObjId]:
         """
         Return related item's candidate's ids that satisfy the relation with the given main object.
@@ -183,6 +195,52 @@ class Relation(ABC):
             if related_object_id in self.related_item.candidate_ids
         }
         return satisfying_related_object_ids
+
+    def compute_main_candidates_results(
+        self,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+    ) -> dict[SimObjId, set[SimObjId]]:
+        """
+        Return the set of related item's candidate's ids that satisfy the relation for each main object's candidate.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+                of the objects in the scene to their metadata.
+
+        Returns:
+            main_candidates_results (dict[SimObjId, set[SimObjId]]): The set of related item's
+                candidate's ids that satisfy the relation for each main object's candidate.
+        """
+        return {
+            main_candidate_id: self.compute_satisfying_related_object_ids(
+                scene_objects_dict[main_candidate_id], scene_objects_dict
+            )
+            for main_candidate_id in self.main_item.candidate_ids
+        }
+
+    # TODO: Implement a weighted score
+    @staticmethod
+    def compute_main_candidates_scores(
+        main_candidates_results: dict[SimObjId, set[SimObjId]],
+    ) -> dict[SimObjId, float]:
+        """
+        Return the score of each main object's candidate based on the related item's candidate's ids that satisfy the relation.
+
+        The score is the number of related item's candidate's ids that satisfy the relation for the
+        main object's candidate.
+
+        Args:
+            main_candidates_results (dict[SimObjId, set[SimObjId]]): Dictionary mapping the id of
+                the main object's candidates to the set of related item's candidate's ids that satisfy the relation.
+
+        Returns:
+            main_candidates_scores (dict[SimObjId, float]): Dictionary mapping the id of the main
+                object's candidates to their score.
+        """
+        return {
+            main_candidate_id: 1 if related_object_ids else 0
+            for main_candidate_id, related_object_ids in main_candidates_results.items()
+        }
 
     def __str__(self) -> str:
         return f"{self.main_item} is {self.type_id} {self.related_item}"
@@ -236,7 +294,7 @@ class ReceptacleOfRelation(Relation):
         receptacle_object_ids = main_obj_metadata["receptacleObjectIds"]
         return receptacle_object_ids if receptacle_object_ids is not None else []
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -281,7 +339,7 @@ class ContainedInRelation(Relation):
         parent_receptacles = main_obj_metadata["parentReceptacles"]
         return parent_receptacles if parent_receptacles is not None else []
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -333,7 +391,7 @@ class CloseToRelation(Relation):
 
         return close_object_ids
 
-    def are_candidates_compatible(  # noqa: PLR6301
+    def _are_candidates_compatible(  # noqa: PLR6301
         self,
         main_candidate_metadata: SimObjMetadata,
         related_candidate_metadata: SimObjMetadata,
@@ -345,7 +403,7 @@ class CloseToRelation(Relation):
         )
 
 
-# %% === Mappings ===
+## %% === Mappings ===
 relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
