@@ -17,6 +17,7 @@ from rl_ai2thor.envs.sim_objects import (
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
+    SimObjId,
     SimObjMetadata,
     SimObjProp,
     SimObjVariableProp,
@@ -215,6 +216,28 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
 
     # def __hash__(self) -> int:
     #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
+
+    def compute_candidates_results(
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata], candidates_ids: set[SimObjId]
+    ) -> dict[SimObjId, bool]:
+        """
+        Compute the results of the property satisfaction for the candidates.
+
+        The results are stored in a dictionary where the keys are the candidates ids and the values
+        are booleans indicating if the candidate satisfies the property.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+                of the objects in the scene to their metadata.
+            candidates_ids (set[SimObjId]): The set of candidate ids.
+
+        Returns:
+            candidates_results (dict[SimObjId, bool]): Dictionary mapping the candidate ids to
+                a boolean indicating if the candidate satisfies the property.
+        """
+        return {
+            candidate_id: self.is_object_satisfying(scene_objects_dict[candidate_id]) for candidate_id in candidates_ids
+        }
 
 
 class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):

@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, ItemProp, ItemPropValue, ItemVariableProp
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
+type PropResults = dict[SimObjProp, dict[SimObjId, bool]]
+type RelationResults[T] = dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]]
+
 
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
 # TODO: Store relation in a list and store the results using the id of the relation to simplify the code
@@ -246,7 +249,7 @@ class TaskItem[T: Hashable]:
         }
         return results
 
-    def _compute_all_candidates_results(
+    def compute_all_candidates_results(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         dict[SimObjProp, dict[SimObjId, bool]],
@@ -266,9 +269,7 @@ class TaskItem[T: Hashable]:
                 Results of each object for the item relations.
         """
         candidates_properties_results = {
-            prop.target_ai2thor_property: {
-                obj_id: prop.is_object_satisfying(scene_objects_dict[obj_id]) for obj_id in self.candidate_ids
-            }
+            prop.target_ai2thor_property: prop.compute_candidates_results(scene_objects_dict, self.candidate_ids)
             for prop in self.properties
         }
 
@@ -285,7 +286,29 @@ class TaskItem[T: Hashable]:
 
         return candidates_properties_results, candidates_relations_results
 
-    def _compute_all_candidates_scores(
+    def _compute_aux_items_results(
+        self,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
+    ) -> dict[ItemProp[ItemPropValue, ItemPropValue], dict[SimObjId, dict[SimObjProp, bool]]]:
+        """
+        Return the results dictionary with the results of each auxiliary item of the item.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
+            of the objects in the scene to their metadata.
+
+        Returns:
+            aux_items_results (dict[TaskItem, dict[SimObjId, dict[SimObjProp, bool]]]): Results of each
+                auxiliary item for the item properties.
+        """
+        aux_items_results = {
+            aux_item: aux_item.compute_all_candidates_results(scene_objects_dict)[0]
+            for aux_item in itertools.chain.from_iterable(self.props_auxiliary_items.values())
+        }
+
+        return aux_items_results
+
+    def compute_all_candidates_scores(
         self,
         candidates_properties_results: dict[SimObjProp, dict[SimObjId, bool]],
         candidates_relations_results: dict[T, dict[RelationTypeId, dict[SimObjId, set[SimObjId]]]],
@@ -367,20 +390,51 @@ class TaskItem[T: Hashable]:
                 the item.
         """
         # Compute the results of each object for the item
-        candidates_properties_results, candidates_relations_results = self._compute_all_candidates_results(
+        candidates_properties_results, candidates_relations_results = self.compute_all_candidates_results(
             scene_objects_dict
         )
 
         # Compute the scores of each object for the item
-        candidates_properties_scores, candidates_relations_scores = self._compute_all_candidates_scores(
+        candidates_properties_scores, candidates_relations_scores = self.compute_all_candidates_scores(
             candidates_properties_results, candidates_relations_results
         )
 
-        # Compute the results of each auxiliary item for the items
-        # TODO: Implement this
+        # Compute the results and scores of each auxiliary item
+        aux_items_results: dict[
+            ItemProp,
+            dict[TaskItem, tuple[PropResults, RelationResults]],
+        ] = {
+            prop: {aux_item: aux_item.compute_all_candidates_results(scene_objects_dict) for aux_item in aux_items}
+            for prop, aux_items in self.props_auxiliary_items.items()
+        }
+        aux_items_scores = {
+            prop: {
+                aux_item: aux_item.compute_all_candidates_scores(data[0], data[1])
+                for aux_item, data in aux_items_results[prop].items()
+            }
+            for prop in aux_items_results
+        }
 
         # Compute the results of each auxiliary property for the items
-        # TODO: Implement this
+        aux_props_results: dict[
+            ItemProp,
+            dict[ItemVariableProp, dict[SimObjId, bool]],
+        ] = {
+            main_prop: {
+                aux_prop: aux_prop.compute_candidates_results(scene_objects_dict, self.candidate_ids)
+                for aux_prop in aux_props
+            }
+            for main_prop, aux_props in self.props_auxiliary_properties.items()
+        }
+        # Update auxiliary properties results according to their main property results
+        # If the main property is satisfied, then its auxiliary properties are satisfied
+        for main_prop in aux_props_results:
+            for aux_prop in aux_props_results[main_prop]:
+                aux_props_results[main_prop][aux_prop] = {
+                    obj_id: aux_props_results[main_prop][aux_prop][obj_id]
+                    or candidates_properties_results[main_prop.target_ai2thor_property][obj_id]
+                    for obj_id in self.candidate_ids
+                }
 
         # Remove the candidates that have a stronger alternative
         interesting_candidates = list(self.candidate_ids)
