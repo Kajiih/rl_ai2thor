@@ -204,7 +204,7 @@ class UndefinedTask(BaseTask):
 type TaskArg = ItemPropValue | int
 type RelationsDict = dict[ItemId, dict[RelationTypeId, dict[str, RelationParam]]]
 type PropertiesDict = dict[SimObjProp, PropSatFunction[ItemPropValue]]
-type TaskDict = dict[ItemId, TaskItemData]
+type TaskDict = dict[ItemId | str, TaskItemData]
 
 
 @dataclass
@@ -326,7 +326,7 @@ class GraphTask(BaseTask):
 
         # Initialize the candidates of the items
         for item in self.items:
-            item.candidate_ids = item.get_candidate_ids(scene_objects_dict)
+            item.candidates_data = item.instantiate_candidate_data(scene_objects_dict)
             if not item.candidate_ids:
                 print(f"No candidate found for item {item.id}")
                 return False, 0, False, {}
@@ -337,7 +337,7 @@ class GraphTask(BaseTask):
         )
         for auxiliary_item in self.auxiliary_items:
             auxiliary_item.relations = set()
-            auxiliary_item.candidate_ids = auxiliary_item.get_candidate_ids(scene_objects_dict)
+            auxiliary_item.candidates_data = auxiliary_item.instantiate_candidate_data(scene_objects_dict)
             if not auxiliary_item.candidate_ids:
                 print(f"No candidate found for auxiliary item {auxiliary_item.id}")
                 return False, 0, False, {}
@@ -350,7 +350,10 @@ class GraphTask(BaseTask):
 
         # Keep only candidates that are in at least one compatible assignment
         for item in self.items:
-            item.candidate_ids = {CandidateId(assignment[item]) for assignment in compatible_assignments}
+            final_candidate_ids = {CandidateId(assignment[item]) for assignment in compatible_assignments}
+            for candidate_id in item.candidates_data:
+                if candidate_id not in final_candidate_ids:
+                    del item.candidates_data[candidate_id]
 
         # Initialize overlap classes and keep only assignments that are part of one of the global
         # compatible assignments
@@ -642,7 +645,7 @@ class GraphTask(BaseTask):
         }
 
         # === Instantiate relations ===
-        organized_relations: dict[ItemId, dict[ItemId, dict[RelationTypeId, Relation]]] = {
+        organized_relations: dict[ItemId | str, dict[ItemId | str, dict[RelationTypeId, Relation]]] = {
             main_item_id: {} for main_item_id in items
         }
 

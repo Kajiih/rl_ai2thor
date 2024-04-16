@@ -12,11 +12,10 @@ from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, PickupableProp, ReceptacleProp, SingleValuePSF
-from rl_ai2thor.envs.tasks.items import CandidateId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.items import TaskItem
+    from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
 # %% === Enums ===

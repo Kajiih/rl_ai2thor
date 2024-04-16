@@ -263,7 +263,6 @@ class TaskItem:
         self._prop_candidate_required_properties: set[ItemFixedProp[ItemPropValue]]
         self.props_auxiliary_items: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[TaskItem]]
         self.props_auxiliary_properties: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
-        self.candidate_ids: set[CandidateId]
         self.candidates_data: dict[CandidateId, CandidateData]
 
     @property
@@ -335,6 +334,16 @@ class TaskItem:
         """
         return self._prop_candidate_required_properties | self._rel_candidate_required_properties
 
+    @property
+    def candidate_ids(self) -> set[CandidateId]:
+        """
+        Get the candidate ids of the item.
+
+        Returns:
+            set[CandidateId]: Set of candidate ids of the item.
+        """
+        return set(self.candidates_data.keys())
+
     def is_candidate(self, obj_metadata: SimObjMetadata) -> bool:
         """
         Return True if the given object is a valid candidate for the item.
@@ -347,7 +356,7 @@ class TaskItem:
         """
         return all(prop.is_object_satisfying(obj_metadata) for prop in self.candidate_required_properties)
 
-    def get_candidate_ids(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> set[CandidateId]:
+    def _get_candidate_ids(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> set[CandidateId]:
         """
         Return the set of candidate ids of the item.
 
@@ -359,6 +368,23 @@ class TaskItem:
             candidate_ids (set[CandidateId]): Set of candidate ids of the item.
         """
         return {CandidateId(obj_id) for obj_id in scene_objects_dict if self.is_candidate(scene_objects_dict[obj_id])}
+
+    def instantiate_candidate_data(
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> dict[CandidateId, CandidateData]:
+        """
+        Instantiate the candidate data for the item.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
+
+        Returns:
+            candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
+                their data.
+        """
+        candidate_ids = self._get_candidate_ids(scene_objects_dict)
+        return {c_id: CandidateData(c_id, self) for c_id in candidate_ids}
 
     # TODO: Replace keys by the actual properties
     def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
