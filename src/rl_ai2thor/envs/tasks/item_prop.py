@@ -22,7 +22,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjProp,
     SimObjVariableProp,
 )
-from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
+from rl_ai2thor.envs.tasks.items import AuxItem, CandidateId
 
 
 # %% === Property value enums ==
@@ -147,6 +147,7 @@ type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 # TODO? Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
 # TODO: Support multiple candidate required properties
+# TODO: Make only variable prop having auxiliary properties and items
 class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     """
     Base class for item properties in the definition of a task.
@@ -184,14 +185,19 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
 
     target_ai2thor_property: SimObjProp
     candidate_required_prop: ItemFixedProp[T2] | None = None
-    auxiliary_properties: frozenset[ItemVariableProp] | None = None
-    auxiliary_items: frozenset[TaskItem] | None = None
+    auxiliary_properties: frozenset[ItemVariableProp] = frozenset()
+    auxiliary_items: frozenset[AuxItem] = frozenset()
 
     def __init__(self, target_satisfaction_function: PropSatFunction[T1] | ItemPropValue) -> None:
         """Initialize the Property object."""
         if isinstance(target_satisfaction_function, ItemPropValue):
             target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
         self.target_satisfaction_function = target_satisfaction_function
+        for aux_item in self.auxiliary_items:
+            aux_item.main_prop = self
+
+        # === Type Annotations ===
+        self.target_satisfaction_function: PropSatFunction[T1]
 
     def __call__(self, prop_value: T1) -> bool:
         """Return True if the value satisfies the property."""
@@ -295,7 +301,6 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
     """
 
     target_ai2thor_property: SimObjVariableProp
-    # candidate_required_prop: ItemFixedProp[T2]  # TODO: Delete?
 
 
 # %% === Item property definitions ===
@@ -445,7 +450,7 @@ class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
     target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
     candidate_required_prop = CanFillWithLiquidProp(True)
     auxiliary_items = frozenset({
-        TaskItem(
+        AuxItem(
             t_id="water_source",
             properties={
                 ObjectTypeProp(MultiValuePSF(WATER_SOURCES)),
@@ -470,7 +475,7 @@ class IsDirtyProp(ItemVariableProp[bool, bool]):
     target_ai2thor_property = SimObjVariableProp.IS_DIRTY
     candidate_required_prop = DirtyableProp(True)
     auxiliary_items = frozenset({
-        TaskItem(
+        AuxItem(
             t_id="water_source",
             properties={
                 ObjectTypeProp(MultiValuePSF(WATER_SOURCES)),
@@ -493,7 +498,7 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
     candidate_required_prop = CookableProp(True)
     auxiliary_properties = frozenset({IsPickedUpProp(True)})
     auxiliary_items = frozenset({
-        TaskItem(
+        AuxItem(
             t_id="cooking_source",
             properties={
                 ObjectTypeProp(MultiValuePSF(COOKING_SOURCES)),
@@ -525,7 +530,7 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
 
         if self.target_satisfaction_function.target_value == TemperatureValue.HOT:
             self.auxiliary_items = frozenset({
-                TaskItem(
+                AuxItem(
                     t_id="heat_source",
                     properties={
                         ObjectTypeProp(MultiValuePSF(HEAT_SOURCES)),
@@ -535,7 +540,7 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
             })
         elif self.target_satisfaction_function.target_value == TemperatureValue.COLD:
             self.auxiliary_items = frozenset({
-                TaskItem(
+                AuxItem(
                     t_id="cold_source",
                     properties={
                         ObjectTypeProp(MultiValuePSF([SimObjectType.FRIDGE])),
@@ -551,7 +556,7 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
     target_ai2thor_property = SimObjVariableProp.IS_SLICED
     candidate_required_prop = SliceableProp(True)
     auxiliary_items = frozenset({
-        TaskItem(
+        AuxItem(
             t_id="knife",
             properties={
                 ObjectTypeProp(SimObjectType.KNIFE),

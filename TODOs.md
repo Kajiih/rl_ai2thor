@@ -132,6 +132,10 @@
   - [ ] Support RLlib..?
   - [ ] Support CleanRL
 
+### Code Improvement TODOs
+
+- [ ] Add SimObjectMetadata class to have more type safety when using the object's metadata?
+
 ### Final TODOs
 
 - [ ] Check the different config files

@@ -37,6 +37,7 @@ from rl_ai2thor.envs.tasks.item_prop import (
 )
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
+    AuxItem,
     CandidateId,
     ItemId,
     ItemOverlapClass,
@@ -297,7 +298,7 @@ class GraphTask(BaseTask):
         self.items: list[TaskItem]
         self.items_by_id: dict[ItemId, TaskItem]
         self.overlap_classes: list[ItemOverlapClass]
-        self.auxiliary_items: frozenset[TaskItem]
+        self.auxiliary_items: frozenset[AuxItem]
         self.max_task_advancement: float
 
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
