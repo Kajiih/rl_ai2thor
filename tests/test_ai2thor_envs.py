@@ -341,7 +341,8 @@ def test_reset_exact_observation_reproducibility(ithor_env: ITHOREnv):
 
 # This test fails sometimes because AI2-THOR is not deterministic
 # ! Sometimes 'Pen' and 'Pencil' are switched...?
-impleme    media_path = test_media_path / "reset_same_runtime_reproducible"
+def test_reset_same_runtime_reproducible(ithor_env: ITHOREnv, ithor_env_2: ITHOREnv):  # noqa: PLR0914
+    media_path = test_media_path / "reset_same_runtime_reproducible"
     media_path.mkdir(exist_ok=True)
 
     obs1, info1 = ithor_env.reset(seed=seed)
