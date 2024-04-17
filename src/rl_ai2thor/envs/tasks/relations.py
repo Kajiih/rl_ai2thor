@@ -172,13 +172,13 @@ class Relation(ABC):
             for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
         )
 
-    def compute_satisfying_related_object_ids(
+    def compute_satisfying_related_candidates_ids(
         self,
         main_obj_metadata: SimObjMetadata,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> set[CandidateId]:
         """
-        Return related item's candidate's ids that satisfy the relation with the given main object.
+        Return related item's candidate's ids that satisfy the relation with the given main item's candidate.
 
         Args:
             main_obj_metadata (SimObjMetadata): The metadata of the main object.
@@ -212,7 +212,7 @@ class Relation(ABC):
                 candidate's ids that satisfy the relation for each main object's candidate.
         """
         return {
-            main_candidate_id: self.compute_satisfying_related_object_ids(
+            main_candidate_id: self.compute_satisfying_related_candidates_ids(
                 scene_objects_dict[main_candidate_id], scene_objects_dict
             )
             for main_candidate_id in self.main_item.candidate_ids
