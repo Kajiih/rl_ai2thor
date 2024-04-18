@@ -15,6 +15,9 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjMetadata,
     SimObjProp,
 )
+from rl_ai2thor.envs.tasks.item_prop_interface import (
+    ItemVariableProp,
+)
 from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
@@ -22,7 +25,6 @@ if TYPE_CHECKING:
         ItemFixedProp,
         ItemProp,
         ItemPropValue,
-        ItemVariableProp,
         PropAuxProp,
     )
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
@@ -480,15 +482,11 @@ class TaskItem(SimpleItem):
         # Auxiliary items and properties
         self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
         self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.scored_properties}
-        self.relations_auxiliary_properties = {
-            relation: relation.auxiliary_properties for relation in self.relations
-        }  # TODO: Implement relations auxiliary properties
 
         # === Type annotations ===
         self.props_auxiliary_items: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[AuxItem]]
         self.props_auxiliary_properties: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
         self.relations_auxiliary_properties: dict[Relation, frozenset[ItemVariableProp]]
-        self._relations: frozenset[Relation]
 
     @property
     def relations(self) -> frozenset[Relation]:
@@ -514,6 +512,10 @@ class TaskItem(SimpleItem):
             elif relation.type_id in existing_relations[relation.related_item.id]:
                 raise DuplicateRelationsError(relation.type_id, self.id, relation.related_item.id)
             existing_relations[relation.related_item.id][relation.type_id] = relation
+
+        self.relations_auxiliary_properties = {
+            relation: relation.auxiliary_properties for relation in relations
+        }  # TODO: Implement relations auxiliary properties
 
         self._relations_max_advancement = sum(relation.max_advancement for relation in relations)
         self.max_advancement = self._properties_max_advancement + self._relations_max_advancement

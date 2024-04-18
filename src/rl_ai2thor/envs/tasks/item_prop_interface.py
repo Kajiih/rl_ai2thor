@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 # %% === Property value enums ==
+# TODO? Move to a separate module?
 class TemperatureValue(StrEnum):
     """Temperature values."""
 
