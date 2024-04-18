@@ -7,6 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import itertools
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, NewType
 
 from rl_ai2thor.envs.sim_objects import (
@@ -17,7 +18,13 @@ from rl_ai2thor.envs.sim_objects import (
 from rl_ai2thor.utils.global_exceptions import DuplicateRelationsError
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, BaseItemProp, ItemPropValue, ItemVariableProp
+    from rl_ai2thor.envs.tasks.item_prop_interface import (
+        ItemFixedProp,
+        ItemProp,
+        ItemPropValue,
+        ItemVariableProp,
+        PropAuxProp,
+    )
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
 
 
@@ -41,14 +48,14 @@ class CandidateData:
         item (SimpleItem): The item of the candidate.
         id (CandidateId): The ID of the candidate.
         metadata (SimObjMetadata): The metadata of the candidate.
-        base_properties_results (dict[ItemProp, bool]): Dictionary mapping the item's properties to
-            the results of the property satisfaction for the candidate.
-        aux_properties_results (dict[ItemProp, dict[ItemVariableProp, bool]]): Dictionary mapping
-            the item's properties to the results of the auxiliary properties satisfaction for the
-            candidate.
+        base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item's
+            properties to the results of the property satisfaction for the candidate.
+        props_aux_properties_results (dict[ItemVariableProp, dict[PropAuxProp, bool]]):
+            Dictionary mapping the item's scored properties to the results of the auxiliary
+            properties satisfaction for the candidate.
         relations_results (dict[Relation, set[CandidateId]]): Dictionary mapping the item's
         relations to the set of satisfying related item's candidate ids for the candidate.
-        properties_scores (dict[ItemProp, float]): Dictionary mapping the item properties to the
+        properties_scores (dict[ItemVariableProp, float]): Dictionary mapping the item properties to the
             scores of the candidate for the properties.
         property_score (float): The score of the candidate for the item's properties, sum of the
             scores of the properties.
@@ -62,7 +69,7 @@ class CandidateData:
             sum of the scores of the relations where all related item's candidate are satisfying.
     """
 
-    def __init__(self, c_id: CandidateId, item: SimpleItem) -> None:
+    def __init__(self, c_id: CandidateId, item: TaskItem) -> None:
         """
         Initialize the candidate's id and item.
 
@@ -75,35 +82,35 @@ class CandidateData:
 
         # === Type annotations ===
         if TYPE_CHECKING:
-            self.item: SimpleItem
+            self.item: TaskItem
             self.id: CandidateId
             self.metadata: SimObjMetadata
-            self.base_properties_results: dict[BaseItemProp, bool]
-            self.aux_properties_results = dict[BaseItemProp, dict[ItemVariableProp, bool]]
+            self.base_properties_results: dict[ItemVariableProp, bool]
+            self.props_aux_properties_results = dict[ItemVariableProp, dict[PropAuxProp, bool]]
             self.relations_satisfying_related_candidates_ids: dict[Relation, set[CandidateId]]
-            self.properties_scores: dict[BaseItemProp, float]
+            self.properties_scores: dict[ItemVariableProp, float]
             self.property_score: float
             self.relations_min_max_scores: dict[Relation, tuple[float, float]]
             self.relation_max_score: float
             self.relation_min_score: float
 
     @property
-    def _properties(self) -> set[BaseItemProp]:
+    def _scored_properties(self) -> set[ItemVariableProp]:
         """
-        Get the properties of the item.
+        Get the scored properties of the item.
 
         Returns:
-            set[ItemProp]: The properties of the item.
+            set[ItemVariableProp]: The scored properties of the item.
         """
-        return self.item.properties
+        return self.item.scored_properties
 
     @property
-    def _relations(self) -> set[Relation]:
+    def _relations(self) -> frozenset[Relation]:
         """
         Get the relations of the item.
 
         Returns:
-            set[Relation]: The relations of the item.
+            frozenset[Relation]: The relations of the item.
         """
         return self.item.relations
 
@@ -118,10 +125,11 @@ class CandidateData:
         # === Properties ===
         self.metadata = scene_object_dict[self.id]
         self.base_properties_results = self._compute_base_properties_results()
-        self.aux_properties_results = self._compute_aux_properties_results(self.base_properties_results)
+        self.props_aux_properties_results = self._compute_props_aux_properties_results(self.base_properties_results)
+        self.props_aux_items_results = self._compute_props_aux_items_results(self.base_properties_results)
 
         self.properties_scores = self._compute_properties_scores(
-            self.base_properties_results, self.aux_properties_results
+            self.base_properties_results, self.props_aux_properties_results
         )
         self.property_score = sum(self.properties_scores.values())
 
@@ -129,43 +137,50 @@ class CandidateData:
         self.relations_satisfying_related_candidates_ids = self._compute_relations_satisfying_related_candidates_ids(
             scene_object_dict
         )
+        self.relations_aux_properties_results = self._compute_relations_aux_properties_results(
+            self.relations_satisfying_related_candidates_ids
+        )
         self.relations_min_max_scores = self._compute_relations_min_max_scores(
             self.relations_satisfying_related_candidates_ids
         )
         self.relation_min_score = sum(min_score for (min_score, _max_score) in self.relations_min_max_scores.values())
         self.relation_max_score = sum(max_score for (_min_score, max_score) in self.relations_min_max_scores.values())
 
-    def _compute_base_properties_results(self) -> dict[BaseItemProp, bool]:
+        # === Final score ===
+        self.min_score = self.property_score + self.relation_min_score
+        self.max_score = self.property_score + self.relation_max_score
+
+    def _compute_base_properties_results(self) -> dict[ItemVariableProp, bool]:
         """
         Return the results dictionary of each properties for the candidate.
 
         Returns:
-            base_properties_results (dict[ItemProp, bool]): Dictionary mapping the item properties
+            base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item properties
             to the results of the property satisfaction for the candidate.
         """
-        return {prop: prop.is_object_satisfying(self.metadata) for prop in self._properties}
+        return {prop: prop.is_object_satisfying(self.metadata) for prop in self._scored_properties}
 
-    def _compute_aux_properties_results(
-        self, properties_results: dict[BaseItemProp, bool]
-    ) -> dict[BaseItemProp, dict[ItemVariableProp, bool]]:
+    def _compute_props_aux_properties_results(
+        self, properties_results: dict[ItemVariableProp, bool]
+    ) -> dict[ItemVariableProp, dict[PropAuxProp, bool]]:
         """
         Return the results dictionary of each auxiliary properties for the candidate.
 
         Args:
-            properties_results (dict[ItemProp, bool]): Dictionary mapping the item properties to the
+            properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item properties to the
                 results of the property satisfaction for the candidate.
 
         Returns:
-            aux_properties_results (dict[ItemProp, dict[ItemVariableProp, bool]]): Dictionary
+            aux_properties_results (dict[ItemVariableProp, dict[PropAuxProp, bool]]): Dictionary
                 mapping the item's properties to the results of the auxiliary properties
                 satisfaction for the candidate.
         """
         return {
             prop: {
-                aux_prop: aux_prop.is_object_satisfying(self.metadata) or properties_results[prop]
+                aux_prop: properties_results[prop] or aux_prop.is_object_satisfying(self.metadata)
                 for aux_prop in prop.auxiliary_properties
             }
-            for prop in self._properties
+            for prop in self._scored_properties
         }
 
     def _compute_relations_satisfying_related_candidates_ids(
@@ -186,27 +201,27 @@ class CandidateData:
     # TODO: Implement weighted properties
     @staticmethod
     def _compute_properties_scores(
-        base_properties_results: dict[BaseItemProp, bool],
-        aux_properties_results: dict[BaseItemProp, dict[ItemVariableProp, bool]],
-    ) -> dict[BaseItemProp, float]:
+        base_properties_results: dict[ItemVariableProp, bool],
+        props_aux_properties_results: dict[ItemVariableProp, dict[PropAuxProp, bool]],
+    ) -> dict[ItemVariableProp, float]:
         """
         Return the scores of the candidate for the item's properties.
 
         Args:
-            base_properties_results (dict[ItemProp, bool]): Dictionary mapping the item properties
+            base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item properties
             to the results of the property satisfaction for the candidate.
-            aux_properties_results (dict[ItemProp, dict[ItemVariableProp, bool]]): Dictionary
-            mapping the item's properties to the results of the auxiliary properties satisfaction
-            for the candidate.
+            props_aux_properties_results (dict[ItemVariableProp, dict[ItemVariableProp, bool]]):
+            Dictionary mapping the item's properties to the results of the auxiliary properties
+            satisfaction for the candidate.
 
         Returns:
-            properties_scores (dict[ItemProp, float]): Dictionary mapping the item properties to the
+            properties_scores (dict[ItemVariableProp, float]): Dictionary mapping the item properties to the
                 scores of the candidate for the properties.
         """
         base_score = {prop: int(result) for prop, result in base_properties_results.items()}
         aux_score = {
-            prop: sum(int(result) for result in aux_properties_results[prop].values())
-            for prop in aux_properties_results
+            prop: sum(int(result) for result in props_aux_properties_results[prop].values())
+            for prop in props_aux_properties_results
         }
         return {prop: base_score[prop] + aux_score[prop] for prop in itertools.chain(base_score, aux_score)}
 
@@ -250,27 +265,31 @@ class CandidateData:
 
 
 # %% === Items ===
-class SimpleItem:
+class SimpleItem(ABC):
     """
     An item having properties without auxiliary items or properties and no relations.
 
     Attributes:
-        t_id (ItemId): The ID of the item as defined in the task description.
-        properties (set[ItemProp]): Set of properties of the item.
+        id (ItemId): The ID of the item as defined in the task description.
+        properties (set[ItemProp]): Set of properties of the item (fixed and variable properties).
+        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
+            to be a candidate for the item.
+        scored_properties (set[ItemVariableProp]): Set of variable properties of the item which are
+            used to compute the scores of the candidates.
+        max_advancement (int): Maximum advancement of the item in the task: sum of the maximum
+            advancement of the scored properties and relations.
         candidate_ids (set[SimObjId]): Set of candidate ids of the item.
         candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
             their data.
-        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
-            to be a candidate for the item.
     """
 
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[BaseItemProp],
+        properties: set[ItemProp],
     ) -> None:
         """
-        Initialize the SimpleItem object.
+        Initialize the attribute of the item.
 
         Args:
             t_id (ItemId): The ID of the item as defined in the task description.
@@ -278,17 +297,20 @@ class SimpleItem:
         """
         self.id = ItemId(t_id)
         self.properties = properties
+        self.scored_properties = {prop for prop in self.properties if isinstance(prop, ItemVariableProp)}
+        self._properties_max_advancement = sum(prop.max_advancement for prop in self.scored_properties)
+        self.max_advancement = self._properties_max_advancement
 
         # Infer the candidate required properties from the item properties
         self._prop_candidate_required_properties = {
             prop.candidate_required_prop for prop in self.properties if prop.candidate_required_prop is not None
         }
 
-        # Temp: for compatibility with CandidateData for the moment
-        self.relations: set[Relation] = set()
         # === Type annotations ===
         self.id: ItemId
-        self.properties: set[BaseItemProp[ItemPropValue, ItemPropValue]]
+        self.properties: set[ItemProp[ItemPropValue, ItemPropValue]]
+        self.scored_properties: set[ItemVariableProp[ItemPropValue, ItemPropValue]]
+        self.max_advancement: int
         self._prop_candidate_required_properties: set[ItemFixedProp[ItemPropValue]]
         self.candidates_data: dict[CandidateId, CandidateData]
 
@@ -338,6 +360,7 @@ class SimpleItem:
         """
         return {CandidateId(obj_id) for obj_id in scene_objects_dict if self.is_candidate(scene_objects_dict[obj_id])}
 
+    @abstractmethod
     def instantiate_candidate_data(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> dict[CandidateId, CandidateData]:
@@ -352,8 +375,6 @@ class SimpleItem:
             candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
                 their data.
         """
-        candidate_ids = self._get_candidate_ids(scene_objects_dict)
-        return {c_id: CandidateData(c_id, self) for c_id in candidate_ids}
 
     def _update_candidates_data(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> None:
         """
@@ -369,7 +390,7 @@ class SimpleItem:
     # TODO: Delete
     def compute_candidates_props_scores(
         self,
-        candidates_props_results: dict[BaseItemProp, dict[CandidateId, bool]],
+        candidates_props_results: dict[ItemProp, dict[CandidateId, bool]],
     ) -> dict[CandidateId, float]:
         """
         Return the property scores of each candidate of the item.
@@ -394,7 +415,7 @@ class SimpleItem:
     def compute_candidates_props_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[BaseItemProp[ItemPropValue, ItemPropValue], dict[CandidateId, bool]]:
+    ) -> dict[ItemProp[ItemPropValue, ItemPropValue], dict[CandidateId, bool]]:
         """
         Return the results dictionary of each properties for the candidates of the item.
 
@@ -412,8 +433,7 @@ class SimpleItem:
 
 
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
-# TODO: Store relation in a list and store the results using the id of the relation to simplify the code
-# TODO: Store the results in the class and write methods to return views of the results to simplify the code
+# TODO: Make so that the class need the relations to be instantiated like the properties instead of having to set them after
 class TaskItem(SimpleItem):
     """
     An item in the definition of a task.
@@ -423,26 +443,30 @@ class TaskItem(SimpleItem):
     overlap classes to avoid assigning the same object to multiple items.
 
     Attributes:
-        t_id (ItemId): The ID of the item as defined in the task description.
-        properties (set[ItemProp]): Set of properties of the item.
-        relations (set[Relation]): Set of relations of the item.
+        id (ItemId): The ID of the item as defined in the task description.
+        properties (set[ItemProp]): Set of properties of the item (fixed and variable properties).
+        relations (frozenset[Relation]): Set of relations of the item.
         organized_relations (dict[ItemId, dict[RelationTypeId, Relation]]): Relations of the item
             organized by related item id and relation type id.
+        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
+            to be a candidate for the item.
+        scored_properties (set[ItemVariableProp]): Set of variable properties of the item which are
+            used to compute the scores of the candidates.
         props_auxiliary_items (dict[ItemProp, frozenset[TaskItem]]): Map of the item's properties to
             their auxiliary items.
         props_auxiliary_properties (dict[ItemProp, frozenset[ItemVariableProp]]): Map of the item's
             properties to their auxiliary properties.
-        candidate_ids (set[SimObjId]): Set of candidate ids of the item.
+        relations_auxiliary_properties (dict[Relation, frozenset[ItemVariableProp]]): Map of the
+            item's relations to their auxiliary properties.
+        candidate_ids (frozenset[SimObjId]): Set of candidate ids of the item.
         candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
             their data.
-        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
-            to be a candidate for the item.
     """
 
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[BaseItemProp],
+        properties: set[ItemProp],
     ) -> None:
         """
         Initialize the TaskItem object.
@@ -454,25 +478,30 @@ class TaskItem(SimpleItem):
         super().__init__(t_id, properties)
 
         # Auxiliary items and properties
-        self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.properties}
-        self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.properties}
+        self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
+        self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.scored_properties}
+        self.relations_auxiliary_properties = {
+            relation: relation.auxiliary_properties for relation in self.relations
+        }  # TODO: Implement relations auxiliary properties
 
         # === Type annotations ===
-        self.props_auxiliary_items: dict[BaseItemProp[ItemPropValue, ItemPropValue], frozenset[AuxItem]]
-        self.props_auxiliary_properties: dict[BaseItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
+        self.props_auxiliary_items: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[AuxItem]]
+        self.props_auxiliary_properties: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
+        self.relations_auxiliary_properties: dict[Relation, frozenset[ItemVariableProp]]
+        self._relations: frozenset[Relation]
 
     @property
-    def relations(self) -> set[Relation]:
+    def relations(self) -> frozenset[Relation]:
         """
         Get the set of relations of the item.
 
         Returns:
-            set[Relation]: The set of relations.
+            frozenset[Relation]: The set of relations.
         """
         return self._relations
 
     @relations.setter
-    def relations(self, relations: set[Relation]) -> None:
+    def relations(self, relations: frozenset[Relation]) -> None:
         """
         Setter for the relations of the item.
 
@@ -484,7 +513,10 @@ class TaskItem(SimpleItem):
                 existing_relations[relation.related_item.id] = {}
             elif relation.type_id in existing_relations[relation.related_item.id]:
                 raise DuplicateRelationsError(relation.type_id, self.id, relation.related_item.id)
+            existing_relations[relation.related_item.id][relation.type_id] = relation
 
+        self._relations_max_advancement = sum(relation.max_advancement for relation in relations)
+        self.max_advancement = self._properties_max_advancement + self._relations_max_advancement
         self._relations = relations
 
     # TODO: Replace to hold a set of relations instead of dict of relation id -> relation
@@ -494,8 +526,8 @@ class TaskItem(SimpleItem):
         Get the organized relations of the item.
 
         Returns:
-            dict[ItemId, dict[RelationTypeId, Relation]]: Dictionary containing the relations of the main
-                item organized by related item id and relation type id.
+            dict[ItemId, dict[RelationTypeId, Relation]]: Dictionary containing the relations of the
+            main item organized by related item id and relation type id.
         """
         return {
             relation.related_item.id: {
@@ -529,6 +561,23 @@ class TaskItem(SimpleItem):
                 required properties.
         """
         return self._prop_candidate_required_properties | self._rel_candidate_required_properties
+
+    def instantiate_candidate_data(
+        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
+    ) -> dict[CandidateId, CandidateData]:
+        """
+        Instantiate the candidate data for the item.
+
+        Args:
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
+                objects in the scene to their metadata.
+
+        Returns:
+            candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
+                their data.
+        """
+        candidate_ids = self._get_candidate_ids(scene_objects_dict)
+        return {c_id: CandidateData(c_id, self) for c_id in candidate_ids}
 
     # TODO: Replace keys by the actual properties
     # TODO: Delete; unused
@@ -646,7 +695,7 @@ class TaskItem(SimpleItem):
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         set[CandidateId],
-        dict[BaseItemProp, dict[CandidateId, bool]],
+        dict[ItemProp, dict[CandidateId, bool]],
         dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]],
         dict[CandidateId, float],
         dict[CandidateId, float],
@@ -709,7 +758,7 @@ class TaskItem(SimpleItem):
 
         # Compute the results of each auxiliary property for the items
         aux_props_results: dict[
-            BaseItemProp,
+            ItemProp,
             dict[
                 ItemVariableProp,
                 dict[CandidateId, bool],
@@ -911,7 +960,7 @@ class TaskItem(SimpleItem):
         return self.id == other.id and self.properties == other.properties and self.relations == other.relations
 
 
-class AuxItem(SimpleItem):
+class AuxItem(TaskItem):
     """
     An auxiliary item in the definition of an item property.
 
@@ -920,13 +969,13 @@ class AuxItem(SimpleItem):
     - A Fridge is necessary for the property "temperature" with the value "cold"
 
     Attributes:
-        main_prop (ItemProp): The main property of the main item to which the auxiliary item is related.
+        linked_prop (ItemVariableProp): The main property of the main item to which the auxiliary item is related.
     """
 
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[BaseItemProp],
+        properties: set[ItemProp],
     ) -> None:
         """
         Initialize the AuxItem object.
@@ -938,13 +987,13 @@ class AuxItem(SimpleItem):
         super().__init__(t_id, properties)
 
         # === Type annotations ===
-        self.main_prop: BaseItemProp
+        self.linked_prop: ItemVariableProp
 
     def __str__(self) -> str:
         return f"AuxItem({self.id})"
 
     def __repr__(self) -> str:
-        return f"AuxItem({self.id}, {self.main_prop})"
+        return f"AuxItem({self.id}, {self.linked_prop})"
 
 
 # %% === Overlap class ===
@@ -1029,7 +1078,7 @@ class ItemOverlapClass:
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
     ) -> tuple[
         list[Assignment],
-        dict[TaskItem, dict[BaseItemProp, dict[CandidateId, bool]]],
+        dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]],
         dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]],
         dict[TaskItem, dict[CandidateId, float]],
         dict[TaskItem, dict[CandidateId, float]],

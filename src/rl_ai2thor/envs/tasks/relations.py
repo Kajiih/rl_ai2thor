@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
-from rl_ai2thor.envs.tasks.item_prop import ItemFixedProp, PickupableProp, ReceptacleProp, SingleValuePSF
+from rl_ai2thor.envs.tasks.item_prop import PickupableProp, ReceptacleProp
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
+    from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp
     from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
@@ -49,10 +50,14 @@ class Relation(ABC):
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: ItemFixedProp | None = None
+    auxiliary_properties: frozenset[AuxProp] = frozenset()
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         self.main_item = main_item
         self.related_item = related_item
+
+        self.max_advancement = 1 + len(self.auxiliary_properties)
+
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
         # === Type Annotations ===
@@ -277,7 +282,7 @@ class ReceptacleOfRelation(Relation):
 
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
-    candidate_required_prop = ReceptacleProp(SingleValuePSF(True))
+    candidate_required_prop = ReceptacleProp(True)
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         super().__init__(main_item, related_item)
@@ -307,6 +312,7 @@ class ReceptacleOfRelation(Relation):
         )
 
 
+# TODO: Add IsPickedUp auxiliary property
 class ContainedInRelation(Relation):
     """
     A relation of the form "main_item is_contained_in related_item".
@@ -322,7 +328,7 @@ class ContainedInRelation(Relation):
 
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
-    candidate_required_prop = PickupableProp(SingleValuePSF(True))
+    candidate_required_prop = PickupableProp(True)
 
     def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
         super().__init__(main_item, related_item)
@@ -352,6 +358,7 @@ class ContainedInRelation(Relation):
         )
 
 
+# TODO: Add IsPickedUp auxiliary property
 class CloseToRelation(Relation):
     """
     A relation of the form "main_item is close to related_item".

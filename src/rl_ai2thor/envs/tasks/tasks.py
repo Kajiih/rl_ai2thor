@@ -15,25 +15,19 @@ from typing import TYPE_CHECKING, Any
 from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
 from rl_ai2thor.envs.sim_objects import (
-    COLD_SOURCES,
-    DIRTYABLES,
-    HEAT_SOURCES,
     LIGHT_SOURCES,
-    OBJECT_TYPES_DATA,
-    WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
     SimObjVariableProp,
 )
-from rl_ai2thor.envs.tasks.item_prop import (
-    BaseItemProp,
+from rl_ai2thor.envs.tasks.item_prop import obj_prop_id_to_item_prop
+from rl_ai2thor.envs.tasks.item_prop_interface import (
+    ItemProp,
     ItemPropValue,
-    ItemVariableProp,
     MultiValuePSF,
     PropSatFunction,
     SingleValuePSF,
     TemperatureValue,
-    obj_prop_id_to_item_prop,
 )
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
@@ -299,7 +293,7 @@ class GraphTask(BaseTask):
         self.items_by_id: dict[ItemId, TaskItem]
         self.overlap_classes: list[ItemOverlapClass]
         self.auxiliary_items: frozenset[AuxItem]
-        self.max_task_advancement: float
+        self.max_advancement: float
 
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
@@ -337,7 +331,7 @@ class GraphTask(BaseTask):
             *(auxiliary_items for item in self.items for auxiliary_items in item.props_auxiliary_items.values())
         )
         for auxiliary_item in self.auxiliary_items:
-            auxiliary_item.relations = set()
+            auxiliary_item.relations = frozenset()
             auxiliary_item.candidates_data = auxiliary_item.instantiate_candidate_data(scene_objects_dict)
             if not auxiliary_item.candidate_ids:
                 print(f"No candidate found for auxiliary item {auxiliary_item.id}")
@@ -365,7 +359,7 @@ class GraphTask(BaseTask):
 
         # Compute max task advancement = Total number of properties and relations of the items
         # TODO: Make it compatible with weighted properties and relations
-        self.max_task_advancement = sum(len(item.properties) + len(item.relations) for item in self.items)
+        self.max_advancement = sum(item.max_advancement for item in self.items)
 
         return True, *self.compute_task_advancement(event, scene_objects_dict)
 
@@ -539,12 +533,12 @@ class GraphTask(BaseTask):
             if assignment_advancement > max_task_advancement:
                 max_task_advancement = assignment_advancement
                 best_assignment = global_assignment
-                if max_task_advancement == self.max_task_advancement:
+                if max_task_advancement == self.max_advancement:
                     is_terminated = True
                     break
 
         # === Construct the results dictionary ===
-        all_properties_results: dict[TaskItem, dict[BaseItemProp, dict[CandidateId, bool]]] = {
+        all_properties_results: dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]] = {
             item: item_properties_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_properties_results in overlap_class_assignment_data[1].items()
@@ -687,11 +681,11 @@ class GraphTask(BaseTask):
 
         # === Set item relations ===
         for item_id, item in items.items():
-            item.relations = {
+            item.relations = frozenset({
                 relation
                 for relations_dict in organized_relations[item_id].values()
                 for relation in relations_dict.values()
-            }
+            })
 
         return list(items.values())
 
