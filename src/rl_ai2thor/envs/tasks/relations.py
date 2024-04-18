@@ -250,17 +250,17 @@ class Relation(ABC):
         return f"Relation({self.type_id}, {self.main_item.id}, {self.related_item.id})"
 
     # TODO: Check if we keep this
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, Relation):
-            return False
-        return (
-            self.type_id == other.type_id
-            and self.main_item.id == other.main_item.id
-            and self.related_item.id == other.related_item.id
-        )
+    # def __eq__(self, other: Any) -> bool:
+    #     if not isinstance(other, Relation):
+    #         return False
+    #     return (
+    #         self.type_id == other.type_id
+    #         and self.main_item.id == other.main_item.id
+    #         and self.related_item.id == other.related_item.id
+    #     )
 
-    def __hash__(self) -> int:
-        return hash((self.type_id, self.main_item, self.related_item))
+    # def __hash__(self) -> int:
+    #     return hash((self.type_id, self.main_item, self.related_item))
 
 
 class ReceptacleOfRelation(Relation):

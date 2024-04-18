@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Container
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.sim_objects import (
     COOKING_SOURCES,
@@ -23,6 +23,9 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjVariableProp,
 )
 from rl_ai2thor.envs.tasks.items import AuxItem, CandidateId
+
+if TYPE_CHECKING:
+    from rl_ai2thor.envs.tasks.relations import Relation
 
 
 # %% === Property value enums ==
@@ -48,7 +51,7 @@ ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | Fillable
 # type AuxProps = frozenset[ItemVariableProp]
 
 
-# %% === Property satisfaction functions ===
+# %% === Property Satisfaction Functions ===
 class BasePSF[T: ItemPropValue](ABC):
     """
     Base class for functions used to define the set of acceptable values for a property to be satisfied.
@@ -148,7 +151,7 @@ type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 # TODO: Check if we need to add a hash
 # TODO: Support multiple candidate required properties
 # TODO: Make only variable prop having auxiliary properties and items
-class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
+class BaseItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     """
     Base class for item properties in the definition of a task.
 
@@ -185,16 +188,12 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
 
     target_ai2thor_property: SimObjProp
     candidate_required_prop: ItemFixedProp[T2] | None = None
-    auxiliary_properties: frozenset[ItemVariableProp] = frozenset()
-    auxiliary_items: frozenset[AuxItem] = frozenset()
 
-    def __init__(self, target_satisfaction_function: PropSatFunction[T1] | ItemPropValue) -> None:
+    def __init__(self, target_satisfaction_function: PropSatFunction[T1] | T1) -> None:
         """Initialize the Property object."""
         if isinstance(target_satisfaction_function, ItemPropValue):
             target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
         self.target_satisfaction_function = target_satisfaction_function
-        for aux_item in self.auxiliary_items:
-            aux_item.main_prop = self
 
         # === Type Annotations ===
         self.target_satisfaction_function: PropSatFunction[T1]
@@ -206,22 +205,6 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     def is_object_satisfying(self, obj_metadata: SimObjMetadata) -> bool:
         """Return True if the object satisfies the property."""
         return self(obj_metadata[self.target_ai2thor_property])
-
-    def __str__(self) -> str:
-        return f"{self.target_ai2thor_property}({self.target_satisfaction_function})"
-
-    def __repr__(self) -> str:
-        return f"ItemProp({self.target_ai2thor_property}={self.target_satisfaction_function})"
-
-    # def __eq__(self, other: Any) -> bool:
-    #     return (
-    #         isinstance(other, ItemProp)
-    #         and self.target_ai2thor_property == other.target_ai2thor_property
-    #         and self.target_satisfaction_function == other.target_satisfaction_function
-    #     )
-
-    # def __hash__(self) -> int:
-    #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
 
     # TODO: Delete?
     def compute_candidates_results(
@@ -270,8 +253,24 @@ class ItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
             candidate_id: int(candidate_satisfies) for candidate_id, candidate_satisfies in candidates_results.items()
         }
 
+    def __str__(self) -> str:
+        return f"{self.target_ai2thor_property}({self.target_satisfaction_function})"
 
-class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
+    def __repr__(self) -> str:
+        return f"ItemProp({self.target_ai2thor_property}, {self.target_satisfaction_function})"
+
+    # def __eq__(self, other: Any) -> bool:
+    #     return (
+    #         isinstance(other, ItemProp)
+    #         and self.target_ai2thor_property == other.target_ai2thor_property
+    #         and self.target_satisfaction_function == other.target_satisfaction_function
+    #     )
+
+    # def __hash__(self) -> int:
+    #     return hash((self.target_ai2thor_property, self.target_satisfaction_function))
+
+
+class ItemFixedProp[T: ItemPropValue](BaseItemProp[T, T]):
     """
     Base class for fixed item properties in the definition of a task.
 
@@ -284,14 +283,14 @@ class ItemFixedProp[T: ItemPropValue](ItemProp[T, T]):
 
     def __init__(
         self,
-        target_satisfaction_function: PropSatFunction[T] | ItemPropValue,
+        target_satisfaction_function: PropSatFunction[T] | T,
     ) -> None:
         """Initialize the candidate_required_prop attribute with self."""
         super().__init__(target_satisfaction_function)
         self.candidate_required_prop = self
 
 
-class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
+class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2]):
     """
     Base class for variable item properties in the definition of a task.
 
@@ -301,6 +300,106 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](ItemProp[T1, T2]):
     """
 
     target_ai2thor_property: SimObjVariableProp
+    auxiliary_properties: frozenset[PropAuxProp] = frozenset()
+    auxiliary_items: frozenset[AuxItem] = frozenset()
+
+    def __init__(
+        self,
+        target_satisfaction_function: PropSatFunction[T1] | T1,
+    ) -> None:
+        """Initialize the Property object."""
+        super().__init__(target_satisfaction_function)
+
+        # Initialize the main property of the auxiliary properties and items
+        for aux_item in self.auxiliary_items:
+            aux_item.main_prop = self
+        for aux_prop in self.auxiliary_properties:
+            aux_prop.linked_prop = self
+
+
+type ItemProp = ItemFixedProp | ItemVariableProp
+
+
+# TODO: Define this better, eventually by writing an AuxProp class for each Variable prop that is used as an auxiliary prop or by adding is_fixed and is_auxiliary attributes to the ItemProp class
+class BaseAuxProp[T1: ItemPropValue, T2: ItemPropValue](ItemVariableProp[T1, T2], ABC):
+    """
+    Base class for auxiliary properties of an item property or a relation.
+
+    An auxiliary property is a variable property and has no auxiliary properties or auxiliary items
+    itself.
+
+    The main point of an auxiliary property is that if its main property is satisfied, the auxiliary
+    property is also considered satisfied. Also, we add the score of the auxiliary property to the
+    score of the main property.
+
+    Attributes:
+        linked_object (ItemVariableProp, Relation): The main property or relation that this
+            auxiliary property is linked to.
+    """
+
+    def __init__(
+        self, variable_prop_type: type[ItemVariableProp[T1, T2]], target_satisfaction_function: PropSatFunction[T1] | T1
+    ) -> None:
+        """Initialize the Property object."""
+        variable_prop_type.__init__(self, target_satisfaction_function)
+
+        self.target_ai2thor_property = variable_prop_type.target_ai2thor_property
+
+        # === Type annotations ===
+        self.linked_prop: ItemVariableProp | Relation
+
+
+class RelationAuxProp[T1: ItemPropValue, T2: ItemPropValue](BaseAuxProp[T1, T2]):
+    """
+    Auxiliary property of a relation.
+
+    Attributes:
+        linked_relation (Relation): The relation that this auxiliary property is linked to.
+    """
+
+    def __init__(
+        self, variable_prop_type: type[ItemVariableProp[T1, T2]], target_satisfaction_function: PropSatFunction[T1] | T1
+    ) -> None:
+        """Initialize the Property object."""
+        super().__init__(variable_prop_type, target_satisfaction_function)
+
+        self.target_ai2thor_property = variable_prop_type.target_ai2thor_property
+
+        # === Type annotations ===
+        self.linked_relation: Relation
+
+    @property
+    def linked_object(self) -> Relation:
+        """Return the linked object."""
+        return self.linked_relation
+
+
+class PropAuxProp[T1: ItemPropValue, T2: ItemPropValue](BaseAuxProp[T1, T2]):
+    """
+    Auxiliary property of an item property.
+
+    Attributes:
+        linked_prop (ItemVariableProp): The main property that this auxiliary property is linked to.
+    """
+
+    def __init__(
+        self, variable_prop_type: type[ItemVariableProp[T1, T2]], target_satisfaction_function: PropSatFunction[T1] | T1
+    ) -> None:
+        """Initialize the Property object."""
+        super().__init__(variable_prop_type, target_satisfaction_function)
+
+        self.target_ai2thor_property = variable_prop_type.target_ai2thor_property
+
+        # === Type annotations ===
+        self.linked_prop: ItemVariableProp
+
+    @property
+    def linked_object(self) -> ItemVariableProp:
+        """Return the linked object."""
+        return self.linked_prop
+
+
+type AuxProp = RelationAuxProp | PropAuxProp
 
 
 # %% === Item property definitions ===
@@ -440,7 +539,7 @@ class IsBrokenProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_BROKEN
     candidate_required_prop = BreakableProp(True)
-    auxiliary_properties = frozenset({IsPickedUpProp(True)})
+    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpProp, True)})
 
 
 # TODO: Support filling with other liquids and contextual interactions
@@ -496,7 +595,7 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_COOKED
     candidate_required_prop = CookableProp(True)
-    auxiliary_properties = frozenset({IsPickedUpProp(True)})
+    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpProp, True)})
     auxiliary_items = frozenset({
         AuxItem(
             t_id="cooking_source",
@@ -521,7 +620,7 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
     """
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
-    auxiliary_properties = frozenset({IsPickedUpProp(True)})
+    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpProp, True)})
 
     def __init__(self, target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue) -> None:
         """Initialize the Property object."""

@@ -26,7 +26,7 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjVariableProp,
 )
 from rl_ai2thor.envs.tasks.item_prop import (
-    ItemProp,
+    BaseItemProp,
     ItemPropValue,
     ItemVariableProp,
     MultiValuePSF,
@@ -544,7 +544,7 @@ class GraphTask(BaseTask):
                     break
 
         # === Construct the results dictionary ===
-        all_properties_results: dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]] = {
+        all_properties_results: dict[TaskItem, dict[BaseItemProp, dict[CandidateId, bool]]] = {
             item: item_properties_results
             for overlap_class_assignment_data in overlap_classes_assignment_data
             for item, item_properties_results in overlap_class_assignment_data[1].items()
