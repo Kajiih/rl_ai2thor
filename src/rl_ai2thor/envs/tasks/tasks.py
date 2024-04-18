@@ -10,6 +10,7 @@ from __future__ import annotations
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.actions import Ai2thorAction
@@ -1269,18 +1270,32 @@ class Open(GraphTask):
 
 
 # %% === Constants ===
-ALL_TASKS = {
+class TaskType(StrEnum):
+    """Enumeration of task types."""
+
     # === Alfred tasks ===
-    "PlaceIn": PlaceIn,
-    "PlaceNSameIn": PlaceNSameIn,
-    "PlaceWithMoveableRecepIn": PlaceWithMoveableRecepIn,
-    "PlaceCleanedIn": PlaceCleanedIn,
-    "PlaceHeatedIn": PlaceHeatedIn,
-    "PlaceCooledIn": PlaceCooledIn,
-    "LookInLight": LookInLight,
+    PLACE_IN = "PlaceIn"
+    PLACE_N_SAME_IN = "PlaceNSameIn"
+    PLACE_WITH_MOVEABLE_RECEP_IN = "PlaceWithMoveableRecepIn"
+    PLACE_CLEANED_IN = "PlaceCleanedIn"
+    PLACE_HEATED_IN = "PlaceHeatedIn"
+    PLACE_COOLED_IN = "PlaceCooledIn"
+    LOOK_IN_LIGHT = "LookInLight"
     # === Custom tasks ===
-    "Pickup": Pickup,
-    "Open": Open,
+    PICKUP = "Pickup"
+    OPEN = "Open"
+
+
+ALL_TASKS = {
+    TaskType.PLACE_IN: PlaceIn,
+    TaskType.PLACE_N_SAME_IN: PlaceNSameIn,
+    TaskType.PLACE_WITH_MOVEABLE_RECEP_IN: PlaceWithMoveableRecepIn,
+    TaskType.PLACE_CLEANED_IN: PlaceCleanedIn,
+    TaskType.PLACE_HEATED_IN: PlaceHeatedIn,
+    TaskType.PLACE_COOLED_IN: PlaceCooledIn,
+    TaskType.LOOK_IN_LIGHT: LookInLight,
+    TaskType.PICKUP: Pickup,
+    TaskType.OPEN: Open,
 }
 
 

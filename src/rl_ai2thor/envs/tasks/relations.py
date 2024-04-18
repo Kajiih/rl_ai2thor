@@ -12,11 +12,12 @@ from typing import TYPE_CHECKING
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_ai2thor.envs.tasks.item_prop import PickupableProp, ReceptacleProp
+from rl_ai2thor.envs.tasks.items import ItemId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp
-    from rl_ai2thor.envs.tasks.items import CandidateId, ItemId, TaskItem
+    from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
 # %% === Enums ===
@@ -475,7 +476,8 @@ class CloseToRelation(Relation):
 
 
 ## %% === Mappings ===
-relation_type_id_to_relation: dict[RelationTypeId, type[Relation]] = {
+relation_type_id_to_relation: dict[RelationTypeId, type[Relation]]
+relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
     RelationTypeId.CLOSE_TO: CloseToRelation,

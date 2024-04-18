@@ -297,6 +297,7 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
 
 
 ## %% === Item property mapping ===
+obj_prop_id_to_item_prop: dict[SimObjFixedProp | SimObjVariableProp, type[ItemFixedProp | ItemVariableProp]]
 obj_prop_id_to_item_prop = {
     SimObjFixedProp.OBJECT_TYPE: ObjectTypeProp,
     SimObjFixedProp.IS_INTERACTABLE: IsInteractableProp,

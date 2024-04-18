@@ -214,6 +214,7 @@ class ObjTypeData:
     contextual_interactions: str
 
 
+OBJECT_TYPES_DATA: dict[SimObjectType, ObjTypeData]
 OBJECT_TYPES_DATA = {
     SimObjectType(sim_object_type): ObjTypeData(
         scenes=object_type_data["scenes"],
@@ -312,6 +313,7 @@ COOKING_SOURCES = {
 }
 
 
+ALL_OBJECT_GROUPS: dict[str, set[SimObjectType]]
 ALL_OBJECT_GROUPS = {
     "_PICKUPABLES": PICKUPABLES,
     "_RECEPTACLES": RECEPTACLES,
