@@ -16,7 +16,7 @@ from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp
-    from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
+    from rl_ai2thor.envs.tasks.items import CandidateId, ItemId, TaskItem
 
 
 # %% === Enums ===
@@ -33,18 +33,32 @@ type RelationParam = int | float | bool
 
 
 # %% === Relations ===
-# TODO? Add main_candidates_ids and related_candidates_ids attributes to the relation and remove the dependency on the items?
+# TODO? Optimize the computation of the results and the advancement by reusing the results of the inverse relation when possible?
 class Relation(ABC):
     """
     A relation between two items in the definition of a task.
 
+    The inverse relation is automatically created when the relation is instantiated, and in
+    particular, the inverse relation should not be manually instantiated and instead, one should
+    use the inverse_relation attribute of the relation to access it.
+
+    The main_item and related_item are the items that are automatically set when the main item and
+    teh related item respectively are instantiated with the relation and the inverse relation
+    respectively.
+
     Attributes:
         type_id (RelationTypeId): The type of the relation.
-        inverse_relation_type_id (RelationTypeId): The type of the inverse relation.
+        inverse_relation_type_id (RelationTypeId): The id of the type of the inverse relation.
         candidate_required_prop (ItemFixedProp | None): The candidate required property for the main
             item.
-        main_item (TaskItem): The main item in the relation.
-        related_item (TaskItem): The related item to which the main item is related.
+        auxiliary_properties (frozenset[AuxProp]): The auxiliary properties of the relation.
+        main_item_id (ItemId): The id of the main item of the relation.
+        related_item_id (ItemId): The id of the related item of the relation.
+        inverse_relation (Relation): The inverse relation of the relation.
+        main_item (TaskItem): The main item in the relation. Automatically set when the main item is
+            instantiated with this relation.
+        related_item (TaskItem): The related item to which the main item is related. Automatically
+            set when the related item is instantiated with the inverse relation.
     """
 
     type_id: RelationTypeId
@@ -52,15 +66,37 @@ class Relation(ABC):
     candidate_required_prop: ItemFixedProp | None = None
     auxiliary_properties: frozenset[AuxProp] = frozenset()
 
-    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
-        self.main_item = main_item
-        self.related_item = related_item
+    def __init__(
+        self,
+        main_item_id: ItemId | str,
+        related_item_id: ItemId | str,
+        _inverse_relation: Relation | None = None,
+    ) -> None:
+        """
+        Initialize the relation and eventually the inverse relation.
+
+        Args:
+            main_item_id (ItemId): Id of the main item of the relation.
+            related_item_id (ItemId): Id of the related item of the relation.
+            _inverse_relation (Relation, optional): The inverse relation of the relation. Should not
+                be used outside of _initialize_inverse_relation to have coherent inverse relations.
+        """
+        self.main_item_id = ItemId(main_item_id)
+        self.related_item_id = ItemId(related_item_id)
+
+        if _inverse_relation is not None:
+            self.inverse_relation = _inverse_relation
+        else:
+            self.inverse_relation = self._initialize_inverse_relation()
 
         self.max_advancement = 1 + len(self.auxiliary_properties)
 
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
         # === Type Annotations ===
+        self.main_item_id: ItemId
+        self.related_item_id: ItemId
+        self.inverse_relation: Relation
         self.main_item: TaskItem
         self.related_item: TaskItem
 
@@ -76,18 +112,20 @@ class Relation(ABC):
             inverse_relation_parameters (dict[str, RelationParam]): The parameters of the inverse relation.
         """
 
-    def create_inverse_relation(self) -> Relation:
+    def _initialize_inverse_relation(self) -> Relation:
         """
-        Return the inverse relation.
+        Initialize and return the inverse relation.
 
         Returns:
             inverse_relation (Relation): The inverse relation.
         """
         inverse_relation_parameters = self._compute_inverse_relation_parameters()
-        inverse_relation = relation_type_id_to_relation[self.inverse_relation_type_id](
-            main_item=self.related_item,
-            related_item=self.main_item,
+        inverse_relation_type = relation_type_id_to_relation[self.inverse_relation_type_id]
+        inverse_relation = inverse_relation_type(
             **inverse_relation_parameters,
+            main_item_id=self.related_item_id,
+            related_item_id=self.main_item_id,
+            _inverse_relation=self,
         )
         return inverse_relation
 
@@ -275,6 +313,9 @@ class ReceptacleOfRelation(Relation):
     The inverse relation is ContainedInRelation.
 
     Attributes:
+        main_item_id (ItemId): The id of the main item of the relation.
+        related_item_id (ItemId): The id of the related item that is contained in the main item.
+        inverse_relation (Relation): The inverse relation of the relation.
         main_item (TaskItem): The main item in the relation.
         related_item (TaskItem): The related item that is contained in the main item.
 
@@ -284,8 +325,13 @@ class ReceptacleOfRelation(Relation):
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
     candidate_required_prop = ReceptacleProp(True)
 
-    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
-        super().__init__(main_item, related_item)
+    def __init__(
+        self,
+        main_item_id: ItemId | str,
+        related_item_id: ItemId | str,
+        _inverse_relation: Relation | None = None,
+    ) -> None:
+        super().__init__(main_item_id, related_item_id, _inverse_relation)
 
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
         """Return an empty dictionary since the inverse relation doesn't have parameters."""
@@ -320,6 +366,9 @@ class ContainedInRelation(Relation):
     The inverse relation is ReceptacleOfRelation.
 
     Attributes:
+        main_item_id (ItemId): The id of the main item of the relation.
+        related_item_id (ItemId): The id of the related item that contains the main item.
+        inverse_relation (Relation): The inverse relation of the relation.
         main_item (TaskItem): The main item in the relation.
         related_item (TaskItem): The related item that contains the main item.
 
@@ -330,8 +379,13 @@ class ContainedInRelation(Relation):
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
     candidate_required_prop = PickupableProp(True)
 
-    def __init__(self, main_item: TaskItem, related_item: TaskItem) -> None:
-        super().__init__(main_item, related_item)
+    def __init__(
+        self,
+        main_item_id: ItemId | str,
+        related_item_id: ItemId | str,
+        _inverse_relation: Relation | None = None,
+    ) -> None:
+        super().__init__(main_item_id, related_item_id, _inverse_relation)
 
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:  # noqa: PLR6301
         """Return an empty dictionary since the inverse relation doesn't have parameters."""
@@ -366,17 +420,26 @@ class CloseToRelation(Relation):
     The inverse relation is itself.
 
     Attributes:
+        distance (float): The distance between the main item and the related item.
+        main_item_id (ItemId): The id of the main item of the relation.
+        related_item_id (ItemId): The id of the related item that is close to the main item.
+        inverse_relation (Relation): The inverse relation of the relation.
         main_item (TaskItem): The main item in the relation.
         related_item (TaskItem): The related item that is close to the main item.
-        distance (float): The distance between the main item and the related item.
 
     """
 
     type_id = RelationTypeId.CLOSE_TO
     inverse_relation_type_id = RelationTypeId.CLOSE_TO
 
-    def __init__(self, main_item: TaskItem, related_item: TaskItem, distance: float) -> None:
-        super().__init__(main_item, related_item)
+    def __init__(
+        self,
+        distance: float,
+        main_item_id: ItemId | str,
+        related_item_id: ItemId | str,
+        _inverse_relation: Relation | None = None,
+    ) -> None:
+        super().__init__(main_item_id, related_item_id, _inverse_relation)
         self.distance = distance
 
     def _compute_inverse_relation_parameters(self) -> dict[str, float]:
@@ -412,7 +475,7 @@ class CloseToRelation(Relation):
 
 
 ## %% === Mappings ===
-relation_type_id_to_relation = {
+relation_type_id_to_relation: dict[RelationTypeId, type[Relation]] = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,
     RelationTypeId.CONTAINED_IN: ContainedInRelation,
     RelationTypeId.CLOSE_TO: CloseToRelation,

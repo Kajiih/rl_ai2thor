@@ -627,27 +627,12 @@ class GraphTask(BaseTask):
         Returns:
             items (list[TaskItem]): List of the items of the task.
         """
-        # === Instantiate items without relations ===
-        items = {
-            item_id: TaskItem(
-                item_id,
-                {
-                    obj_prop_id_to_item_prop[prop](prop_sat_function)
-                    for prop, prop_sat_function in item_data.properties.items()
-                },
-            )
-            for item_id, item_data in task_description_dict.items()
-        }
-
         # === Instantiate relations ===
-        organized_relations: dict[ItemId | str, dict[ItemId | str, dict[RelationTypeId, Relation]]] = {
-            main_item_id: {} for main_item_id in items
-        }
+        organized_relations: dict[ItemId | str, dict[ItemId | str, dict[RelationTypeId, Relation]]]
+        organized_relations = {main_item_id: {} for main_item_id in task_description_dict}
 
         for main_item_id, main_item_data in task_description_dict.items():
-            main_item = items[main_item_id]
             for related_item_id, relations_dict in main_item_data.relations.items():
-                related_item = items[related_item_id]
                 if related_item_id not in organized_relations[main_item_id]:
                     organized_relations[main_item_id][related_item_id] = {}
                     organized_relations[related_item_id][main_item_id] = {}
@@ -661,8 +646,9 @@ class GraphTask(BaseTask):
 
                     # === Add direct relations ===
                     relation = relation_type_id_to_relation[relation_type_id](
-                        main_item=main_item,
-                        related_item=related_item,
+                        main_item_id=main_item_id,
+                        related_item_id=related_item_id,
+                        _inverse_relation=None,
                         **relation_parameters,
                     )
                     organized_relations[main_item_id][related_item_id][relation_type_id] = relation
@@ -676,18 +662,37 @@ class GraphTask(BaseTask):
                             related_item_id=main_item_id,
                         )
                     organized_relations[related_item_id][main_item_id][inverse_relation_type_id] = (
-                        relation.create_inverse_relation()
+                        relation.inverse_relation
                     )
 
-        # === Set item relations ===
-        for item_id, item in items.items():
-            item.relations = frozenset({
+        # === Instantiate items ===
+        relations_by_main_item_id = {
+            main_item_id: {
                 relation
-                for relations_dict in organized_relations[item_id].values()
+                for relations_dict in organized_relations[main_item_id].values()
                 for relation in relations_dict.values()
-            })
+            }
+            for main_item_id in organized_relations
+        }
+        properties_by_item_id = {
+            item_id: {
+                obj_prop_id_to_item_prop[prop](prop_sat_function)
+                for prop, prop_sat_function in item_data.properties.items()
+            }
+            for item_id, item_data in task_description_dict.items()
+        }
+        items = [
+            TaskItem(
+                item_id,
+                properties_by_item_id[item_id],
+                relations_by_main_item_id[item_id],
+            )
+            for item_id in task_description_dict
+        ]
+        # main_item and related_item attributes of the relations are automatically set by the
+        # TaskItem constructor
 
-        return list(items.values())
+        return items
 
     # TODO: Improve this
     def __repr__(self) -> str:

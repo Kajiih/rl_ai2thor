@@ -97,12 +97,12 @@ class CandidateData:
             self.relation_min_score: float
 
     @property
-    def _scored_properties(self) -> set[ItemVariableProp]:
+    def _scored_properties(self) -> frozenset[ItemVariableProp]:
         """
         Get the scored properties of the item.
 
         Returns:
-            set[ItemVariableProp]: The scored properties of the item.
+            frozenset[ItemVariableProp]: The scored properties of the item.
         """
         return self.item.scored_properties
 
@@ -273,10 +273,11 @@ class SimpleItem(ABC):
 
     Attributes:
         id (ItemId): The ID of the item as defined in the task description.
-        properties (set[ItemProp]): Set of properties of the item (fixed and variable properties).
-        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
+        properties (frozenset[ItemProp]): Set of properties of the item (fixed and variable properties).
+        relations (frozenset[Relation]): Set of relations of the item.
+        candidate_required_properties (frozenset[ItemFixedProp]): Set of properties required for an object
             to be a candidate for the item.
-        scored_properties (set[ItemVariableProp]): Set of variable properties of the item which are
+        scored_properties (frozenset[ItemVariableProp]): Set of variable properties of the item which are
             used to compute the scores of the candidates.
         max_advancement (int): Maximum advancement of the item in the task: sum of the maximum
             advancement of the scored properties and relations.
@@ -298,34 +299,22 @@ class SimpleItem(ABC):
             properties (set[ItemProp]): Set of properties of the item.
         """
         self.id = ItemId(t_id)
-        self.properties = properties
-        self.scored_properties = {prop for prop in self.properties if isinstance(prop, ItemVariableProp)}
-        self._properties_max_advancement = sum(prop.max_advancement for prop in self.scored_properties)
-        self.max_advancement = self._properties_max_advancement
+        self.properties = frozenset(properties)
+        self.scored_properties = frozenset(prop for prop in self.properties if isinstance(prop, ItemVariableProp))
+        self.max_advancement = sum(prop.max_advancement for prop in self.scored_properties)
 
         # Infer the candidate required properties from the item properties
-        self._prop_candidate_required_properties = {
+        self.candidate_required_properties = frozenset(
             prop.candidate_required_prop for prop in self.properties if prop.candidate_required_prop is not None
-        }
+        )
 
         # === Type annotations ===
         self.id: ItemId
-        self.properties: set[ItemProp[ItemPropValue, ItemPropValue]]
-        self.scored_properties: set[ItemVariableProp[ItemPropValue, ItemPropValue]]
+        self.properties: frozenset[ItemProp[ItemPropValue, ItemPropValue]]
+        self.scored_properties: frozenset[ItemVariableProp[ItemPropValue, ItemPropValue]]
         self.max_advancement: int
-        self._prop_candidate_required_properties: set[ItemFixedProp[ItemPropValue]]
+        self.candidate_required_properties: frozenset[ItemFixedProp[ItemPropValue]]
         self.candidates_data: dict[CandidateId, CandidateData]
-
-    @property
-    def candidate_required_properties(self) -> set[ItemFixedProp[ItemPropValue]]:
-        """
-        Return a dictionary containing the properties required for an object to be a candidate for the item.
-
-        Returns:
-            candidate_properties (set[ItemFixedProp[ItemPropValue]]): Set of the item's candidate
-                required properties.
-        """
-        return self._prop_candidate_required_properties
 
     @property
     def candidate_ids(self) -> set[CandidateId]:
@@ -446,13 +435,13 @@ class TaskItem(SimpleItem):
 
     Attributes:
         id (ItemId): The ID of the item as defined in the task description.
-        properties (set[ItemProp]): Set of properties of the item (fixed and variable properties).
+        properties (frozenset[ItemProp]): Set of properties of the item (fixed and variable properties).
         relations (frozenset[Relation]): Set of relations of the item.
         organized_relations (dict[ItemId, dict[RelationTypeId, Relation]]): Relations of the item
             organized by related item id and relation type id.
-        candidate_required_properties (set[ItemFixedProp]): Set of properties required for an object
+        candidate_required_properties (frozenset[ItemFixedProp]): Set of properties required for an object
             to be a candidate for the item.
-        scored_properties (set[ItemVariableProp]): Set of variable properties of the item which are
+        scored_properties (frozenset[ItemVariableProp]): Set of variable properties of the item which are
             used to compute the scores of the candidates.
         props_auxiliary_items (dict[ItemProp, frozenset[TaskItem]]): Map of the item's properties to
             their auxiliary items.
@@ -460,7 +449,7 @@ class TaskItem(SimpleItem):
             properties to their auxiliary properties.
         relations_auxiliary_properties (dict[Relation, frozenset[ItemVariableProp]]): Map of the
             item's relations to their auxiliary properties.
-        candidate_ids (frozenset[SimObjId]): Set of candidate ids of the item.
+        candidate_ids (set[SimObjId]): Set of candidate ids of the item.
         candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
             their data.
     """
@@ -469,57 +458,50 @@ class TaskItem(SimpleItem):
         self,
         t_id: ItemId | str,
         properties: set[ItemProp],
+        relations: set[Relation] | None = None,
     ) -> None:
         """
-        Initialize the TaskItem object.
+        Initialize the task item.
+
+        The main item of the relations and the related item of their inverse relations are set to
+        `self`.
 
         Args:
             t_id (ItemId): The ID of the item as defined in the task description.
             properties (set[ItemProp]): Set of properties of the item.
+            relations (set[Relation], optional): Set of relations of the item.
         """
         super().__init__(t_id, properties)
+        # === Set the relations ===
+        if relations is not None:
+            self.relations = frozenset(relations)
+        else:
+            self.relations = frozenset()
+        self._check_duplicate_relations(self.relations)
+        # Set the main item and related item of the relations and their inverse relations
+        for relation in self.relations:
+            relation.main_item = self
+            relation.inverse_relation.related_item = self
 
-        # Auxiliary items and properties
+        self.max_advancement += sum(relation.max_advancement for relation in self.relations)
+
+        relation_required_properties = frozenset(
+            relation.candidate_required_prop
+            for relation in self.relations
+            if relation.candidate_required_prop is not None
+        )
+        self.candidate_required_properties |= relation_required_properties
+
+        #  === Auxiliary items and properties ===
         self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
         self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.scored_properties}
+        self.relations_auxiliary_properties = {relation: relation.auxiliary_properties for relation in self.relations}
 
         # === Type annotations ===
+        self.relations: frozenset[Relation]
         self.props_auxiliary_items: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[AuxItem]]
         self.props_auxiliary_properties: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
         self.relations_auxiliary_properties: dict[Relation, frozenset[ItemVariableProp]]
-
-    @property
-    def relations(self) -> frozenset[Relation]:
-        """
-        Get the set of relations of the item.
-
-        Returns:
-            frozenset[Relation]: The set of relations.
-        """
-        return self._relations
-
-    @relations.setter
-    def relations(self, relations: frozenset[Relation]) -> None:
-        """
-        Setter for the relations of the item.
-
-        Check that there are no duplicate relations of the same type and related item.
-        """
-        existing_relations = {}
-        for relation in relations:
-            if relation.related_item.id not in existing_relations:
-                existing_relations[relation.related_item.id] = {}
-            elif relation.type_id in existing_relations[relation.related_item.id]:
-                raise DuplicateRelationsError(relation.type_id, self.id, relation.related_item.id)
-            existing_relations[relation.related_item.id][relation.type_id] = relation
-
-        self.relations_auxiliary_properties = {
-            relation: relation.auxiliary_properties for relation in relations
-        }  # TODO: Implement relations auxiliary properties
-
-        self._relations_max_advancement = sum(relation.max_advancement for relation in relations)
-        self.max_advancement = self._properties_max_advancement + self._relations_max_advancement
-        self._relations = relations
 
     # TODO: Replace to hold a set of relations instead of dict of relation id -> relation
     @property
@@ -538,31 +520,21 @@ class TaskItem(SimpleItem):
             for relation in self.relations
         }
 
-    @property
-    def _rel_candidate_required_properties(self) -> set[ItemFixedProp[ItemPropValue]]:
+    @staticmethod
+    def _check_duplicate_relations(relations: frozenset[Relation]) -> None:
         """
-        Get the candidate required properties of the relations of the item.
+        Check that there are no duplicate relations of the same type and main and related items.
 
-        Returns:
-            set[ItemFixedProp[ItemPropValue]]: Set of the item's candidate required properties
-                coming from the relations.
+        Args:
+            relations (frozenset[Relation]): Set of relations to check.
         """
-        return {
-            relation.candidate_required_prop
-            for relation in self.relations
-            if relation.candidate_required_prop is not None
-        }
-
-    @property
-    def candidate_required_properties(self) -> set[ItemFixedProp[ItemPropValue]]:
-        """
-        Return a dictionary containing the properties required for an object to be a candidate for the item.
-
-        Returns:
-            candidate_properties (set[ItemFixedProp[ItemPropValue]]): Set of the item's candidate
-                required properties.
-        """
-        return self._prop_candidate_required_properties | self._rel_candidate_required_properties
+        existing_relations = {}
+        for relation in relations:
+            if relation.related_item.id not in existing_relations:
+                existing_relations[relation.related_item.id] = {}
+            elif relation.type_id in existing_relations[relation.related_item.id]:
+                raise DuplicateRelationsError(relation.type_id, relation.main_item_id, relation.related_item_id)
+            existing_relations[relation.related_item.id][relation.type_id] = relation
 
     def instantiate_candidate_data(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
@@ -978,6 +950,7 @@ class AuxItem(TaskItem):
         self,
         t_id: ItemId | str,
         properties: set[ItemProp],
+        relations: set[Relation] | None = None,
     ) -> None:
         """
         Initialize the AuxItem object.
@@ -985,8 +958,9 @@ class AuxItem(TaskItem):
         Args:
             t_id (ItemId): The ID of the item as defined in the task description.
             properties (set[ItemProp]): Set of properties of the item.
+            relations (set[Relation], optional): Set of relations of the item.
         """
-        super().__init__(t_id, properties)
+        super().__init__(t_id, properties, relations)
 
         # === Type annotations ===
         self.linked_prop: ItemVariableProp
