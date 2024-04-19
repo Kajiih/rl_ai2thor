@@ -199,7 +199,7 @@ class UndefinedTask(BaseTask):
 
 type TaskArg = ItemPropValue | int
 type RelationsDict = dict[ItemId, dict[RelationTypeId, dict[str, RelationParam]]]
-type PropertiesDict = dict[SimObjProp, PropSatFunction[ItemPropValue]]
+type PropertiesDict = dict[SimObjProp, PropSatFunction]
 type TaskDict = dict[ItemId | str, TaskItemData]
 
 

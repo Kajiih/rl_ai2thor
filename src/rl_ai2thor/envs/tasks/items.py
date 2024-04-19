@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from rl_ai2thor.envs.tasks.item_prop_interface import (
         ItemFixedProp,
         ItemProp,
-        ItemPropValue,
         PropAuxProp,
     )
     from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
@@ -474,10 +473,10 @@ class SimpleItem(ABC):
 
         # === Type annotations ===
         self.id: ItemId
-        self.properties: frozenset[ItemProp[ItemPropValue, ItemPropValue]]
-        self.scored_properties: frozenset[ItemVariableProp[ItemPropValue, ItemPropValue]]
+        self.properties: frozenset[ItemProp]
+        self.scored_properties: frozenset[ItemVariableProp]
         self.maximum_advancement: int
-        self.candidate_required_properties: frozenset[ItemFixedProp[ItemPropValue]]
+        self.candidate_required_properties: frozenset[ItemFixedProp]
         self.candidates_data: dict[CandidateId, CandidateData]
         self.step_max_property_advancement: int
 
@@ -587,7 +586,7 @@ class SimpleItem(ABC):
     def compute_candidates_props_results(
         self,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[ItemProp[ItemPropValue, ItemPropValue], dict[CandidateId, bool]]:
+    ) -> dict[ItemProp, dict[CandidateId, bool]]:
         """
         Return the results dictionary of each properties for the candidates of the item.
 
@@ -596,7 +595,7 @@ class SimpleItem(ABC):
                 objects in the scene to their metadata.
 
         Returns:
-            candidates_props_results (dict[ItemProp[ItemPropValue, ItemPropValue], dict[CandidateId, bool]]):
+            candidates_props_results (dict[ItemProp, dict[CandidateId, bool]]):
                 Dictionary mapping the item properties to the results of each candidates for the properties.
         """
         return {
@@ -702,8 +701,8 @@ class TaskItem(SimpleItem):
 
         # === Type annotations ===
         self.relations: frozenset[Relation]
-        self.props_auxiliary_items: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[AuxItem]]
-        self.props_auxiliary_properties: dict[ItemProp[ItemPropValue, ItemPropValue], frozenset[ItemVariableProp]]
+        self.props_auxiliary_items: dict[ItemProp, frozenset[AuxItem]]
+        self.props_auxiliary_properties: dict[ItemProp, frozenset[ItemVariableProp]]
         self.relations_auxiliary_properties: dict[Relation, frozenset[ItemVariableProp]]
         self.step_max_relation_advancement: int
 
@@ -949,51 +948,6 @@ class TaskItem(SimpleItem):
         candidates_properties_scores = self.compute_candidates_props_scores(candidates_properties_results)
         candidates_relations_scores = self.compute_candidates_relations_scores(candidates_relations_results)
 
-        # Compute the results and scores of each auxiliary item
-        aux_items_candidates_props_results = {
-            prop: {aux_item: aux_item.compute_candidates_props_results(scene_objects_dict) for aux_item in aux_items}
-            for prop, aux_items in self.props_auxiliary_items.items()
-        }
-        aux_items_scores = {
-            prop: {
-                aux_item: aux_item.compute_candidates_props_scores(aux_items_candidates_props_results[prop][aux_item])
-                for aux_item in aux_items
-            }
-            for prop, aux_items in self.props_auxiliary_items.items()
-        }
-
-        # Compute the results of each auxiliary property for the items
-        aux_props_results: dict[
-            ItemProp,
-            dict[
-                ItemVariableProp,
-                dict[CandidateId, bool],
-            ],
-        ] = {
-            main_prop: {
-                aux_prop: aux_prop.compute_candidates_results(scene_objects_dict, self.candidate_ids)
-                for aux_prop in aux_props
-            }
-            for main_prop, aux_props in self.props_auxiliary_properties.items()
-        }
-        # Update auxiliary properties results according to their main property results
-        # If the main property is satisfied, then its auxiliary properties are satisfied
-        for main_prop in aux_props_results:
-            for aux_prop in aux_props_results[main_prop]:
-                for candidate_id in aux_props_results[main_prop][aux_prop]:
-                    aux_props_results[main_prop][aux_prop][candidate_id] &= candidates_properties_results[main_prop][
-                        candidate_id
-                    ]
-        aux_props_scores = {
-            main_prop: {
-                aux_prop: aux_prop.compute_candidates_scores(aux_props_results[main_prop][aux_prop])
-                for aux_prop in aux_props
-            }
-            for main_prop, aux_props in self.props_auxiliary_properties.items()
-        }
-        # TODO: Finish
-
-        # TODO: Check that it takes auxiliary properties and items into account
         # Remove the candidates that have a stronger alternative
         interesting_candidates = list(self.candidate_ids)
         for i, candidate_id in enumerate(interesting_candidates):
