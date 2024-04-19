@@ -260,7 +260,7 @@ class GraphTask(BaseTask):
             with overlapping candidates.
         auxiliary_items (FrozenSet[TaskItem]): Set of items that are not part of the task
             but that are necessary for certain item's properties or relations to be satisfied.
-        max_task_advancement (float): Maximum task advancement possible for the task.
+        maximum_advancement (int): Maximum task advancement possible for the task.
 
     Methods:
         reset(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
@@ -294,9 +294,9 @@ class GraphTask(BaseTask):
         self.items_by_id: dict[ItemId, TaskItem]
         self.overlap_classes: list[ItemOverlapClass]
         self.auxiliary_items: frozenset[AuxItem]
-        self.max_advancement: float
+        self.maximum_advancement: int
 
-    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
+    def reset(self, controller: Controller) -> tuple[bool, int, bool, dict[str, Any]]:
         """
         Reset the task with the information of the event.
 
@@ -313,7 +313,7 @@ class GraphTask(BaseTask):
 
         Returns:
             reset_successful (bool): True if the task is successfully reset.
-            initial_task_advancement (float): Initial task advancement.
+            initial_task_advancement (int): Initial task advancement.
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
@@ -360,7 +360,7 @@ class GraphTask(BaseTask):
 
         # Compute max task advancement = Total number of properties and relations of the items
         # TODO: Make it compatible with weighted properties and relations
-        self.max_advancement = sum(item.max_advancement for item in self.items)
+        self.maximum_advancement = sum(item.maximum_advancement for item in self.items)
 
         return True, *self.compute_task_advancement(event, scene_objects_dict)
 
@@ -534,7 +534,7 @@ class GraphTask(BaseTask):
             if assignment_advancement > max_task_advancement:
                 max_task_advancement = assignment_advancement
                 best_assignment = global_assignment
-                if max_task_advancement == self.max_advancement:
+                if max_task_advancement == self.maximum_advancement:
                     is_terminated = True
                     break
 

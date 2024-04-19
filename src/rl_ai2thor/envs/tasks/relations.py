@@ -16,7 +16,7 @@ from rl_ai2thor.envs.tasks.items import ItemId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp
+    from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp, RelationAuxProp
     from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
@@ -52,10 +52,12 @@ class Relation(ABC):
         inverse_relation_type_id (RelationTypeId): The id of the type of the inverse relation.
         candidate_required_prop (ItemFixedProp | None): The candidate required property for the main
             item.
-        auxiliary_properties (frozenset[AuxProp]): The auxiliary properties of the relation.
+        auxiliary_properties (frozenset[RelationAuxProp]): The auxiliary properties of the relation.
         main_item_id (ItemId): The id of the main item of the relation.
         related_item_id (ItemId): The id of the related item of the relation.
         inverse_relation (Relation): The inverse relation of the relation.
+        maximum_advancement (int): The maximum advancement that can be achieved by satisfying the
+            relation and all of its auxiliary properties.
         main_item (TaskItem): The main item in the relation. Automatically set when the main item is
             instantiated with this relation.
         related_item (TaskItem): The related item to which the main item is related. Automatically
@@ -65,7 +67,7 @@ class Relation(ABC):
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: ItemFixedProp | None = None
-    auxiliary_properties: frozenset[AuxProp] = frozenset()
+    auxiliary_properties: frozenset[RelationAuxProp] = frozenset()
 
     def __init__(
         self,
@@ -90,7 +92,8 @@ class Relation(ABC):
         else:
             self.inverse_relation = self._initialize_inverse_relation()
 
-        self.max_advancement = 1 + len(self.auxiliary_properties)
+        # TODO? Replace aux_prop.maximum_advancement by 1
+        self.maximum_advancement = 1 + sum(aux_prop.maximum_advancement for aux_prop in self.auxiliary_properties)
 
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
@@ -216,7 +219,7 @@ class Relation(ABC):
             for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
         )
 
-    def compute_satisfying_related_candidates_ids(
+    def compute_satisfying_related_candidate_ids(
         self,
         main_obj_metadata: SimObjMetadata,
         scene_objects_dict: dict[SimObjId, SimObjMetadata],
@@ -256,7 +259,7 @@ class Relation(ABC):
                 candidate's ids that satisfy the relation for each main object's candidate.
         """
         return {
-            main_candidate_id: self.compute_satisfying_related_candidates_ids(
+            main_candidate_id: self.compute_satisfying_related_candidate_ids(
                 scene_objects_dict[main_candidate_id], scene_objects_dict
             )
             for main_candidate_id in self.main_item.candidate_ids

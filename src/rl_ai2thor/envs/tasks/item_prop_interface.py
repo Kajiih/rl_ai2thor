@@ -302,14 +302,16 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2
             first satisfied by any object in the scene in order to satisfy the main property. Those
             items are not considered in the item-candidates assignments of the task since they don't
             represent a unique task item but only an auxiliary item for a property.
-        max_advancement (int): The maximum advancement that can be achieved by satisfying the main
+        maximum_advancement (int): The maximum advancement that can be achieved by satisfying the
             property and all of its auxiliary properties and items.
     """
 
     target_ai2thor_property: SimObjVariableProp
     is_fixed: bool = False
     auxiliary_properties: frozenset[PropAuxProp] = frozenset()
-    auxiliary_items: frozenset[AuxItem] = frozenset()
+    auxiliary_items: frozenset[AuxItem] = (
+        frozenset()
+    )  # TODO: Can't directly instantiate the auxiliary items because one need to know the item_id of the item that has the property to instantiate the relation of the auxiliary items. So can't use direct instances of items in the class definition.
 
     def __init__(
         self,
@@ -324,12 +326,15 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2
         for aux_prop in self.auxiliary_properties:
             aux_prop.linked_prop = self
 
-        self.max_advancement = (
-            1 + len(self.auxiliary_properties) + sum(aux_item.max_advancement for aux_item in self.auxiliary_items)
+        # TODO? Replace aux_prop.maximum_advancement by 1
+        self.maximum_advancement = (
+            1
+            + sum(aux_prop.maximum_advancement for aux_prop in self.auxiliary_properties)
+            + sum(aux_item.maximum_advancement for aux_item in self.auxiliary_items)
         )
 
         # === Type annotations ===
-        self.max_advancement: int
+        self.maximum_advancement: int
 
 
 type ItemProp[T1: ItemPropValue, T2: ItemPropValue] = ItemFixedProp[T1] | ItemVariableProp[T1, T2]
@@ -346,6 +351,9 @@ class BaseAuxProp[T1: ItemPropValue, T2: ItemPropValue](ItemVariableProp[T1, T2]
     The main point of an auxiliary property is that if its main property is satisfied, the auxiliary
     property is also considered satisfied. Also, we add the score of the auxiliary property to the
     score of the main property.
+
+    The maximum_advancement of an auxiliary property is always 1 since it has no auxiliary
+    properties or items.
 
     Attributes:
         linked_object (ItemVariableProp, Relation): The main property or relation that this
