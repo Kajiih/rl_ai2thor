@@ -194,31 +194,6 @@ class Relation(ABC):
             list[SimObjId]: The ids of the main object's related objects.
         """
 
-    def is_semi_satisfied(
-        self,
-        main_obj_metadata: SimObjMetadata,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> bool:
-        """
-        Return True if the relation is semi satisfied in the given main object.
-
-        A relation is semi satisfied if the main object is correctly
-        related to a candidate of the related item (but no related
-        object might be assigned to the related item).
-
-        Args:
-            main_obj_metadata (SimObjMetadata): The metadata of the main object.
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-            of the objects in the scene to their metadata.
-
-        Returns:
-            bool: True if the relation is semi satisfied.
-        """
-        return any(
-            related_object_id in self.related_item.candidate_ids
-            for related_object_id in self._extract_related_object_ids(main_obj_metadata, scene_objects_dict)
-        )
-
     def compute_satisfying_related_candidate_ids(
         self,
         main_obj_metadata: SimObjMetadata,
@@ -241,54 +216,6 @@ class Relation(ABC):
             if related_object_id in self.related_item.candidate_ids
         }
         return satisfying_related_object_ids
-
-    # TODO: Delete?
-    def compute_main_candidates_results(
-        self,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[CandidateId, set[CandidateId]]:
-        """
-        Return the set of related item's candidate's ids that satisfy the relation for each main object's candidate.
-
-        Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-                of the objects in the scene to their metadata.
-
-        Returns:
-            main_candidates_results (dict[CandidateId, set[CandidateId]]): The set of related item's
-                candidate's ids that satisfy the relation for each main object's candidate.
-        """
-        return {
-            main_candidate_id: self.compute_satisfying_related_candidate_ids(
-                scene_objects_dict[main_candidate_id], scene_objects_dict
-            )
-            for main_candidate_id in self.main_item.candidate_ids
-        }
-
-    # TODO: Delete?
-    # TODO: Implement a weighted score
-    @staticmethod
-    def compute_main_candidates_scores(
-        main_candidates_results: dict[CandidateId, set[CandidateId]],
-    ) -> dict[CandidateId, float]:
-        """
-        Return the score of each main object's candidate based on the related item's candidate's ids that satisfy the relation.
-
-        The score is the number of related item's candidate's ids that satisfy the relation for the
-        main object's candidate.
-
-        Args:
-            main_candidates_results (dict[SimObjId, set[SimObjId]]): Dictionary mapping the id of
-                the main object's candidates to the set of related item's candidate's ids that satisfy the relation.
-
-        Returns:
-            main_candidates_scores (dict[SimObjId, float]): Dictionary mapping the id of the main
-                object's candidates to their score.
-        """
-        return {
-            main_candidate_id: 1 if related_object_ids else 0
-            for main_candidate_id, related_object_ids in main_candidates_results.items()
-        }
 
     def __str__(self) -> str:
         return f"{self.main_item} is {self.type_id} {self.related_item}"

@@ -50,25 +50,41 @@ class CandidateData:
         item (SimpleItem): The item of the candidate.
         id (CandidateId): The ID of the candidate.
         metadata (SimObjMetadata): The metadata of the candidate.
-        base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item's
+        _base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item's
             properties to the results of the property satisfaction for the candidate.
-        props_aux_properties_results (dict[ItemVariableProp, dict[PropAuxProp, bool]]):
-            Dictionary mapping the item's scored properties to the results of the auxiliary
+        _props_aux_properties_results (dict[ItemVariableProp, dict[PropAuxProp, bool]]):
+            Dictionary mapping the item's scored properties to the results of their auxiliary
             properties satisfaction for the candidate.
-        relations_results (dict[Relation, set[CandidateId]]): Dictionary mapping the item's
-        relations to the set of satisfying related item's candidate ids for the candidate.
-        properties_scores (dict[ItemVariableProp, float]): Dictionary mapping the item properties to the
-            scores of the candidate for the properties.
-        property_score (float): The score of the candidate for the item's properties, sum of the
-            scores of the properties.
-        relations_min_max_scores (dict[Relation, tuple[float, float]]): Dictionary mapping the
-            item's relations to the minimum and maximum scores of the candidate for the relations.
-        relation_max_score (float): The maximum score of the candidate for the item's relations,
-            sum of the scores of the relations where there is at least one semi-satisfying related
-            item's candidate (i.e. the set of satisfying objects is not empty but they might not be
-            part of the assignment).
-        relation_min_score (float): The minimum score of the candidate for the item's relations,
-            sum of the scores of the relations where all related item's candidate are satisfying.
+        _props_aux_items_advancement (dict[ItemVariableProp, dict[AuxItem, int]]): Dictionary
+            item's scored properties to the advancement of their auxiliary items for the candidate.
+        properties_advancement (dict[ItemVariableProp, int]): Dictionary mapping the item's
+            properties to the advancement of the candidate for the properties.
+        property_advancement (int): The advancement of the candidate for the item's properties, sum
+            of the advancements of the properties.
+        relations_satisfying_related_candidate_ids (dict[Relation, set[CandidateId]]): Dictionary
+            mapping the item's relations to the set of satisfying related item's candidate ids for
+            the candidate.
+        _relations_aux_properties_results (dict[Relation, dict[RelationAuxProp, bool]]): Dictionary
+            mapping the item's relations to the results of the auxiliary properties satisfaction for
+            the candidate.
+        relations_min_max_advancement (dict[Relation, tuple[int, int]]): Dictionary mapping the
+            item's relations to the minimum and maximum advancement of the candidate for the
+            relations.
+        relation_min_advancement (int): The minimum advancement of the candidate for the item's
+            relations, sum of the advancements of the relations where all related item's candidate
+            are satisfying.
+        relation_max_advancement (int): The maximum advancement of the candidate for the item's
+            relations, sum of the advancements of the relations where there is at least one
+            semi-satisfying related item's candidate (i.e. the set of satisfying objects is not
+            empty but they might not be part of the assignment).
+        total_min_advancement (int): The minimum advancement of the candidate for the item, sum of
+            the advancements of the properties and min advancements of the relations (where we count
+            each relation advancement twice to take into account the advancement of the related
+            item).
+        total_max_advancement (int): The maximum advancement of the candidate for the item, sum of
+            the advancements of the properties and max advancements of the relations (where we count
+            each relation advancement twice to take into account the advancement of the related
+            item).
     """
 
     def __init__(self, c_id: CandidateId, item: TaskItem) -> None:
@@ -87,16 +103,18 @@ class CandidateData:
             self.item: TaskItem
             self.id: CandidateId
             self.metadata: SimObjMetadata
-            self.base_properties_results: dict[ItemVariableProp, bool]
-            self.props_aux_properties_results = dict[ItemVariableProp, dict[PropAuxProp, bool]]
-            self.props_aux_items_advancement: dict[ItemVariableProp, dict[AuxItem, int]]
-            self.relations_satisfying_related_candidate_ids: dict[Relation, set[CandidateId]]
-            self.relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
+            self._base_properties_results: dict[ItemVariableProp, bool]
+            self._props_aux_properties_results = dict[ItemVariableProp, dict[PropAuxProp, bool]]
+            self._props_aux_items_advancement: dict[ItemVariableProp, dict[AuxItem, int]]
             self.properties_advancement: dict[ItemVariableProp, int]
             self.property_advancement: int
+            self.relations_satisfying_related_candidate_ids: dict[Relation, set[CandidateId]]
+            self.relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
             self.relations_min_max_advancement: dict[Relation, tuple[int, int]]
             self.relation_min_advancement: int
             self.relation_max_advancement: int
+            self.total_min_advancement: int
+            self.total_max_advancement: int
 
     @property
     def _scored_properties(self) -> frozenset[ItemVariableProp]:
@@ -132,16 +150,18 @@ class CandidateData:
         self.metadata = scene_object_dict[self.id]
 
         # === Properties ===
-        self.base_properties_results = self._compute_base_properties_results()
-        self.props_aux_properties_results = self._compute_props_aux_properties_results(self.base_properties_results)
-        self.props_aux_items_advancement = self._compute_props_aux_items_advancement(self.base_properties_results)
+        self._base_properties_results = self._compute_base_properties_results()
+        self._props_aux_properties_results = self._compute_props_aux_properties_results(self._base_properties_results)
+        self._props_aux_items_advancement = self._compute_props_aux_items_advancement(self._base_properties_results)
 
         self.properties_advancement = self._compute_properties_advancement(
-            self.base_properties_results, self.props_aux_properties_results, self.props_aux_items_advancement
+            self._base_properties_results, self._props_aux_properties_results, self._props_aux_items_advancement
         )
         self.property_advancement = sum(self.properties_advancement.values())
 
         # === Relations ===
+        # Note: We compute a more optimal lower bound on the relation's advancement (min_advancement) by taking into account the fact that several relations might involve the same related item and then computing the relations advancement for each assignment of the related item's candidate
+        # TODO? Implement this?
         self.relations_satisfying_related_candidate_ids = self._compute_relations_satisfying_related_candidate_ids(
             scene_object_dict
         )
@@ -160,8 +180,8 @@ class CandidateData:
         )
 
         # === Final advancement ===
-        self.min_advancement = self.property_advancement + self.relation_min_advancement
-        self.max_advancement = self.property_advancement + self.relation_max_advancement
+        self.total_min_advancement = self.property_advancement + 2 * self.relation_min_advancement
+        self.total_max_advancement = self.property_advancement + 2 * self.relation_max_advancement
 
     def _compute_base_properties_results(self) -> dict[ItemVariableProp, bool]:
         """
@@ -558,50 +578,6 @@ class SimpleItem(ABC):
             candidate_data.property_advancement for candidate_data in self.candidates_data.values()
         )
 
-    # TODO: Delete
-    def compute_candidates_props_scores(
-        self,
-        candidates_props_results: dict[ItemProp, dict[CandidateId, bool]],
-    ) -> dict[CandidateId, float]:
-        """
-        Return the property scores of each candidate of the item.
-
-        Args:
-            candidates_props_results (dict[ItemProp, dict[CandidateId, bool]]): Dictionary mapping the
-                item properties to the results of each candidates for the properties.
-
-        Returns:
-            candidates_props_scores (dict[CandidateId, float]): Dictionary mapping the candidate ids to
-                their property scores.
-        """
-        prop_candidates_scores = {
-            prop: prop.compute_candidates_scores(candidates_props_results[prop]) for prop in candidates_props_results
-        }
-        return {
-            candidate_id: sum(prop_candidates_scores[prop][candidate_id] for prop in prop_candidates_scores)
-            for candidate_id in self.candidate_ids
-        }
-
-    # TODO: Delete
-    def compute_candidates_props_results(
-        self,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[ItemProp, dict[CandidateId, bool]]:
-        """
-        Return the results dictionary of each properties for the candidates of the item.
-
-        Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
-                objects in the scene to their metadata.
-
-        Returns:
-            candidates_props_results (dict[ItemProp, dict[CandidateId, bool]]):
-                Dictionary mapping the item properties to the results of each candidates for the properties.
-        """
-        return {
-            prop: prop.compute_candidates_results(scene_objects_dict, self.candidate_ids) for prop in self.properties
-        }
-
 
 # TODO? Add support for giving some score for semi satisfied relations and using this info in the selection of interesting objects/assignments
 # TODO: Make so that the class need the relations to be instantiated like the properties instead of having to set them after
@@ -784,142 +760,13 @@ class TaskItem(SimpleItem):
             candidate_data.relation_max_advancement for candidate_data in self.candidates_data.values()
         )
 
-    # TODO: Replace keys by the actual properties
-    # TODO: Delete; unused
-    def _get_properties_satisfaction(self, obj_metadata: SimObjMetadata) -> dict[SimObjProp, bool]:
+    # TODO: Double check the interesting candidates computation
+    def compute_interesting_candidates(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> set[CandidateId]:
         """
-        Return a dictionary indicating which properties are satisfied by the given object.
+        Return the set of interesting candidates for the item.
 
-        Args:
-            obj_metadata (SimObjMetadata): Object metadata.
-
-        Returns:
-            prop_satisfaction (dict[SimObjProp, bool]): Dictionary indicating which properties are
-                satisfied by the given object.
-        """
-        return {prop.target_ai2thor_property: prop.is_object_satisfying(obj_metadata) for prop in self.properties}
-
-    # TODO: Delete; unused
-    def _get_relations_semi_satisfying_objects(
-        self,
-        candidate_metadata: SimObjMetadata,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[ItemId, dict[RelationTypeId, set[CandidateId]]]:
-        """
-        Return the dictionary of satisfying objects with the given candidate for each relations.
-
-        The relations are organized by related item id.
-
-        Args:
-            candidate_metadata (SimObjMetadata): Metadata of the candidate.
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
-                objects in the scene to their metadata.
-
-        Returns:
-            semi_satisfying_objects (dict[ItemId, dict[RelationTypeId, set[CandidateId]]]): Dictionary
-                indicating which objects are semi-satisfying the relations with the given object.
-        """
-        return {
-            related_item_id: {
-                relation.type_id: relation.compute_satisfying_related_candidate_ids(
-                    candidate_metadata, scene_objects_dict
-                )
-                for relation in self.organized_relations[related_item_id].values()
-            }
-            for related_item_id in self.organized_relations
-        }
-
-    # TODO: Delete
-    def compute_candidates_relations_results(
-        self,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-    ) -> dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]:
-        """
-        Return the results dictionary of each relations for the candidates of the item.
-
-        The relations are organized by related item id.
-
-        Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
-                objects in the scene to their metadata.
-
-        Returns:
-            candidates_relations_results (dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]):
-                Dictionary mapping the related item ids to the results dictionary of each relation,
-                    which maps the candidate ids to the set of satisfying object ids.
-        """
-        return {
-            main_item_id: {
-                relation: relation.compute_main_candidates_results(scene_objects_dict)
-                for relation in self.organized_relations[main_item_id].values()
-            }
-            for main_item_id in self.organized_relations
-        }
-
-    # TODO: Delete
-    def compute_candidates_relations_scores(
-        self,
-        candidates_relations_results: dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]],
-    ) -> dict[CandidateId, float]:
-        """
-        Return the relation scores of each candidate of the item.
-
-        Args:
-            candidates_relations_results (dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]):
-                Dictionary mapping the related item ids to the results dictionary of each relation,
-                which maps the candidate ids to the set of satisfying object ids.
-
-        Returns:
-            candidates_relations_scores (dict[CandidateId, float]): Dictionary mapping the candidate ids
-                to their relation scores.
-        """
-        # return {
-        #     candidate_id: sum(
-        #         1
-        #         for related_item_id in candidates_relations_results
-        #         for relation in candidates_relations_results[related_item_id]
-        #         if candidates_relations_results[related_item_id][relation][candidate_id]
-        #     )
-        #     for candidate_id in self.candidate_ids
-        # }
-
-        relations_candidates_scores = {
-            relation: relation.compute_main_candidates_scores(candidates_relations_results[related_item_id][relation])
-            for related_item_id in candidates_relations_results
-            for relation in candidates_relations_results[related_item_id]
-        }
-
-        return {
-            candidate_id: sum([
-                relations_candidates_scores[relation][candidate_id] for relation in relations_candidates_scores
-            ])
-            for candidate_id in self.candidate_ids
-        }
-
-    def compute_interesting_candidates(
-        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
-    ) -> tuple[
-        set[CandidateId],
-        dict[ItemProp, dict[CandidateId, bool]],
-        dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]],
-        dict[CandidateId, float],
-        dict[CandidateId, float],
-    ]:
-        """
-        Return the set of interesting candidates and the results and scores of each candidate of the item.
-
-        The interesting candidates are those that can lead to a maximum of task advancement
-        depending on the assignment of objects to the other items.
-
-        A candidate is *strong* if it has no strictly *stronger* candidate among the other
-        candidates, where the stronger relation is defined in the get_stronger_candidate
-        method.
-
-        The set of interesting candidates is the set of strong candidates where we keep
-        only one candidate of same strength and we add the candidate with the higher
-        property score (not counting the semi satisfied relations score) if none of those
-        are already added (because we don't know which relation will effectively be
-        satisfied in the assignment).
+        The interesting candidates are those  that have to be considered for the item in the global assignment because they can lead to a maximum of task advancement depending on the
+        assignment of objects to the other items.
 
         Args:
             scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary containing the metadata of
@@ -927,183 +774,19 @@ class TaskItem(SimpleItem):
 
         Returns:
             interesting_candidates (set[CandidateId]): Set of interesting candidates for the item.
-            candidates_properties_results (dict[SimObjProp, dict[CandidateId, bool]]): Results of each
-                object for the item properties.
-            candidates_relations_results (dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]):
-                Results of each object for the item relations.
-            candidates_properties_scores (dict[CandidateId, float]): Property scores of each object for
-                the item.
-            candidates_relations_scores (dict[CandidateId, float]): Relation scores of each object for
-                the item.
         """
         self.update_candidates_data(scene_objects_dict)
 
-        # TODO: Update this function
-
-        # Compute the properties and relations results of each object for the item
-        candidates_properties_results = self.compute_candidates_props_results(scene_objects_dict)
-        candidates_relations_results = self.compute_candidates_relations_results(scene_objects_dict)
-
-        # Compute the scores of each object for the item
-        candidates_properties_scores = self.compute_candidates_props_scores(candidates_properties_results)
-        candidates_relations_scores = self.compute_candidates_relations_scores(candidates_relations_results)
-
-        # Remove the candidates that have a stronger alternative
-        interesting_candidates = list(self.candidate_ids)
-        for i, candidate_id in enumerate(interesting_candidates):
-            for j, other_candidate_id in enumerate(interesting_candidates[i + 1 :]):
-                stronger_candidate = self._get_stronger_candidate(
-                    candidate_id,
-                    other_candidate_id,
-                    candidates_relations_results,
-                    candidates_properties_scores,
-                    candidates_relations_scores,
-                )
-                if stronger_candidate in {candidate_id, "equal"}:
-                    # In the equal case, we can keep any of the two candidates
-                    # Remove the other candidate
-                    interesting_candidates.pop(i + j + 1)
-                elif stronger_candidate == other_candidate_id:
-                    # Remove the candidate
-                    interesting_candidates.pop(i)
-                    break
-
-        # Add a candidate with the highest property score if none of those are already added
-        max_prop_score = max(candidates_properties_scores[candidate_id] for candidate_id in interesting_candidates)
-        # Check if there is a candidate with the highest property score
-        if max_prop_score not in [
-            candidates_properties_scores[candidate_id] for candidate_id in interesting_candidates
-        ]:
-            # Add the candidate with the highest property score
-            for candidate_id in self.candidate_ids:
-                if candidates_properties_scores[candidate_id] == max_prop_score:
-                    interesting_candidates.append(candidate_id)
-                    break
-
-        return (
-            set(interesting_candidates),
-            candidates_properties_results,
-            candidates_relations_results,
-            candidates_properties_scores,
-            candidates_relations_scores,
+        # TODO: Double check this
+        max_of_min_advancement = max(
+            candidate_data.relation_min_advancement for candidate_data in self.candidates_data.values()
         )
-
-    def _get_stronger_candidate(
-        self,
-        obj_1_id: CandidateId,
-        obj_2_id: CandidateId,
-        candidates_relations_results: dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]],
-        candidates_properties_scores: dict[CandidateId, float],
-        candidates_relations_scores: dict[CandidateId, float],
-    ) -> CandidateId | Literal["equal", "incomparable"]:
-        """
-        Return the stronger candidate between the two given candidates.
-
-        A candidate x is stronger than a candidate y if some relations, the sets
-        of satisfying objects of y are included in the set of satisfying objects of x
-        and the difference Sp(x) - (Sp(y) +Sr(y)) + d[x,y] > 0 where Sp(z) is the sum
-        of the property scores of z, Sr(z) is the sum of the relation scores of z and
-        d[x,y] is the number of relations such that the set of satisfying objects of
-        y is included in the set of satisfying objects of x. This represent the worst
-        case for x compared to y.
-
-        In particular, if Sp(y) + Sr(y) > Sp(x) + Sr(x), x cannot be stronger than y.
-
-        Two candidates x and y have the same strength if x is stronger than y and y is
-        stronger than x, otherwise they are either incomparable if none of them is
-        stronger than the other or one is stronger than the other.
-        The equal case can only happen if all relations have the same set of satisfying
-        objects for both candidates.
-
-        Args:
-            obj_1_id (CandidateId): First candidate object id.
-            obj_2_id (CandidateId): Second candidate object id.
-            candidates_relations_results (dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]):
-                Results of each object for the item relations.
-            candidates_properties_scores (dict[CandidateId, float]):
-                Property scores of each object for the item.
-            candidates_relations_scores (dict[CandidateId, float]):
-                Relation scores of each object for the item.
-
-        Returns:
-            stronger_candidate (CandidateId | Literal["equal", "incomparable"]): The stronger candidate
-                between the two given candidates or "equal" if they have same strength or
-                "incomparable" if they cannot be compared.
-
-        """
-        obj1_stronger = True
-        obj2_stronger = True
-        # Pre check: Sp(obj_1_id) + Sr(obj_1_id) < Sp(obj_2_id) + Sr(obj_2_id)
-        if (
-            candidates_properties_scores[obj_1_id] + candidates_relations_scores[obj_1_id]
-            < candidates_properties_scores[obj_2_id] + candidates_relations_scores[obj_2_id]
-        ):
-            obj1_stronger = False
-        else:
-            obj1_stronger = self._is_stronger_candidate_than(
-                obj_1_id, obj_2_id, candidates_relations_results, candidates_properties_scores
-            )
-
-        # Pre check: Sp(obj_1_id) + Sr(obj_1_id) > Sp(obj_2_id) + Sr(obj_2_id)
-        if (
-            candidates_properties_scores[obj_1_id] + candidates_relations_scores[obj_1_id]
-            > candidates_properties_scores[obj_2_id] + candidates_relations_scores[obj_2_id]
-        ):
-            obj2_stronger = False
-        else:
-            obj2_stronger = self._is_stronger_candidate_than(
-                obj_2_id, obj_1_id, candidates_relations_results, candidates_properties_scores
-            )
-
-        if obj1_stronger:
-            return "equal" if obj2_stronger else obj_1_id
-        return obj_2_id if obj2_stronger else "incomparable"
-
-    @staticmethod
-    def _is_stronger_candidate_than(
-        obj_1_id: CandidateId,
-        obj_2_id: CandidateId,
-        candidates_relations_results: dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]],
-        candidates_properties_scores: dict[CandidateId, float],
-    ) -> bool:
-        """
-        Return True if the first candidate is stronger than the second candidate.
-
-        A candidate x is stronger than a candidate y if some relations, the sets
-        of satisfying objects of y are included in the set of satisfying objects of x
-        and the difference Sp(x) - (Sp(y) +Sr(y)) + d[x,y] > 0 where Sp(z) is the sum
-        of the property scores of z, Sr(z) is the sum of the relation scores of z and
-        d[x,y] is the number of relations such that the set of satisfying objects of
-        y is included in the set of satisfying objects of x. This represent the worst
-        case for x compared to y.
-
-        See the get_stronger_candidate method for more details about the "is stronger than" relation.
-
-        Args:
-            obj_1_id (CandidateId): First candidate object id.
-            obj_2_id (CandidateId): Second candidate object id.
-            candidates_relations_results (dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]):
-                Results of each object for the item relations.
-            candidates_properties_scores (dict[CandidateId, float]):
-                Property scores of each object for the item.
-
-        Returns:
-            is_stronger (bool): True if the first candidate is stronger than the second candidate.
-        """
-        sp_x = candidates_properties_scores[obj_1_id]
-        sp_y = candidates_properties_scores[obj_2_id]
-        sr_y = candidates_properties_scores[obj_2_id]
-
-        # Calculate d[x,y]
-        d_xy = 0
-        for related_item_id in candidates_relations_results:
-            for relation in candidates_relations_results[related_item_id]:
-                x_sat_obj_ids = candidates_relations_results[related_item_id][relation][obj_1_id]
-                y_sat_obj_ids = candidates_relations_results[related_item_id][relation][obj_2_id]
-                if y_sat_obj_ids.issubset(x_sat_obj_ids):
-                    d_xy += 1
-
-        return sp_x - (sp_y + sr_y) + d_xy > 0
+        interesting_candidates = {
+            candidate_id
+            for candidate_id in self.candidate_ids
+            if self.candidates_data[candidate_id].relation_max_advancement >= max_of_min_advancement
+        }
+        return interesting_candidates
 
     def __str__(self) -> str:
         return f"{self.id}"
@@ -1236,15 +919,7 @@ class ItemOverlapClass:
     # I think there is a mistake in the computation of interesting candidates because it also
     # depends on the other items of the overlap class and not the item and its related items.
     # TODO: Check this and fix if needed
-    def compute_interesting_assignments(
-        self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
-    ) -> tuple[
-        list[Assignment],
-        dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]],
-        dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]],
-        dict[TaskItem, dict[CandidateId, float]],
-        dict[TaskItem, dict[CandidateId, float]],
-    ]:
+    def compute_interesting_assignments(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> list[Assignment]:
         """
         Return the interesting assignments of objects to the items in the overlap class, the items results and items scores.
 
@@ -1252,6 +927,8 @@ class ItemOverlapClass:
         depending on the assignment of objects in the other overlap classes.
         Interesting assignments are the ones where each all assigned objects are interesting
         candidates for their item.
+        Note: We reduce the set of interesting assignments by considering this relations between the items in the overlap class (with the information of the assignment of the other items in the overlap class).
+        # TODO? Implement this
 
         For more details about the definition of interesting candidates, see the
         compute_interesting_candidates method of the TaskItem class.
@@ -1263,39 +940,21 @@ class ItemOverlapClass:
         Returns:
             interesting_assignments (list[Assignment]):
                 List of the interesting assignments of objects to the items in the overlap class.
-            all_properties_results (dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]]):
-                Results of each object for each property of each item in the overlap class.
-            all_relation_results (dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]]):
-                Results of each object for the relation of each item in the overlap class.
-            all_properties_scores (dict[TaskItem, dict[CandidateId, float]]):
-                Property scores of each object for each item in the overlap class.
-            all_relations_scores (dict[TaskItem, dict[CandidateId, float]]):
-                Relation scores of each object for each item in the overlap class.
         """
-        interesting_candidates_data = {
+        # Extract the interesting candidates
+        items_interesting_candidates = {
             item: item.compute_interesting_candidates(scene_objects_dict) for item in self.items
         }
-        # Extract the interesting candidates, results and scores
-        interesting_candidates = {item: data[0] for item, data in interesting_candidates_data.items()}
-        all_properties_results = {item: data[1] for item, data in interesting_candidates_data.items()}
-        all_relation_results = {item: data[2] for item, data in interesting_candidates_data.items()}
-        all_properties_scores = {item: data[3] for item, data in interesting_candidates_data.items()}
-        all_relations_scores = {item: data[4] for item, data in interesting_candidates_data.items()}
 
         # Filter the valid assignments to keep only the ones with interesting candidates
         interesting_assignments = [
             assignment
             for assignment in self.valid_assignments
-            if all(assignment[item] in interesting_candidates[item] for item in self.items)
+            if all(assignment[item] in items_interesting_candidates[item] for item in self.items)
         ]
+        # TODO? Implement the filtering of the assignments based on the relations between the items in the overlap class
 
-        return (
-            interesting_assignments,
-            all_properties_results,
-            all_relation_results,
-            all_properties_scores,
-            all_relations_scores,
-        )
+        return interesting_assignments
 
     def __str__(self) -> str:
         return f"{{self.items}}"

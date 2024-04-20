@@ -465,7 +465,7 @@ class GraphTask(BaseTask):
         self,
         event: Event,
         scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
-    ) -> tuple[float, bool, dict[str, Any]]:
+    ) -> tuple[int, bool, dict[str, Any]]:
         """
         Return the task advancement and whether the task is completed.
 
@@ -487,10 +487,11 @@ class GraphTask(BaseTask):
                 mapping object ids to their metadata to avoid recomputing it. Defaults to None.
 
         Returns:
-            task_advancement (float): Task advancement.
+            task_advancement (int): Task advancement.
             is_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
+        # TODO: Update this function
         # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
         if scene_objects_dict is None:
             scene_objects_dict = {obj["objectId"]: obj for obj in event.metadata["objects"]}

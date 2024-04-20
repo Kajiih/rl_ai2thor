@@ -198,53 +198,6 @@ class BaseItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
         """Return True if the object satisfies the property."""
         return self(obj_metadata[self.target_ai2thor_property])
 
-    # TODO: Delete?
-    def compute_candidates_results(
-        self,
-        scene_objects_dict: dict[SimObjId, SimObjMetadata],
-        candidates_ids: set[CandidateId],
-    ) -> dict[CandidateId, bool]:
-        """
-        Return the results of the property satisfaction for the candidates.
-
-        The results are stored in a dictionary where the keys are the candidates ids and the values
-        are booleans indicating if the candidate satisfies the property.
-
-        Args:
-            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id
-                of the objects in the scene to their metadata.
-            candidates_ids (set[CandidateId]): The set of candidate ids.
-
-        Returns:
-            candidates_results (dict[CandidateId, bool]): Dictionary mapping the candidate ids to
-                a boolean indicating if the candidate satisfies the property.
-        """
-        return {
-            candidate_id: self.is_object_satisfying(scene_objects_dict[candidate_id]) for candidate_id in candidates_ids
-        }
-
-    # TODO: Delete?
-    # TODO: Implement a weighted score
-    @staticmethod
-    def compute_candidates_scores(candidates_results: dict[CandidateId, bool]) -> dict[CandidateId, float]:
-        """
-        Return the scores of the candidates based on the properties results.
-
-        The scores are stored in a dictionary where the keys are the candidates ids and the values
-        are the scores of the candidates.
-
-        Args:
-            candidates_results (dict[CandidateId, bool]): Dictionary mapping the candidate ids to
-                a boolean indicating if the candidate satisfies the property.
-
-        Returns:
-            candidates_scores (dict[CandidateId, float]): Dictionary mapping the candidate ids to
-                their scores.
-        """
-        return {
-            candidate_id: int(candidate_satisfies) for candidate_id, candidate_satisfies in candidates_results.items()
-        }
-
     def __str__(self) -> str:
         return f"{self.target_ai2thor_property}({self.target_satisfaction_function})"
 
