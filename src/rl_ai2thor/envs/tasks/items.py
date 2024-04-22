@@ -67,6 +67,8 @@ class CandidateData:
         _relations_aux_properties_results (dict[Relation, dict[RelationAuxProp, bool]]): Dictionary
             mapping the item's relations to the results of the auxiliary properties satisfaction for
             the candidate.
+        relations_aux_property_advancement (dict[Relation, int]): Dictionary mapping the item's
+            relations to the relation's auxiliary property advancement for the candidate.
         relations_min_max_advancement (dict[Relation, tuple[int, int]]): Dictionary mapping the
             item's relations to the minimum and maximum advancement of the candidate for the
             relations.
@@ -100,6 +102,7 @@ class CandidateData:
 
         # === Type annotations ===
         if TYPE_CHECKING:
+            # === Properties ===
             self.item: TaskItem
             self.id: CandidateId
             self.metadata: SimObjMetadata
@@ -108,11 +111,14 @@ class CandidateData:
             self._props_aux_items_advancement: dict[ItemVariableProp, dict[AuxItem, int]]
             self.properties_advancement: dict[ItemVariableProp, int]
             self.property_advancement: int
+            # === Relations ===
             self.relations_satisfying_related_candidate_ids: dict[Relation, set[CandidateId]]
-            self.relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
+            self._relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
+            self.relations_aux_property_advancement: dict[Relation, int]
             self.relations_min_max_advancement: dict[Relation, tuple[int, int]]
             self.relation_min_advancement: int
             self.relation_max_advancement: int
+            # === Final advancement ===
             self.total_min_advancement: int
             self.total_max_advancement: int
 
@@ -168,9 +174,12 @@ class CandidateData:
         self.relations_aux_properties_results = self._compute_relations_aux_properties_results(
             self.relations_satisfying_related_candidate_ids
         )
+        self.relations_aux_property_advancement = self._compute_relations_aux_property_advancement(
+            self.relations_aux_properties_results
+        )
 
         self.relations_min_max_advancement = self._compute_relations_min_max_advancement(
-            self.relations_satisfying_related_candidate_ids, self.relations_aux_properties_results
+            self.relations_satisfying_related_candidate_ids, self.relations_aux_property_advancement
         )
         self.relation_min_advancement = sum(
             min_adv for (min_adv, _max_adv) in self.relations_min_max_advancement.values()
@@ -235,6 +244,29 @@ class CandidateData:
             for relation in self._relations
         }
 
+    # TODO: Implement weighted relations
+    def compute_relation_advancement_for_related_candidate(
+        self,
+        relation: Relation,
+        related_candidate_id: CandidateId,
+    ) -> int:
+        """
+        Compute the advancement of the candidate for the relation when the related item's candidate is the given related candidate.
+
+        Args:
+            relation (Relation): The relation for which to compute the advancement.
+            related_candidate_id (CandidateId): The id of the related item's candidate.
+
+        Returns:
+            relation_advancement (int): The advancement of the candidate for the relation when the
+                related item's candidate is the given candidate.
+        """
+        return (
+            relation.maximum_advancement
+            if related_candidate_id in self.relations_satisfying_related_candidate_ids[relation]
+            else self.relations_aux_property_advancement[relation]
+        )
+
     # TODO: Double and triple check this method
     # TODO? Create methods to separate the computation of the relation's auxiliary properties results and the relation's advancement?
     def _compute_props_aux_items_advancement(
@@ -267,25 +299,11 @@ class CandidateData:
                 for aux_candidate_id, aux_candidate_data in aux_item.candidates_data.items():
                     # Add properties advancement
                     aux_advancement = aux_candidate_data.property_advancement
-
                     # Add relation advancement
-                    # No need for min and max advancement because we know the related item's candidate
-                    for (
-                        relation,
-                        related_candidate_ids,
-                    ) in aux_candidate_data.relations_satisfying_related_candidate_ids.items():
-                        if self.id in related_candidate_ids:
-                            # TODO: Implement weighted relations
-                            aux_advancement += relation.maximum_advancement
-                        else:
-                            # TODO? Replace aux_prop.maximum_advancement by 1
-                            aux_advancement += sum(
-                                aux_prop.maximum_advancement
-                                for aux_prop, result in aux_candidate_data.relations_aux_properties_results[
-                                    relation
-                                ].items()
-                                if result
-                            )
+                    for relation in aux_item.relations:
+                        aux_advancement += aux_candidate_data.compute_relation_advancement_for_related_candidate(
+                            relation, self.id
+                        )
                     aux_items_advancement[prop][aux_item][aux_candidate_id] = aux_advancement
 
         # Keep only the maximum advancement for each auxiliary item
@@ -379,11 +397,33 @@ class CandidateData:
             if len(relations_satisfying_related_candidate_ids[relation]) != len(relation.related_item.candidate_ids)
         }
 
+    @staticmethod
+    def _compute_relations_aux_property_advancement(
+        relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]],
+    ) -> dict[Relation, int]:
+        """
+        Return the relation's auxiliary property advancement for the candidate.
+
+        Args:
+            relations_aux_properties_results (dict[Relation, dict[RelationAuxProp, bool]]):
+                Dictionary mapping the item's relations to the results of the auxiliary properties
+                satisfaction for the candidate.
+
+        Returns:
+            relations_aux_property_advancement (dict[Relation, int]): Dictionary mapping the item's
+            relations to the relation's auxiliary property advancement for the candidate.
+        """
+        # TODO? Replace aux_prop.maximum_advancement by 1
+        return {
+            relation: sum(aux_prop.maximum_advancement for aux_prop, result in aux_properties_results.items() if result)
+            for relation, aux_properties_results in relations_aux_properties_results.items()
+        }
+
     # TODO: Implement weighted relations
     @staticmethod
     def _compute_relations_min_max_advancement(
         relations_satisfying_related_candidate_ids: dict[Relation, set[CandidateId]],
-        relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]],
+        relations_aux_property_advancement: dict[Relation, int],
     ) -> dict[Relation, tuple[int, int]]:
         """
         Return the minimum and the maximum advancement of the candidate for each item's relations.
@@ -404,35 +444,56 @@ class CandidateData:
             relations_satisfying_related_candidate_ids (dict[Relation, set[CandidateId]]):
                 Dictionary mapping the item's relations to the set of satisfying related item's
                 candidate ids for the candidate.
-            relations_aux_properties_results (dict[Relation, dict[RelationAuxProp, bool]]):
-                Dictionary mapping the item's relations to the results of the auxiliary properties
-                satisfaction for the candidate.
+            relations_aux_property_advancement (dict[Relation, int]): Dictionary mapping the item's
+                relations to the relation's auxiliary property advancement for the candidate.
 
         Returns:
             relations_min_max_scores (dict[Relation, tuple[int, int]]): Dictionary mapping the
                 item's relations to the minimum and maximum scores of the candidate for the
                 relations in this order.
         """
-        # TODO? Replace aux_prop.maximum_advancement by 1
-        aux_prop_advancement = {
-            relation: sum(
-                aux_prop.maximum_advancement
-                for aux_prop, result in relations_aux_properties_results[relation].items()
-                if result
-            )
-            for relation in relations_aux_properties_results
-        }
         return {
             relation: (
                 relation.maximum_advancement
                 if len(relations_satisfying_related_candidate_ids[relation]) == len(relation.related_item.candidate_ids)
-                else aux_prop_advancement[relation],
+                else relations_aux_property_advancement[relation],
                 relation.maximum_advancement
                 if relations_satisfying_related_candidate_ids[relation]
-                else aux_prop_advancement[relation],
+                else relations_aux_property_advancement[relation],
             )
             for relation in relations_satisfying_related_candidate_ids
         }
+
+    # TODO: Update to make printable for the logs?
+    def make_info_dict(self) -> dict[str, Any]:
+        """
+        Return the information of the candidate as a dictionary.
+
+        Returns:
+            info_dict (dict[str, Any]): Dictionary containing the information of the candidate.
+        """
+        info_dict = {
+            "id": self.id,
+            "item_id": self.item.id,
+            "base_properties_results": self._base_properties_results,
+            "props_aux_properties_results": self._props_aux_properties_results,
+            "props_aux_items_data": {
+                prop: {aux_item: aux_item.candidates_data[self.id].make_info_dict() for aux_item in aux_items}
+                for prop, aux_items in self.item.props_auxiliary_items.items()
+            },
+            "props_aux_items_advancement": self._props_aux_items_advancement,
+            "properties_advancement": self.properties_advancement,
+            "property_advancement": self.property_advancement,
+            "relations_satisfying_related_candidate_ids": self.relations_satisfying_related_candidate_ids,
+            "relations_aux_properties_results": self._relations_aux_properties_results,
+            "relations_aux_property_advancement": self.relations_aux_property_advancement,
+            "relations_min_max_advancement": self.relations_min_max_advancement,
+            "relation_min_advancement": self.relation_min_advancement,
+            "relation_max_advancement": self.relation_max_advancement,
+            "total_min_advancement": self.total_min_advancement,
+            "total_max_advancement": self.total_max_advancement,
+        }
+        return info_dict
 
     def __str__(self) -> str:
         return f"CandidateData({self.id})"
@@ -719,11 +780,11 @@ class TaskItem(SimpleItem):
         """
         existing_relations = {}
         for relation in relations:
-            if relation.related_item.id not in existing_relations:
-                existing_relations[relation.related_item.id] = {}
-            elif relation.type_id in existing_relations[relation.related_item.id]:
+            if relation.related_item_id not in existing_relations:
+                existing_relations[relation.related_item_id] = {}
+            elif relation.type_id in existing_relations[relation.related_item_id]:
                 raise DuplicateRelationsError(relation.type_id, relation.main_item_id, relation.related_item_id)
-            existing_relations[relation.related_item.id][relation.type_id] = relation
+            existing_relations[relation.related_item_id][relation.type_id] = relation
 
     def instantiate_candidate_data(
         self, scene_objects_dict: dict[SimObjId, SimObjMetadata]
@@ -792,7 +853,8 @@ class TaskItem(SimpleItem):
         return f"{self.id}"
 
     def __repr__(self) -> str:
-        return f"TaskItem({self.id})\n  properties={self.properties})\n  relations={self.relations})"
+        # return f"TaskItem({self.id})\n  properties={self.properties})\n  relations={self.relations})"
+        return f"TaskItem({self.id})"
 
     def __hash__(self) -> int:
         return hash(self.id)

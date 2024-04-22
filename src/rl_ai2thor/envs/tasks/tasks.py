@@ -496,27 +496,14 @@ class GraphTask(BaseTask):
         if scene_objects_dict is None:
             scene_objects_dict = {obj["objectId"]: obj for obj in event.metadata["objects"]}
 
-        overlap_classes_assignment_data = [
+        overlap_classes_assignments = [
             overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]
-        # Extract the interesting assignments, results and scores
-        interesting_assignments = [data[0] for data in overlap_classes_assignment_data]
-        # Merge the results and scores of the items
-        all_relation_results: dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]] = {
-            item: item_relation_results
-            for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_relation_results in overlap_class_assignment_data[2].items()
-        }
-        all_properties_scores: dict[TaskItem, dict[CandidateId, float]] = {
-            item: item_property_score
-            for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_property_score in overlap_class_assignment_data[3].items()
-        }
 
         # Construct a generator of the cartesian product of the interesting assignments
-        assignment_products = itertools.product(*interesting_assignments)
+        assignment_products = itertools.product(*overlap_classes_assignments)
 
-        max_task_advancement = 0
+        max_task_advancement = -1
         best_assignment = {}
         is_terminated = False
 
@@ -528,9 +515,7 @@ class GraphTask(BaseTask):
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
-            assignment_advancement = self.compute_assignment_advancement(
-                global_assignment, all_relation_results, all_properties_scores
-            )
+            assignment_advancement = self.compute_assignment_advancement(global_assignment)
 
             if assignment_advancement > max_task_advancement:
                 max_task_advancement = assignment_advancement
@@ -539,73 +524,43 @@ class GraphTask(BaseTask):
                     is_terminated = True
                     break
 
-        # === Construct the results dictionary ===
-        all_properties_results: dict[TaskItem, dict[ItemProp, dict[CandidateId, bool]]] = {
-            item: item_properties_results
-            for overlap_class_assignment_data in overlap_classes_assignment_data
-            for item, item_properties_results in overlap_class_assignment_data[1].items()
-        }
-        # Retrieve the score of each property and relation for each item in the best assignment
-        results_dict = {
-            item.id: {
-                "properties": {
-                    prop_id: prop_results[obj_id] for prop_id, prop_results in all_properties_results[item].items()
-                },
-                "relations": {
-                    related_item_id: {
-                        relation_type_id: relations_by_obj_id[obj_id]
-                        for relation_type_id, relations_by_obj_id in relations.items()
-                    }
-                    for related_item_id, relations in all_relation_results[item].items()
-                },
-            }
-            for item, obj_id in best_assignment.items()
-        }
-
         # Add info about the task advancement
         info = {
             # Add best assignment, mapping between item ids and the assigned object ids
-            "best_assignment": {item.id: obj_id for item, obj_id in best_assignment.items()},
-            "results": results_dict,
+            "best_assignment": {item.id: candidate_id for item, candidate_id in best_assignment.items()},
+            "candidate_data": {item.id: item.candidates_data[best_assignment[item]] for item in self.items},
             "task_advancement": max_task_advancement,
         }
         # TODO: Add other info
 
         return max_task_advancement, is_terminated, info
 
-    def compute_assignment_advancement(
-        self,
-        global_assignment: Assignment,
-        all_relation_results: dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]],
-        all_properties_scores: dict[TaskItem, dict[CandidateId, float]],
-    ) -> float:
+    @staticmethod
+    def compute_assignment_advancement(global_assignment: Assignment) -> int:
         """
         Compute the task advancement for a given assignment.
 
         Args:
-            global_assignment (Assignment): Assignment of objects to the items.
-            all_relation_results (dict[TaskItem, dict[ItemId, dict[Relation, dict[CandidateId, set[CandidateId]]]]]):
-                Results of each object for the relation of each item.
-            all_properties_scores (dict[TaskItem, dict[CandidateId, float]]):
-                Property scores of each object for each item.
+            global_assignment (Assignment): Assignment of objects for all items of the task.
 
         Returns:
-            task_advancement (float): Task advancement.
+            task_advancement (int): Task advancement.
         """
         task_advancement = 0
 
-        # Add property scores
-        task_advancement += sum(all_properties_scores[item][obj_id] for item, obj_id in global_assignment.items())
+        # Add property advancement
+        task_advancement += sum(
+            item.candidates_data[candidate_id].property_advancement for item, candidate_id in global_assignment.items()
+        )
 
-        # Add strictly satisfied relation scores
-        for item, obj_id in global_assignment.items():
-            item_relations_results = all_relation_results[item]
-            for related_item_id, relations in item_relations_results.items():
-                related_item_assigned_obj_id = global_assignment[self.items_by_id[related_item_id]]
-                for relations_by_obj_id in relations.values():
-                    satisfying_obj_ids = relations_by_obj_id[obj_id]
-                    if related_item_assigned_obj_id in satisfying_obj_ids:
-                        task_advancement += 1
+        # Add relation advancement for the given assignment
+        for item, candidate_id in global_assignment.items():
+            for relation in item.relations:
+                main_candidate_data = item.candidates_data[candidate_id]
+                related_candidate_id = global_assignment[relation.related_item]
+                task_advancement += main_candidate_data.compute_relation_advancement_for_related_candidate(
+                    relation, related_candidate_id
+                )
 
         return task_advancement
 
