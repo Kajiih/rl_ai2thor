@@ -92,14 +92,15 @@ class PlaceNSameIn(GraphTask):
         Returns:
             task_description_dict (TaskDict): Task description dictionary.
         """
-        receptacle_id = ItemId("receptacle")
         task_description_dict: TaskDict = {
-            receptacle_id: TaskItemData(properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}),
+            ItemId("receptacle"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}
+            ),
         }
         for i in range(n):
             task_description_dict[ItemId(f"placed_object_{i}")] = TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
-                relations={receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
+                relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             )
 
         return task_description_dict
@@ -196,20 +197,17 @@ class PlaceWithMoveableRecepIn(GraphTask):
         Returns:
             task_description_dict (TaskDict): Task description dictionary.
         """
-        receptacle_id = ItemId("receptacle")
-        pickupable_receptacle_id = ItemId("pickupable_receptacle")
-        placed_object_id = ItemId("placed_object")
         return {
-            receptacle_id: TaskItemData(
+            ItemId("receptacle"): TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)},
             ),
-            pickupable_receptacle_id: TaskItemData(
+            ItemId("pickupable_receptacle"): TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(pickupable_receptacle_type)},
-                relations={receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
+                relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             ),
-            placed_object_id: TaskItemData(
+            ItemId("placed_object"): TaskItemData(
                 properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
-                relations={pickupable_receptacle_id: {RelationTypeId.CONTAINED_IN: {}}},
+                relations={ItemId("pickupable_receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             ),
         }
 
@@ -429,21 +427,19 @@ class LookInLight(GraphTask):
         Returns:
             task_description_dict (TaskDict): Task description dictionary.
         """
-        light_source_id = ItemId("light_source")
-        looked_at_object_id = ItemId("looked_at_object")
         return {
-            light_source_id: TaskItemData(
+            ItemId("light_source"): TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: MultiValuePSF(LIGHT_SOURCES),
                     SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
                 },
             ),
-            looked_at_object_id: TaskItemData(
+            ItemId("looked_at_object"): TaskItemData(
                 properties={
                     SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(looked_at_object_type),
                     SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
                 },
-                relations={light_source_id: {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
+                relations={ItemId("light_source"): {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
             ),
         }
 
@@ -610,7 +606,260 @@ class Open(GraphTask):
 
 
 # === Complex Tasks ===
-# TODO: Implement
+# TODO: Add FillLiquid = Water
+class PrepareMealTask(GraphTask):
+    """
+    Task for preparing a meal.
+
+    The task requires to put on a counter top a plate with a cooked cracked egg inside and a fresh
+    cup of water.
+
+    This task is supposed to be used with Kitchen scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("counter_top"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.COUNTER_TOP)},
+            ),
+            ItemId("plate"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.PLATE)},
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("cooked_cracked_egg"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.EGG),
+                    SimObjVariableProp.IS_SLICED: SingleValuePSF(True),
+                    SimObjVariableProp.IS_COOKED: SingleValuePSF(True),
+                },
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("cup_of_water"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.CUP),
+                    SimObjVariableProp.IS_FILLED_WITH_LIQUID: SingleValuePSF(True),
+                    SimObjVariableProp.TEMPERATURE: SingleValuePSF(TemperatureValue.COLD),
+                },
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare a meal by putting a plate with a cooked cracked egg inside and a fresh cup of water on a counter top"
+
+
+class PrepareWatchingTVTask(GraphTask):
+    """
+    Task for preparing for watching TV.
+
+    The task requires to put a newspaper and a switched on laptop on a sofa and look at a turned on TV.
+
+    This task is supposed to be used with Living Room scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("sofa"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SOFA)},
+            ),
+            ItemId("newspaper"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.NEWSPAPER)},
+                relations={
+                    ItemId("sofa"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("laptop"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.LAPTOP),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                },
+                relations={
+                    ItemId("sofa"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("tv"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TELEVISION),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                    SimObjVariableProp.VISIBLE: SingleValuePSF(True),
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for watching TV by putting a newspaper and a switched on laptop on a sofa and looking at a turned on TV"
+
+
+# TODO: Add task preprocessing
+class PrepareGoingToBedTask(GraphTask):
+    """
+    Task for preparing for going to bed.
+
+    The task requires to turn off the light switch, turn on a desk lamp and hold an open book close to it.
+
+    This task is supposed to be used with Bedroom scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("light_switch"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.LIGHT_SWITCH),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(False),
+                },
+            ),
+            ItemId("desk_lamp"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.DESK_LAMP),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                },
+            ),
+            ItemId("book"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.BOOK),
+                    SimObjVariableProp.IS_OPEN: SingleValuePSF(True),
+                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
+                },
+                relations={
+                    ItemId("desk_lamp"): {RelationTypeId.CLOSE_TO: {"distance": 1.0}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for going to bed by turning off the light switch, turning on a desk lamp and holding an open book close to it"
+
+
+class PrepareForShowerTask(GraphTask):
+    """
+    Task for preparing for a shower.
+
+    The task requires put a towel on a towel holder, a soap bar in the bathtub and turn on the shower head.
+
+    This task is supposed to be used with Bathroom scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("towel_holder"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TOWEL_HOLDER)},
+            ),
+            ItemId("towel"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TOWEL)},
+                relations={
+                    ItemId("towel_holder"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("bathtub"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.BATHTUB)},
+            ),
+            ItemId("soap"): TaskItemData(
+                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SOAP_BAR)},
+                relations={
+                    ItemId("bathtub"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("shower_head"): TaskItemData(
+                properties={
+                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SHOWER_HEAD),
+                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head"
+
 
 # %% === Constants ===
 ALL_TASKS: dict[TaskType, type[GraphTask]]
