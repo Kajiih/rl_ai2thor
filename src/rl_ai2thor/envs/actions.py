@@ -437,6 +437,10 @@ slice_object_condition = HoldingObjectTypeCondition(
     object_type=SimObjectType.KNIFE,
     overriding_message="Agent needs to hold a knife to slice an object!",
 )
+# === Type Annotations ===
+fill_object_with_liquid_condition: VisibleWaterCondition
+clean_object_condition: VisibleWaterCondition
+slice_object_condition: HoldingObjectTypeCondition
 
 
 # %% Exceptions
@@ -745,7 +749,42 @@ clean_object_action = ConditionalExecutionAction(
     action_condition=clean_object_condition,
 )
 # Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
-
+# === Type Annotations ===
+move_ahead_action: EnvironmentAction
+move_back_action: EnvironmentAction
+move_left_action: EnvironmentAction
+move_right_action: EnvironmentAction
+rotate_left_action: EnvironmentAction
+rotate_right_action: EnvironmentAction
+look_up_action: EnvironmentAction
+look_down_action: EnvironmentAction
+crouch_action: EnvironmentAction
+stand_action: EnvironmentAction
+done_action: EnvironmentAction
+move_held_object_ahead_back_action: EnvironmentAction
+move_held_object_right_left_action: EnvironmentAction
+move_held_object_up_down_action: EnvironmentAction
+rotate_held_object_roll_action: EnvironmentAction
+rotate_held_object_pitch_action: EnvironmentAction
+rotate_held_object_yaw_action: EnvironmentAction
+pickup_object_action: EnvironmentAction
+put_object_action: EnvironmentAction
+drop_hand_object_action: EnvironmentAction
+throw_object_action: EnvironmentAction
+push_object_action: EnvironmentAction
+pull_object_action: EnvironmentAction
+open_object_action: EnvironmentAction
+close_object_action: EnvironmentAction
+partial_open_object_action: EnvironmentAction
+toggle_object_on_action: EnvironmentAction
+toggle_object_off_action: EnvironmentAction
+fill_object_with_liquid_action: ConditionalExecutionAction
+empty_liquid_from_object_action: EnvironmentAction
+break_object_action: EnvironmentAction
+slice_object_action: ConditionalExecutionAction
+use_up_object_action: EnvironmentAction
+dirty_object_action: EnvironmentAction
+clean_object_action: ConditionalExecutionAction
 
 # %% === Constants ===
 ALL_ACTIONS: set[EnvironmentAction] = {

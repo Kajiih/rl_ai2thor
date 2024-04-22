@@ -6,6 +6,7 @@ TODO: Finish module docstring.
 
 from __future__ import annotations
 
+import operator
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -373,7 +374,7 @@ class ITHOREnv(
             visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
             closest_operable_object = min(
                 (obj for obj in visible_objects if obj[env_action.object_required_property]),
-                key=lambda obj: obj["distance"],
+                key=operator.itemgetter("distance"),
                 default=None,
             )
             if closest_operable_object is not None:

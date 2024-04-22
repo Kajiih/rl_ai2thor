@@ -100,7 +100,7 @@ class BaseAgent[ObsType, ActType](ABC):
         total_nb_steps = 0
 
         if nb_episodes < 1:
-            raise ValueError("Number of episodes must be at least 1.")
+            raise ValueError("Number of episodes must be at least 1.")  # noqa: TRY003
 
         for _ep in range(nb_episodes):
             obs, info = self.reset()
