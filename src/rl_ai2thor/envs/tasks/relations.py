@@ -11,12 +11,13 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
-from rl_ai2thor.envs.tasks.item_prop import PickupableProp, ReceptacleProp
+from rl_ai2thor.envs.tasks.item_prop import IsPickedUpProp, PickupableProp, ReceptacleProp
+from rl_ai2thor.envs.tasks.item_prop_interface import RelationAuxProp
 from rl_ai2thor.envs.tasks.items import ItemId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.item_prop_interface import AuxProp, ItemFixedProp, RelationAuxProp
+    from rl_ai2thor.envs.tasks.item_prop_interface import ItemFixedProp
     from rl_ai2thor.envs.tasks.items import CandidateId, TaskItem
 
 
@@ -309,6 +310,7 @@ class ContainedInRelation(Relation):
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
     candidate_required_prop = PickupableProp(True)
+    auxiliary_properties = frozenset({RelationAuxProp(IsPickedUpProp, True)})
 
     def __init__(
         self,
@@ -370,8 +372,8 @@ class CloseToRelation(Relation):
         related_item_id: ItemId | str,
         _inverse_relation: Relation | None = None,
     ) -> None:
-        super().__init__(main_item_id, related_item_id, _inverse_relation)
         self.distance = distance
+        super().__init__(main_item_id, related_item_id, _inverse_relation)
 
     def _compute_inverse_relation_parameters(self) -> dict[str, float]:
         """Return a dictionary with the same parameters since the relation is symmetrical."""

@@ -1,0 +1,57 @@
+event_0:
+  is_terminated:
+    actual: false
+    expected: false
+  reset_successful: true
+  task_advancement:
+    actual: 3
+    expected: 3
+event_1:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 3
+    expected: 3
+event_2:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 2
+    expected: 2
+event_3:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 2
+    expected: 2
+event_4:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 3
+    expected: 3
+event_5:
+  is_terminated:
+    actual: true
+    expected: true
+  task_advancement:
+    actual: 5
+    expected: 5
+event_6:
+  is_terminated:
+    actual: true
+    expected: true
+  task_advancement:
+    actual: 5
+    expected: 5
+event_7:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 3
+    expected: 3

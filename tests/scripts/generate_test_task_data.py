@@ -33,11 +33,13 @@ def generate_test_pickup_mug_data(controller: ai2thor.controller.Controller) -> 
     advancement_list = []
     terminated_list = []
 
+    # === Event 0 ===
     event = controller.reset("FloorPlan1")
     event_list.append(event)
     advancement_list.append(0)
     terminated_list.append(False)
 
+    # === Event 1 ===
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
     advancement_list.append(0)
@@ -45,11 +47,13 @@ def generate_test_pickup_mug_data(controller: ai2thor.controller.Controller) -> 
 
     event = controller.step(action="DropHandObject", forceAction=True)
 
+    # === Event 2 ===
     event = controller.step(action="PickupObject", objectId="Mug|-01.76|+00.90|-00.62", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(1)  # IsPickedUp 1
     terminated_list.append(True)
 
+    # === Event 3 ===
     event = controller.step(action="DropHandObject", forceAction=True)
     event_list.append(event)
     advancement_list.append(0)
@@ -73,11 +77,13 @@ def generate_test_open_fridge_data(controller: ai2thor.controller.Controller) ->
     advancement_list = []
     terminated_list = []
 
+    # === Event 0 ===
     event = controller.reset("FloorPlan1")
     event_list.append(event)
     advancement_list.append(0)
     terminated_list.append(False)
 
+    # === Event 1 ===
     event = controller.step(action="OpenObject", objectId="Drawer|-01.56|+00.66|-00.20", forceAction=True)
     event_list.append(event)
     advancement_list.append(0)
@@ -85,11 +91,13 @@ def generate_test_open_fridge_data(controller: ai2thor.controller.Controller) ->
 
     event = controller.step(action="CloseObject", objectId="Drawer|-01.56|+00.66|-00.20", forceAction=True)
 
+    # === Event 2 ===
     event = controller.step(action="OpenObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(1)  # IsOpen 1
     terminated_list.append(True)
 
+    # === Event 3 ===
     event = controller.step(action="CloseObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
     advancement_list.append(0)
@@ -114,52 +122,60 @@ def generate_test_place_cooled_in_apple_counter_top_data(controller: ai2thor.con
     advancement_list = []
     terminated_list = []
 
+    # === Event 0 ===
     event = controller.reset("FloorPlan1")
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(3)  # ContainedIn 2 + ReceptacleOf 1
     terminated_list.append(False)
 
+    # === Event 1 ===
     event = controller.step(action="OpenObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(3)  # ContainedIn 2 + ReceptacleOf 1
     terminated_list.append(False)
 
+    # === Event 2 ===
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(2)  # ContainedIn 1 + Temperature(Cold) 1
     terminated_list.append(False)
 
+    # === Event 3 ===
     event = controller.step(
         action="PutObject",
         objectId="Fridge|-02.10|+00.00|+01.07",
         forceAction=True,
     )
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(2)  # Temperature(Cold) 2
     terminated_list.append(False)
 
+    # === Event 4 ===
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(3)  # ContainedIn 1 + Temperature(Cold) 2
     terminated_list.append(False)
 
+    # === Event 5 ===
     event = controller.step(
         action="PutObject",
         objectId="CounterTop|+00.69|+00.95|-02.48",
         forceAction=True,
     )
     event_list.append(event)
-    advancement_list.append(6)
+    advancement_list.append(5)  # ContainedIn 2 + ReceptacleOf 1 + Temperature(Cold) 2
     terminated_list.append(True)
 
+    # === Event 6 ===
     event = controller.step(action="CloseObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(6)
+    advancement_list.append(5)  # ContainedIn 2 + ReceptacleOf 1 + Temperature(Cold) 2
     terminated_list.append(True)
 
+    # === Event 7 ===
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
-    advancement_list.append(4)
+    advancement_list.append(3)  # ContainedIn 1 + Temperature(Cold) 2
     terminated_list.append(False)
 
     with event_list_path.open("wb") as f, advancement_list_path.open("wb") as g, terminated_list_path.open("wb") as h:
@@ -182,9 +198,10 @@ def generate_test_look_in_light_book_data(controller: ai2thor.controller.Control
 
     event = controller.reset("FloorPlan301", gridSize=0.1)
 
+    # === Event 0 ===
     event = controller.step(action="ToggleObjectOff", objectId="DeskLamp|-01.32|+01.24|-00.99", forceAction=True)
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     event = controller.step(
@@ -211,27 +228,30 @@ def generate_test_look_in_light_book_data(controller: ai2thor.controller.Control
         forceAction=False,
     )
 
+    # === Event 1 ===
     event = controller.step(
         action="RotateRight",
         degrees=60,
         forceAction=False,
     )
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(0)
     terminated_list.append(False)
 
+    # === Event 2 ===
     event = controller.step(action="PickupObject", objectId="Book|-00.90|+00.56|+01.18", forceAction=True)
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(1)  # IsPickedUp(Book) 1
     terminated_list.append(False)
 
+    # === Event 3 ===
     event = controller.step(
         action="MoveAhead",
         moveMagnitude=1.2,
         forceAction=False,
     )
     event_list.append(event)
-    advancement_list.append(5)
+    advancement_list.append(3)  # IsPickedUp(Book, True) 1 + 2 IsCloseTo 1
     terminated_list.append(False)
 
     event = controller.step(
@@ -240,23 +260,26 @@ def generate_test_look_in_light_book_data(controller: ai2thor.controller.Control
         forceAction=False,
     )
 
+    # === Event 4 ===
     event = controller.step(
         action="MoveAhead",
         moveMagnitude=0.4,
         forceAction=False,
     )
     event_list.append(event)
-    advancement_list.append(5)
+    advancement_list.append(3)  # IsPickedUp(Book, True) 1 + 2 IsCloseTo 1
     terminated_list.append(False)
 
+    # === Event 5 ===
     event = controller.step(action="ToggleObjectOn", objectId="DeskLamp|-01.32|+01.24|-00.99", forceAction=True)
     event_list.append(event)
-    advancement_list.append(6)
+    advancement_list.append(4)  # isPickedUp(Book, True) 1 + 2 IsCloseTo 1 + IsToggled(DeskLamp, True) 1
     terminated_list.append(True)
 
+    # === Event 6 ===
     event = controller.step(action="ToggleObjectOff", objectId="DeskLamp|-01.32|+01.24|-00.99", forceAction=True)
     event_list.append(event)
-    advancement_list.append(5)
+    advancement_list.append(3)  # isPickedUp(Book, True) 1 + 2 IsCloseTo 1
     terminated_list.append(False)
 
     with event_list_path.open("wb") as f, advancement_list_path.open("wb") as g, terminated_list_path.open("wb") as h:
