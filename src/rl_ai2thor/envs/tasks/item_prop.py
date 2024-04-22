@@ -14,11 +14,13 @@ from rl_ai2thor.envs.sim_objects import (
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
+    SimObjProp,
     SimObjVariableProp,
 )
 from rl_ai2thor.envs.tasks.item_prop_interface import (
     FillableLiquid,
     ItemFixedProp,
+    ItemProp,
     ItemVariableProp,
     MultiValuePSF,
     PropAuxProp,
@@ -297,7 +299,7 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
 
 
 ## %% === Item property mapping ===
-obj_prop_id_to_item_prop: dict[SimObjFixedProp | SimObjVariableProp, type[ItemFixedProp | ItemVariableProp]]
+obj_prop_id_to_item_prop: dict[SimObjProp | str, type[ItemProp]]
 obj_prop_id_to_item_prop = {
     SimObjFixedProp.OBJECT_TYPE: ObjectTypeProp,
     SimObjFixedProp.IS_INTERACTABLE: IsInteractableProp,

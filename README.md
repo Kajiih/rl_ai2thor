@@ -16,17 +16,18 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 
 ## Contents <!-- omit from toc -->
 
-- [💻 Installation](#-installation)
-- [🏃 Getting Started](#-getting-started)
-- [☁️ Running Headless](#️-running-headless)
-  - [Cloud rendering](#cloud-rendering)
-  - [Starting X-Server](#starting-x-server)
-- [✏️ Configuring the environment](#️-configuring-the-environment)
-- [➕ Creating new tasks](#-creating-new-tasks)
-- [🧮 The Benchmark](#-the-benchmark)
-  - [Reproducing baselines results](#reproducing-baselines-results)
-- [📔 Citation](#-citation)
-- [🧾 License](#-license)
+- [🤖 AI2-THOR RL](#-ai2-thor-rl)
+  - [💻 Installation](#-installation)
+  - [🏃 Getting Started](#-getting-started)
+  - [☁️ Running Headless](#️-running-headless)
+    - [Cloud rendering](#cloud-rendering)
+    - [Starting X-Server](#starting-x-server)
+  - [✏️ Configuring the environment](#️-configuring-the-environment)
+  - [➕ Creating new tasks](#-creating-new-tasks)
+  - [🧮 The Benchmark](#-the-benchmark)
+    - [Reproducing baselines results](#reproducing-baselines-results)
+  - [📔 Citation](#-citation)
+  - [🧾 License](#-license)
 
 **[Add features section?]**
 **[Clearer separation between environemnt and benchmark?]**
@@ -154,12 +155,12 @@ Thanks to graph tasks, you can define a new task by describing its agency list. 
 
 ```python
 task_description_dict = {
-    "hot_apple": {
-        "properties": {"objectType": "Apple", "temperature": "Hot"},
-    },
     "plate_receptacle": {
         "properties": {"objectType": "Plate"},
-        "relations": {"hot_apple": ["contains"]},
+    },
+    "hot_apple": {
+        "properties": {"objectType": "Apple", "temperature": "Hot"},
+        "relations": {"plate_receptacle": ["contained_in"]},
     },
 }
 ```

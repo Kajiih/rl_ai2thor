@@ -14,10 +14,11 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.reward import BaseRewardHandler
+from rl_ai2thor.envs.sim_objects import SimObjectType
 from rl_ai2thor.envs.tasks.item_prop import obj_prop_id_to_item_prop
 from rl_ai2thor.envs.tasks.item_prop_interface import (
+    ItemProp,
     ItemPropValue,
-    PropSatFunction,
 )
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     from ai2thor.server import Event
 
     from rl_ai2thor.envs.scenes import SceneId
-    from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata, SimObjProp
+    from rl_ai2thor.envs.sim_objects import SimObjId, SimObjMetadata
     from rl_ai2thor.envs.tasks.relations import Relation
 
 
@@ -198,15 +199,14 @@ class UndefinedTask(BaseTask):
 
 type TaskArg = ItemPropValue | int
 type RelationsDict = dict[ItemId, dict[RelationTypeId, dict[str, RelationParam]]]
-type PropertiesDict = dict[SimObjProp, PropSatFunction]
-type TaskDict = dict[ItemId | str, TaskItemData]
+type TaskDict = dict[ItemId, TaskItemData]
 
 
 @dataclass
 class TaskItemData:
     """Description of a task item."""
 
-    properties: PropertiesDict = field(default_factory=dict)
+    properties: set[ItemProp] = field(default_factory=set)
     relations: RelationsDict = field(default_factory=dict)
 
 
@@ -630,13 +630,7 @@ class GraphTask(BaseTask):
             }
             for main_item_id in organized_relations
         }
-        properties_by_item_id = {
-            item_id: {
-                obj_prop_id_to_item_prop[prop](prop_sat_function)
-                for prop, prop_sat_function in item_data.properties.items()
-            }
-            for item_id, item_data in task_description_dict.items()
-        }
+        properties_by_item_id = {item_id: item_data.properties for item_id, item_data in task_description_dict.items()}
         items = [
             TaskItem(
                 item_id,
@@ -655,6 +649,63 @@ class GraphTask(BaseTask):
         nb_items = len(self.items)
         nb_relations = sum(len(item.relations) for item in self.items)
         return f"GraphTask({nb_items} items, {nb_relations} relations)"
+
+
+# %% === Utility Functions ===
+# TODO: Add support for relations with parameters
+# TODO: Add support for MultiValuePSF, RangePSF, etc.
+def parse_task_description_dict(task_description_dict: dict[str, dict[str, Any]]) -> TaskDict:
+    """
+    Parse a dictionary describing the task graph and return a task description dictionary.
+
+    Example of task description dictionary for the task of placing a hot apple in a plate:
+    task_description_dict = {
+        "plate_receptacle": {
+            "properties": {"objectType": "Plate"},
+        },
+        "hot_apple": {
+            "properties": {"objectType": "Apple", "temperature": "Hot"},
+            "relations": {"plate_receptacle": ["contained_in"]},
+        },
+    }
+
+    And it becomes the proper task description dictionary:
+    task_description_dict2 = {
+        ItemId("plate_receptacle"): TaskItemData(
+            properties={ObjectTypeProp(SingleValuePSF(SimObjectType.PLATE))},
+        ),
+        ItemId("hot_apple"): TaskItemData(
+            properties={
+                ObjectTypeProp(SimObjectType.APPLE),
+                TemperatureProp(TemperatureValue.HOT),
+            },
+            relations={ItemId("plate_receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
+        ),
+    }
+
+    Args:
+        task_description_dict (dict[str, Any]): Task description dictionary.
+
+    Returns:
+        task_description_dict (TaskDict): Parsed task description dictionary.
+    """
+    parsed_task_description_dict: TaskDict = {}
+    for item_id, item_data in task_description_dict.items():
+        # === Parse properties ===
+        properties = item_data.get("properties", {})
+        property_dict: set[ItemProp] = {
+            obj_prop_id_to_item_prop[prop](SimObjectType(prop_value) if prop == "objectType" else prop_value)
+            for prop, prop_value in properties.items()
+        }
+        # === Parse relations ===
+        relation_dict: RelationsDict = {}
+        relations = item_data.get("relations", {})
+        for related_item_id, relations_dict in relations.items():
+            for relation_type_id in relations_dict:
+                relation_dict[ItemId(related_item_id)] = {RelationTypeId(relation_type_id): {}}
+        parsed_task_description_dict[ItemId(item_id)] = TaskItemData(property_dict, relation_dict)
+
+    return parsed_task_description_dict
 
 
 # %% === Constants ===

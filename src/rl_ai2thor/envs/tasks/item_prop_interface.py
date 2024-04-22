@@ -43,7 +43,7 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid
+ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid | str
 
 
 # %% === Property Satisfaction Functions ===

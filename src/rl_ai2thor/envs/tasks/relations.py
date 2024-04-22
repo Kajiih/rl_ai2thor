@@ -367,9 +367,9 @@ class CloseToRelation(Relation):
 
     def __init__(
         self,
-        distance: float,
         main_item_id: ItemId | str,
         related_item_id: ItemId | str,
+        distance: float = 1.0,
         _inverse_relation: Relation | None = None,
     ) -> None:
         self.distance = distance

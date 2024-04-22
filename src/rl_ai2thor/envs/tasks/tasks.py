@@ -18,9 +18,20 @@ from rl_ai2thor.envs.sim_objects import (
     SimObjFixedProp,
     SimObjVariableProp,
 )
+from rl_ai2thor.envs.tasks.item_prop import (
+    IsCookedProp,
+    IsDirtyProp,
+    IsFilledWithLiquidProp,
+    IsOpenProp,
+    IsPickedUpProp,
+    IsSlicedProp,
+    IsToggledProp,
+    ObjectTypeProp,
+    TemperatureProp,
+    VisibleProp,
+)
 from rl_ai2thor.envs.tasks.item_prop_interface import (
     MultiValuePSF,
-    SingleValuePSF,
     TemperatureValue,
 )
 from rl_ai2thor.envs.tasks.items import (
@@ -94,12 +105,12 @@ class PlaceNSameIn(GraphTask):
         """
         task_description_dict: TaskDict = {
             ItemId("receptacle"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)}
+                properties={ObjectTypeProp(receptacle_type)},
             ),
         }
         for i in range(n):
             task_description_dict[ItemId(f"placed_object_{i}")] = TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
+                properties={ObjectTypeProp(placed_object_type)},
                 relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             )
 
@@ -199,14 +210,14 @@ class PlaceWithMoveableRecepIn(GraphTask):
         """
         return {
             ItemId("receptacle"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(receptacle_type)},
+                properties={ObjectTypeProp(receptacle_type)},
             ),
             ItemId("pickupable_receptacle"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(pickupable_receptacle_type)},
+                properties={ObjectTypeProp(pickupable_receptacle_type)},
                 relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             ),
             ItemId("placed_object"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(placed_object_type)},
+                properties={ObjectTypeProp(placed_object_type)},
                 relations={ItemId("pickupable_receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
             ),
         }
@@ -250,9 +261,7 @@ class PlaceCleanedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.IS_DIRTY] = (
-                SingleValuePSF(False)
-            )
+            task_description_dict[ItemId(f"placed_object_{i}")].properties.add(IsDirtyProp(False))
 
         return task_description_dict
 
@@ -327,10 +336,7 @@ class PlaceHeatedIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.TEMPERATURE] = (
-                SingleValuePSF(TemperatureValue.HOT)
-            )
-
+            task_description_dict[ItemId(f"placed_object_{i}")].properties.add(TemperatureProp(TemperatureValue.HOT))
         return task_description_dict
 
     def text_description(self) -> str:
@@ -377,10 +383,7 @@ class PlaceCooledIn(PlaceIn):
         """
         task_description_dict = super()._create_task_description_dict(placed_object_type, receptacle_type)
         for i in range(n):
-            task_description_dict[ItemId(f"placed_object_{i}")].properties[SimObjVariableProp.TEMPERATURE] = (
-                SingleValuePSF(TemperatureValue.COLD)
-            )
-
+            task_description_dict[ItemId(f"placed_object_{i}")].properties.add(TemperatureProp(TemperatureValue.COLD))
         return task_description_dict
 
     def text_description(self) -> str:
@@ -430,14 +433,14 @@ class LookInLight(GraphTask):
         return {
             ItemId("light_source"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: MultiValuePSF(LIGHT_SOURCES),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                    ObjectTypeProp(MultiValuePSF(LIGHT_SOURCES)),
+                    IsToggledProp(True),
                 },
             ),
             ItemId("looked_at_object"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(looked_at_object_type),
-                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
+                    ObjectTypeProp(looked_at_object_type),
+                    IsPickedUpProp(True),
                 },
                 relations={ItemId("light_source"): {RelationTypeId.CLOSE_TO: {"distance": 1.0}}},
             ),
@@ -511,8 +514,8 @@ class Pickup(GraphTask):
         return {
             ItemId("picked_up_object"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(picked_up_object_type),
-                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
+                    ObjectTypeProp(picked_up_object_type),
+                    IsPickedUpProp(True),
                 },
             )
         }
@@ -546,7 +549,7 @@ class OpenAny(GraphTask):
         """
         return {
             ItemId("opened_object"): TaskItemData(
-                properties={SimObjVariableProp.IS_OPEN: SingleValuePSF(True)},
+                properties={IsOpenProp(True)},
             )
         }
 
@@ -589,8 +592,8 @@ class Open(GraphTask):
         return {
             ItemId("opened_object"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(opened_object_type),
-                    SimObjVariableProp.IS_OPEN: SingleValuePSF(True),
+                    ObjectTypeProp(opened_object_type),
+                    IsOpenProp(True),
                 },
             )
         }
@@ -634,19 +637,19 @@ class PrepareMealTask(GraphTask):
         """
         return {
             ItemId("counter_top"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.COUNTER_TOP)},
+                properties={ObjectTypeProp(SimObjectType.COUNTER_TOP)},
             ),
             ItemId("plate"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.PLATE)},
+                properties={ObjectTypeProp(SimObjectType.PLATE)},
                 relations={
                     ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             ),
             ItemId("cooked_cracked_egg"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.EGG),
-                    SimObjVariableProp.IS_SLICED: SingleValuePSF(True),
-                    SimObjVariableProp.IS_COOKED: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.EGG),
+                    IsSlicedProp(True),
+                    IsCookedProp(True),
                 },
                 relations={
                     ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
@@ -654,9 +657,9 @@ class PrepareMealTask(GraphTask):
             ),
             ItemId("cup_of_water"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.CUP),
-                    SimObjVariableProp.IS_FILLED_WITH_LIQUID: SingleValuePSF(True),
-                    SimObjVariableProp.TEMPERATURE: SingleValuePSF(TemperatureValue.COLD),
+                    ObjectTypeProp(SimObjectType.CUP),
+                    IsFilledWithLiquidProp(True),
+                    TemperatureProp(TemperatureValue.COLD),
                 },
                 relations={
                     ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
@@ -701,18 +704,18 @@ class PrepareWatchingTVTask(GraphTask):
         """
         return {
             ItemId("sofa"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SOFA)},
+                properties={ObjectTypeProp(SimObjectType.SOFA)},
             ),
             ItemId("newspaper"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.NEWSPAPER)},
+                properties={ObjectTypeProp(SimObjectType.NEWSPAPER)},
                 relations={
                     ItemId("sofa"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             ),
             ItemId("laptop"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.LAPTOP),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.LAPTOP),
+                    IsToggledProp(True),
                 },
                 relations={
                     ItemId("sofa"): {RelationTypeId.CONTAINED_IN: {}},
@@ -720,9 +723,9 @@ class PrepareWatchingTVTask(GraphTask):
             ),
             ItemId("tv"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TELEVISION),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
-                    SimObjVariableProp.VISIBLE: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.TELEVISION),
+                    IsToggledProp(True),
+                    VisibleProp(True),
                 },
             ),
         }
@@ -766,21 +769,21 @@ class PrepareGoingToBedTask(GraphTask):
         return {
             ItemId("light_switch"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.LIGHT_SWITCH),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(False),
+                    ObjectTypeProp(SimObjectType.LIGHT_SWITCH),
+                    IsToggledProp(False),
                 },
             ),
             ItemId("desk_lamp"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.DESK_LAMP),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.DESK_LAMP),
+                    IsToggledProp(True),
                 },
             ),
             ItemId("book"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.BOOK),
-                    SimObjVariableProp.IS_OPEN: SingleValuePSF(True),
-                    SimObjVariableProp.IS_PICKED_UP: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.BOOK),
+                    IsOpenProp(True),
+                    IsPickedUpProp(True),
                 },
                 relations={
                     ItemId("desk_lamp"): {RelationTypeId.CLOSE_TO: {"distance": 1.0}},
@@ -825,27 +828,27 @@ class PrepareForShowerTask(GraphTask):
         """
         return {
             ItemId("towel_holder"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TOWEL_HOLDER)},
+                properties={ObjectTypeProp(SimObjectType.TOWEL_HOLDER)},
             ),
             ItemId("towel"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.TOWEL)},
+                properties={ObjectTypeProp(SimObjectType.TOWEL)},
                 relations={
                     ItemId("towel_holder"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             ),
             ItemId("bathtub"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.BATHTUB)},
+                properties={ObjectTypeProp(SimObjectType.BATHTUB)},
             ),
             ItemId("soap"): TaskItemData(
-                properties={SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SOAP_BAR)},
+                properties={ObjectTypeProp(SimObjectType.SOAP_BAR)},
                 relations={
                     ItemId("bathtub"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             ),
             ItemId("shower_head"): TaskItemData(
                 properties={
-                    SimObjFixedProp.OBJECT_TYPE: SingleValuePSF(SimObjectType.SHOWER_HEAD),
-                    SimObjVariableProp.IS_TOGGLED: SingleValuePSF(True),
+                    ObjectTypeProp(SimObjectType.SHOWER_HEAD),
+                    IsToggledProp(True),
                 },
             ),
         }
