@@ -1,0 +1,29 @@
+event_0:
+  is_terminated:
+    actual: false
+    expected: false
+  reset_successful: true
+  task_advancement:
+    actual: 0
+    expected: 0
+event_1:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 0
+    expected: 0
+event_2:
+  is_terminated:
+    actual: true
+    expected: true
+  task_advancement:
+    actual: 1
+    expected: 1
+event_3:
+  is_terminated:
+    actual: false
+    expected: false
+  task_advancement:
+    actual: 0
+    expected: 0

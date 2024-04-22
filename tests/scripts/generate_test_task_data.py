@@ -35,24 +35,24 @@ def generate_test_pickup_mug_data(controller: ai2thor.controller.Controller) -> 
 
     event = controller.reset("FloorPlan1")
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     event = controller.step(action="DropHandObject", forceAction=True)
 
     event = controller.step(action="PickupObject", objectId="Mug|-01.76|+00.90|-00.62", forceAction=True)
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(1)
     terminated_list.append(True)
 
     event = controller.step(action="DropHandObject", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     with event_list_path.open("wb") as f, advancement_list_path.open("wb") as g, terminated_list_path.open("wb") as h:
@@ -75,24 +75,24 @@ def generate_test_open_fridge_data(controller: ai2thor.controller.Controller) ->
 
     event = controller.reset("FloorPlan1")
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     event = controller.step(action="OpenObject", objectId="Drawer|-01.56|+00.66|-00.20", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     event = controller.step(action="CloseObject", objectId="Drawer|-01.56|+00.66|-00.20", forceAction=True)
 
     event = controller.step(action="OpenObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(2)
+    advancement_list.append(1)
     terminated_list.append(True)
 
     event = controller.step(action="CloseObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(1)
+    advancement_list.append(0)
     terminated_list.append(False)
 
     with event_list_path.open("wb") as f, advancement_list_path.open("wb") as g, terminated_list_path.open("wb") as h:
@@ -101,6 +101,7 @@ def generate_test_open_fridge_data(controller: ai2thor.controller.Controller) ->
         pkl.dump(terminated_list, h)
 
 
+# TODO: Update when improving task advancement computation
 def generate_test_place_cooled_in_apple_counter_top_data(controller: ai2thor.controller.Controller) -> None:
     """Generate data for the PlaceCooledIn task with an apple and a counter top."""
     test_data_dir = data_dir / "test_place_cooled_in_apple_counter_top"
@@ -115,12 +116,12 @@ def generate_test_place_cooled_in_apple_counter_top_data(controller: ai2thor.con
 
     event = controller.reset("FloorPlan1")
     event_list.append(event)
-    advancement_list.append(4)
+    advancement_list.append(3)
     terminated_list.append(False)
 
     event = controller.step(action="OpenObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(4)
+    advancement_list.append(3)
     terminated_list.append(False)
 
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
@@ -134,7 +135,7 @@ def generate_test_place_cooled_in_apple_counter_top_data(controller: ai2thor.con
         forceAction=True,
     )
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(2)
     terminated_list.append(False)
 
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
@@ -148,17 +149,17 @@ def generate_test_place_cooled_in_apple_counter_top_data(controller: ai2thor.con
         forceAction=True,
     )
     event_list.append(event)
-    advancement_list.append(5)
+    advancement_list.append(6)
     terminated_list.append(True)
 
     event = controller.step(action="CloseObject", objectId="Fridge|-02.10|+00.00|+01.07", forceAction=True)
     event_list.append(event)
-    advancement_list.append(5)
+    advancement_list.append(6)
     terminated_list.append(True)
 
     event = controller.step(action="PickupObject", objectId="Apple|-00.47|+01.15|+00.48", forceAction=True)
     event_list.append(event)
-    advancement_list.append(3)
+    advancement_list.append(4)
     terminated_list.append(False)
 
     with event_list_path.open("wb") as f, advancement_list_path.open("wb") as g, terminated_list_path.open("wb") as h:
