@@ -14,14 +14,13 @@ from typing import TYPE_CHECKING, Any
 from rl_ai2thor.envs.sim_objects import (
     SimObjectType,
     SimObjFixedProp,
-    SimObjId,
     SimObjMetadata,
     SimObjProp,
     SimObjVariableProp,
 )
 
 if TYPE_CHECKING:
-    from rl_ai2thor.envs.tasks.items import AuxItem, CandidateId
+    from rl_ai2thor.envs.tasks.items import AuxItem
     from rl_ai2thor.envs.tasks.relations import Relation
 
 

@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal, NewType
+from typing import TYPE_CHECKING, Any, NewType
 
 from rl_ai2thor.envs.sim_objects import (
     SimObjId,
     SimObjMetadata,
-    SimObjProp,
 )
 from rl_ai2thor.envs.tasks.item_prop_interface import (
     ItemVariableProp,

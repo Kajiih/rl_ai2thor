@@ -16,7 +16,8 @@ from rl_ai2thor.envs.ai2thor_envs import (
     ITHOREnv,
 )
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, NoTaskBlueprintError, UnknownTaskTypeError
+from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceNSameIn, UnknownTaskTypeError
+from rl_ai2thor.envs.tasks.tasks_interface import NoTaskBlueprintError
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -280,7 +281,7 @@ def test__create_task_blueprints():
 
     # Check task blueprint 1
     task_blueprint_1 = task_blueprints[0]
-    assert task_blueprint_1.task_type == ALL_TASKS["PlaceIn"]
+    assert task_blueprint_1.task_type == PlaceIn
     assert task_blueprint_1.scenes == {"FloorPlan2"}
     assert task_blueprint_1.task_args == {
         "placed_object_type": SimObjectType("Knife"),
@@ -289,7 +290,7 @@ def test__create_task_blueprints():
 
     # Check task blueprint 2
     task_blueprint_2 = task_blueprints[1]
-    assert task_blueprint_2.task_type == ALL_TASKS["PlaceNSameIn"]
+    assert task_blueprint_2.task_type == PlaceNSameIn
     assert task_blueprint_2.scenes == {"FloorPlan3"}
     assert task_blueprint_2.task_args == {
         "placed_object_type": SimObjectType("Apple"),

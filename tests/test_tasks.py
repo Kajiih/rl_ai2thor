@@ -10,7 +10,8 @@ from ai2thor.server import Event
 from PIL import Image
 
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.tasks import BaseTask, LookInLight, Open, Pickup, PlaceCooledIn
+from rl_ai2thor.envs.tasks.tasks import LookInLight, Open, Pickup, PlaceCooledIn
+from rl_ai2thor.envs.tasks.tasks_interface import BaseTask
 
 data_dir = Path(__file__).parent / "data"
 
