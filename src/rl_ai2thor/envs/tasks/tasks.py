@@ -57,9 +57,14 @@ class TaskType(StrEnum):
     PLACE_HEATED_IN = "PlaceHeatedIn"
     PLACE_COOLED_IN = "PlaceCooledIn"
     LOOK_IN_LIGHT = "LookInLight"
-    # === Custom tasks ===
+    # === Simple tasks ===
     PICKUP = "Pickup"
     OPEN = "Open"
+    # === Benchmark tasks ===
+    PREPARE_MEAL = "PrepareMeal"
+    PREPARE_WATCHING_TV = "PrepareWatchingTV"
+    PREPARE_GOING_TO_BED = "PrepareGoingToBed"
+    PREPARE_FOR_SHOWER = "PrepareForShower"
 
 
 # === Custom Graph asks ===
@@ -930,6 +935,7 @@ class PrepareForShowerTask(GraphTask):
 # %% === Constants ===
 ALL_TASKS: dict[TaskType, type[GraphTask]]
 ALL_TASKS = {
+    # === Alfred tasks ===
     TaskType.PLACE_IN: PlaceIn,
     TaskType.PLACE_N_SAME_IN: PlaceNSameIn,
     TaskType.PLACE_WITH_MOVEABLE_RECEP_IN: PlaceWithMoveableRecepIn,
@@ -937,8 +943,14 @@ ALL_TASKS = {
     TaskType.PLACE_HEATED_IN: PlaceHeatedIn,
     TaskType.PLACE_COOLED_IN: PlaceCooledIn,
     TaskType.LOOK_IN_LIGHT: LookInLight,
+    # === Simple tasks ===
     TaskType.PICKUP: Pickup,
     TaskType.OPEN: Open,
+    # === Benchmark tasks ===
+    TaskType.PREPARE_MEAL: PrepareMealTask,
+    TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,
+    TaskType.PREPARE_GOING_TO_BED: PrepareGoingToBedTask,
+    TaskType.PREPARE_FOR_SHOWER: PrepareForShowerTask,
 }
 
 

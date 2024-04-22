@@ -106,7 +106,7 @@
   - [ ] Update docstring and documentation
   - [ ] Make `gridsize` and `moveMagnitude` parameters coherent (for `MoveAhead`-type actions)
   - [ ] Make the whole framework split-aware ('train', 'test' splits, ...)
-  - [ ] Add some non-navigation mode? Where the agent can teleport while pointing at where it wants to go
+  - [ ] Add some non-navigation **mode**? Where the agent can teleport while pointing at where it wants to go
   - [x] Add parameters to relations and properties
   - [ ] Improve config (and environment mode config) handling
   - [ ] Add support for multitask with different information than text description (like index of task in a list (+index of target object types...?))
