@@ -38,7 +38,7 @@ from rl_ai2thor.envs.tasks.items import (
     ItemId,
 )
 from rl_ai2thor.envs.tasks.relations import RelationTypeId
-from rl_ai2thor.envs.tasks.tasks_interface import GraphTask, TaskDict, TaskItemData
+from rl_ai2thor.envs.tasks.tasks_interface import GraphTask, TaskDict, TaskItemData, parse_task_description_dict
 
 if TYPE_CHECKING:
     from ai2thor.controller import Controller
@@ -62,7 +62,70 @@ class TaskType(StrEnum):
     OPEN = "Open"
 
 
-# %% == Alfred tasks ==
+# === Custom Graph asks ===
+class CustomGraphTask(GraphTask):
+    """
+    Custom graph task.
+
+    Class used to define a task graph with a plane task description dictionary describing the adjacency list of the graph.
+
+    To create a custom graph task, simply instantiate this class with a task description dictionary of this form:
+    task_description_dict = {
+            "plate_receptacle": {
+                "properties": {"objectType": "Plate"},
+            },
+            "hot_apple": {
+                "properties": {"objectType": "Apple", "temperature": "Hot"},
+                "relations": {"plate_receptacle": ["contained_in"]},
+            },
+        }
+    """
+
+    def __init__(
+        self,
+        task_description_dict: dict[str, dict[str, Any]],
+        text_description: str | None = None,
+    ) -> None:
+        """
+        Initialize the task.
+
+        Parse a dictionary describing the task graph and return a task description dictionary.
+
+        Example of task description dictionary for the task of placing a hot apple in a plate:
+        task_description_dict = {
+            "plate_receptacle": {
+                "properties": {"objectType": "Plate"},
+            },
+            "hot_apple": {
+                "properties": {"objectType": "Apple", "temperature": "Hot"},
+                "relations": {"plate_receptacle": ["contained_in"]},
+            },
+        }
+
+        The text description is used to replace the text_description method of the task.
+
+        Args:
+            task_description_dict (TaskDict): Task description dictionary.
+            text_description (str): Text description of the task.
+        """
+        parsed_task_description_dict = parse_task_description_dict(task_description_dict)
+        super().__init__(parsed_task_description_dict)
+        if text_description is not None:
+            self._text_description = text_description
+        else:
+            self._text_description = "Custom task without text description"
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return self._text_description
+
+
+# %% == Alfred Tasks ==
 class PlaceNSameIn(GraphTask):
     """
     Task for placing n objects of the same type in a receptacle.

@@ -135,6 +135,11 @@
 ### Code Improvement TODOs
 
 - [ ] Add SimObjectMetadata class to have more type safety when using the object's metadata?
+- [ ] Implement equality test of tasks, items, relation, properties
+
+### Test TODOs
+
+- [ ] Test CustomGraphTask Class
 
 ### Final TODOs
 
