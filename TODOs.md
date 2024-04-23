@@ -46,9 +46,11 @@
   - [x] Implement auxiliary properties for relations
   - [ ] Implement complex auxiliary properties (e.g. you need to open the microwave then put potato in then close the microwave then toggle the microwave to cook the potato...)
 
-- [ ] Support slicing objects (`objectType` changes when slicing)
+- [ ] Support slicing/cracking objects (`objectType` changes when slicing)
+  - [x] Using `MultiValuePSF` with both sliced and basic object types
+  - [ ] Automatically changing the `ObjectType` from SingleValuePSF to MultiValuePSF when object has to be sliced/cracked
 - [ ] Support different liquids (coffee for mugs)
-- [ ] Implement a task parser for dictionary that takes a dictionary defining a task with strings and return the correct task dictionary
+- [x] Implement a task parser for dictionary that takes a dictionary defining a task with strings and return the correct task dictionary
 
 - [x] In TaskItem class, separate FixedItemProp which are used only as candidate required property and the variable props which are used only for advancement computation
 - [x] Same with specific TaskItems for auxiliary items

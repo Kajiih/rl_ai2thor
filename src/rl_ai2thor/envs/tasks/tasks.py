@@ -666,9 +666,6 @@ class Open(GraphTask):
 
 
 # === Complex Tasks ===
-# TODO: Add extended tasks
-
-
 # TODO: Add FillLiquid = Water
 class PrepareMealTask(GraphTask):
     """
@@ -707,7 +704,7 @@ class PrepareMealTask(GraphTask):
             ),
             ItemId("cooked_cracked_egg"): TaskItemData(
                 properties={
-                    ObjectTypeProp(SimObjectType.EGG),
+                    ObjectTypeProp(MultiValuePSF({SimObjectType.EGG, SimObjectType.EGG_CRACKED})),
                     IsSlicedProp(True),
                     IsCookedProp(True),
                 },
