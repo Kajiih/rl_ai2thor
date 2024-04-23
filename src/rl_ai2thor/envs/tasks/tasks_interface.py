@@ -102,7 +102,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 
     def reset(self, controller: Controller) -> tuple[bool, bool, dict[str, Any]]:
         """
-        Reset the reward handler.
+        Reset the reward handler and its task (after preprocessing the scene).
 
         The reset is considered not successful if the task and the scene are incompatible.
 
@@ -115,7 +115,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
             info (dict[str, Any]): Additional information about the state of the task.
         """
         # Reset the task
-        reset_successful, task_advancement, task_completion, info = self.task.reset(controller)
+        reset_successful, task_advancement, task_completion, info = self.task.preprocess_and_reset(controller)
         # Initialize the last step advancement
         self.last_step_advancement = task_advancement
 
@@ -142,6 +142,35 @@ class BaseTask(ABC):
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement at the beginning of the episode.
         """
+
+    def _reset_preprocess(self, controller: Controller) -> None:  # noqa: B027
+        """
+        Preprocess the scene before resetting the task.
+
+        This method is called before the task is reset and is used to preprocess the scene, for
+        example to change some properties of the objects in the scene.
+
+        By default, this method does nothing.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+        """
+
+    def preprocess_and_reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
+        """
+        Preprocess the scene before resetting the task and reset the task.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            reset_successful (bool): True if the task is successfully reset.
+            initial_task_advancement (float): Initial task advancement.
+            is_task_completed (bool): True if the task is completed.
+            info (dict[str, Any]): Additional information about the task advancement at the beginning of the episode.
+        """
+        self._reset_preprocess(controller)
+        return self.reset(controller)
 
     @abstractmethod
     def compute_task_advancement(

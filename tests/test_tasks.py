@@ -30,7 +30,7 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
 
     initial_event = event_list[0]
     mock_controller = MockController(last_event=initial_event)
-    reset_successful, task_advancement, is_terminated, _ = task.reset(mock_controller)
+    reset_successful, task_advancement, is_terminated, _ = task.preprocess_and_reset(mock_controller)
 
     test_info[f"event_0"] = {
         "reset_successful": reset_successful,

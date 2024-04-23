@@ -333,17 +333,12 @@ class PlaceCleanedIn(PlaceIn):
 
         return task_description_dict
 
-    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
+    def _reset_preprocess(self, controller: Controller) -> None:
         """
         Make all instances of placed_object_type dirty.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
-
-        Returns:
-            initial_task_advancement (float): Initial task advancement.
-            is_task_completed (bool): True if the task is completed.
-            info (dict[str, Any]): Additional information about the task advancement.
         """
         last_event: Event = controller.last_event  # type: ignore
 
@@ -357,8 +352,6 @@ class PlaceCleanedIn(PlaceIn):
                     objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
                     forceAction=True,
                 )
-
-        return super().reset(controller)
 
     def text_description(self) -> str:
         """
@@ -514,17 +507,14 @@ class LookInLight(GraphTask):
             ),
         }
 
-    def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
+    @classmethod
+    def _reset_preprocess(cls, controller: Controller) -> None:
         """
         Switch of all light sources in the scene.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
 
-        Returns:
-            initial_task_advancement (float): Initial task advancement.
-            is_task_completed (bool): True if the task is completed.
-            info (dict[str, Any]): Additional information about the task advancement.
         """
         last_event: Event = controller.last_event  # type: ignore
 
@@ -538,8 +528,6 @@ class LookInLight(GraphTask):
                     objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
                     forceAction=True,
                 )
-
-        return super().reset(controller)
 
     def text_description(self) -> str:
         """
@@ -677,6 +665,9 @@ class Open(GraphTask):
 
 
 # === Complex Tasks ===
+# TODO: Add extended tasks
+
+
 # TODO: Add FillLiquid = Water
 class PrepareMealTask(GraphTask):
     """
