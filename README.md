@@ -28,6 +28,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
     - [Reproducing baselines results](#reproducing-baselines-results)
   - [📔 Citation](#-citation)
   - [🧾 License](#-license)
+  - [🤝 Contributing](#-contributing)
 
 **[Add features section?]**
 **[Clearer separation between environemnt and benchmark?]**
@@ -189,3 +190,7 @@ Not available yet
 | -------------------- | -------------------------------------------------------------------------|
 | Codebase (this repo) | [MIT License](LICENSE)                                                   |
 | AI2-THOR             | [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)|
+
+## 🤝 Contributing
+
+Not available yet

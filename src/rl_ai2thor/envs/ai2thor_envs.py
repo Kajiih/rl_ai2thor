@@ -7,14 +7,15 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import operator
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import ai2thor.controller
 import gymnasium as gym
 import numpy as np
 import yaml
+from ai2thor.controller import Controller
 from ai2thor.server import Event
 from numpy.typing import NDArray
 
@@ -281,7 +282,7 @@ class ITHOREnv(
 
     def _initialize_ai2thor_controller(self) -> None:
         self.config["controller_parameters"]["agentMode"] = "default"
-        self.controller = ai2thor.controller.Controller(
+        self.controller = Controller(
             **self.config["controller_parameters"],
         )
 
@@ -472,6 +473,48 @@ class ITHOREnv(
         self.current_scene = sampled_scene
 
         return initial_event, task_completion, task_info
+
+    def _randomize_scene(
+        self,
+        controller: Controller,
+        config: dict[str, Any],
+    ) -> None:
+        """
+        Randomize the scene according to the environment config.
+
+        Args:
+            controller (Controller): AI2THOR controller after initializing the scene.
+            config (dict): Environment config.
+        """
+        if config["random_agent_spawn"]:
+            positions = controller.step(action="GetReachablePositions").metadata["actionReturn"]
+            sampled_position = self.np_random.choice(positions)
+            # Sample int from 0 to 11 and multiply by 30 to get a random rotation
+            random_rotation = self.np_random.integers(12) * 30
+            controller.step(
+                action="Teleport",
+                position=sampled_position,
+                rotation=random_rotation,
+                horizon=0,
+                standing=True,
+            )
+        if config["random_object_spawn"]:
+            controller.step(
+                action="InitialRandomSpawn",
+                randomSeed=self.np_random.integers(0, sys.maxsize),
+                forceVisible=False,  # TODO: Check if we use this to prevent objects form being hidden inside receptacles
+                numPlacementAttempts=5,
+                placeStationary=True,
+            )
+        if config["material_randomization"]:
+            controller.step(action="RandomizeMaterials")
+        if config["lighting_randomization"]:
+            controller.step(
+                action="RandomizeLighting",
+                synchronized=False,  # TODO: Check we keep this to False
+            )
+        if config["color_randomization"]:
+            controller.step(action="RandomizeColors")
 
     def close(self) -> None:
         """

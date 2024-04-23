@@ -143,6 +143,10 @@
 
 - [ ] Test CustomGraphTask Class
 
+### Benchmark TODOs
+
+- [ ] Add Agent position and rotation
+
 ### Final TODOs
 
 - [ ] Check the different config files
