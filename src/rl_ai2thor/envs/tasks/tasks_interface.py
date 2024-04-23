@@ -358,7 +358,8 @@ class GraphTask(BaseTask):
         for item in self.items:
             item.candidates_data = item.instantiate_candidate_data(scene_objects_dict)
             if not item.candidate_ids:
-                print(f"No candidate found for item {item.id}")
+                scene_name = event.metadata["sceneName"]
+                print(f"{scene_name}: No candidate found for item '{item.id}'")
                 return False, 0, False, {}
 
         # Initialize the auxiliary items

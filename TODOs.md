@@ -145,7 +145,8 @@
 
 ### Benchmark TODOs
 
-- [ ] Add Agent position and rotation
+- [x] Add Agent position and rotation
+- [ ] Create train script with command line arguments
 
 ### Final TODOs
 
