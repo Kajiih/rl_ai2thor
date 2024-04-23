@@ -143,18 +143,22 @@ class BaseTask(ABC):
             info (dict[str, Any]): Additional information about the task advancement at the beginning of the episode.
         """
 
-    def _reset_preprocess(self, controller: Controller) -> None:  # noqa: B027
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: ARG002, PLR6301
         """
-        Preprocess the scene before resetting the task.
+        Preprocess the scene before resetting the task and return whether the preprocessing was successful.
 
         This method is called before the task is reset and is used to preprocess the scene, for
         example to change some properties of the objects in the scene.
 
-        By default, this method does nothing.
+        By default, this method does nothing and returns True.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            reset_successful (bool): True if the task is successfully reset.
         """
+        return True
 
     def preprocess_and_reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
@@ -169,7 +173,9 @@ class BaseTask(ABC):
             is_task_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement at the beginning of the episode.
         """
-        self._reset_preprocess(controller)
+        preprocess_successful = self._reset_preprocess(controller)
+        if not preprocess_successful:
+            return False, 0, False, {}
         return self.reset(controller)
 
     @abstractmethod

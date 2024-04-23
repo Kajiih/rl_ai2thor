@@ -790,6 +790,47 @@ class PrepareWatchingTVTask(GraphTask):
         }
 
     @classmethod
+    def _reset_preprocess(cls, controller: Controller) -> bool:
+        """
+        Turn off TVs and turn off and close laptops.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Turn off TVs ===
+            if obj_type == SimObjectType.TELEVISION and obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_OFF,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+            # === Turn off and close laptops ===
+            if obj_type == SimObjectType.LAPTOP:
+                if obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                    controller.step(
+                        action=Ai2thorAction.TOGGLE_OBJECT_OFF,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+                if obj_metadata[SimObjVariableProp.IS_OPEN]:
+                    controller.step(
+                        action=Ai2thorAction.CLOSE_OBJECT,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+
+        return True
+
+    @classmethod
     def text_description(cls) -> str:
         """
         Return a text description of the task.
@@ -800,7 +841,6 @@ class PrepareWatchingTVTask(GraphTask):
         return "Prepare for watching TV by putting a newspaper and a switched on laptop on a sofa and looking at a turned on TV"
 
 
-# TODO: Add task preprocessing
 class PrepareGoingToBedTask(GraphTask):
     """
     Task for preparing for going to bed.
@@ -849,6 +889,48 @@ class PrepareGoingToBedTask(GraphTask):
                 },
             ),
         }
+
+    @classmethod
+    def _reset_preprocess(cls, controller: Controller) -> bool:
+        """
+        Turn on light switches, turn off desk lamps and close all open books.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Turn on light switches ===
+            if obj_type == SimObjectType.LIGHT_SWITCH and not obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_ON,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+            # === Turn off desk lamps ===
+            if obj_type == SimObjectType.DESK_LAMP and obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_OFF,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+            # === Close all open books ===
+            if obj_type == SimObjectType.BOOK and obj_metadata[SimObjVariableProp.IS_OPEN]:
+                controller.step(
+                    action=Ai2thorAction.CLOSE_OBJECT,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+        return True
 
     @classmethod
     def text_description(cls) -> str:
@@ -911,6 +993,67 @@ class PrepareForShowerTask(GraphTask):
                 },
             ),
         }
+
+    @classmethod
+    def _reset_preprocess(cls, controller: Controller) -> bool:
+        """
+        Put towels on the floor, soap bars on the sink and turn off the shower head.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        # === Find sink ===
+        sink_id = None
+        for obj_metadata in last_event.metadata["objects"]:
+            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == SimObjectType.SINK:
+                sink_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+                break
+        else:
+            return False
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Drop towels that are on a towel holder ===
+            if obj_type == SimObjectType.TOWEL and obj_metadata["parentReceptacles"]:
+                controller.step(
+                    action=Ai2thorAction.PICKUP_OBJECT,
+                    objectId=obj_id,
+                    forceAction=True,
+                    manualInteract=True,
+                )
+                controller.step(
+                    action=Ai2thorAction.DROP_HAND_OBJECT,
+                    forceAction=True,
+                )
+
+            #  === Put soap bars in the sink ===
+            if obj_type == SimObjectType.SOAP_BAR:
+                controller.step(
+                    action=Ai2thorAction.PICKUP_OBJECT,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+                controller.step(
+                    action=Ai2thorAction.PUT_OBJECT,
+                    objectId=sink_id,
+                    forceAction=True,
+                )
+
+            # === Turn off the shower head ===
+            if obj_type == SimObjectType.SHOWER_HEAD and obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_OFF,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+        return True
 
     @classmethod
     def text_description(cls) -> str:
