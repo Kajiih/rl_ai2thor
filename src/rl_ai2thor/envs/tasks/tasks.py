@@ -11,6 +11,8 @@ from abc import ABC
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from ai2thor.controller import Controller
+
 from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.sim_objects import (
     LIGHT_SOURCES,
@@ -507,8 +509,7 @@ class LookInLight(GraphTask):
             ),
         }
 
-    @classmethod
-    def _reset_preprocess(cls, controller: Controller) -> None:
+    def _reset_preprocess(self, controller: Controller) -> None:  # noqa: PLR6301
         """
         Switch of all light sources in the scene.
 
@@ -737,6 +738,44 @@ class PrepareMealTask(GraphTask):
         return "Prepare a meal by putting a plate with a cooked cracked egg inside and a fresh cup of water on a counter top"
 
 
+class ExtendedPrepareMealTask(PrepareMealTask):
+    """Extended version of the PrepareMealTask where the plate also has to be cleaned."""
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict()
+        task_description_dict[ItemId("plate")].properties.add(IsDirtyProp(False))
+
+        return task_description_dict
+
+    def _reset_preprocess(self, controller: Controller) -> bool:
+        """
+        Make the plate dirty.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == SimObjectType.PLATE:
+                controller.step(
+                    action=Ai2thorAction.DIRTY_OBJECT,
+                    objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
+                    forceAction=True,
+                )
+        return super()._reset_preprocess(controller)
+
+
 class PrepareWatchingTVTask(GraphTask):
     """
     Task for preparing for watching TV.
@@ -789,8 +828,7 @@ class PrepareWatchingTVTask(GraphTask):
             ),
         }
 
-    @classmethod
-    def _reset_preprocess(cls, controller: Controller) -> bool:
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
         """
         Turn off TVs and turn off and close laptops.
 
@@ -839,6 +877,53 @@ class PrepareWatchingTVTask(GraphTask):
             description (str): Text description of the task.
         """
         return "Prepare for watching TV by putting a newspaper and a switched on laptop on a sofa and looking at a turned on TV"
+
+
+class ExtendedPrepareWatchingTVTask(PrepareWatchingTVTask):
+    """Extended version of the PrepareWatchingTVTask where the light switch also has to be turned off."""
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict()
+        task_description_dict[ItemId("light_switch")] = TaskItemData(
+            properties={
+                ObjectTypeProp(SimObjectType.LIGHT_SWITCH),
+                IsToggledProp(False),
+            }
+        )
+
+        return task_description_dict
+
+    def _reset_preprocess(self, controller: Controller) -> bool:
+        """
+        Turn on light switches, turn off TVs and turn off and close laptops.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Turn on light switches ===
+            if obj_type == SimObjectType.LIGHT_SWITCH and not obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                controller.step(
+                    action=Ai2thorAction.TOGGLE_OBJECT_ON,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+        return super()._reset_preprocess(controller)
 
 
 class PrepareGoingToBedTask(GraphTask):
@@ -890,8 +975,7 @@ class PrepareGoingToBedTask(GraphTask):
             ),
         }
 
-    @classmethod
-    def _reset_preprocess(cls, controller: Controller) -> bool:
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
         """
         Turn on light switches, turn off desk lamps and close all open books.
 
@@ -941,6 +1025,53 @@ class PrepareGoingToBedTask(GraphTask):
             description (str): Text description of the task.
         """
         return "Prepare for going to bed by turning off the light switch, turning on a desk lamp and holding an open book close to it"
+
+
+class ExtendedPrepareGoingToBedTask(PrepareGoingToBedTask):
+    """Extended version of the PrepareGoingToBedTask where the blinds also have to be closed."""
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict()
+        task_description_dict[ItemId("blinds")] = TaskItemData(
+            properties={
+                ObjectTypeProp(SimObjectType.BLINDS),
+                IsOpenProp(False),
+            }
+        )
+
+        return task_description_dict
+
+    def _reset_preprocess(self, controller: Controller) -> bool:
+        """
+        Turn on light switches, turn off desk lamps, close all open books and open blinds.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Open closed blinds ===
+            if obj_type == SimObjectType.BLINDS and obj_metadata[SimObjVariableProp.IS_OPEN]:
+                controller.step(
+                    action=Ai2thorAction.OPEN_OBJECT,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+
+        return super()._reset_preprocess(controller)
 
 
 class PrepareForShowerTask(GraphTask):
@@ -994,8 +1125,7 @@ class PrepareForShowerTask(GraphTask):
             ),
         }
 
-    @classmethod
-    def _reset_preprocess(cls, controller: Controller) -> bool:
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
         """
         Put towels on the floor, soap bars on the sink and turn off the shower head.
 
@@ -1064,6 +1194,60 @@ class PrepareForShowerTask(GraphTask):
             description (str): Text description of the task.
         """
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head"
+
+
+class ExtendedPrepareForShowerTask(PrepareForShowerTask):
+    """Extended version of the PrepareForShowerTask where cloths also have to be put in the garbage can (laundry basket)."""
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        task_description_dict = super()._create_task_description_dict()
+        task_description_dict[ItemId("garbage_can")] = TaskItemData(
+            properties={ObjectTypeProp(SimObjectType.GARBAGE_CAN)},
+        )
+        task_description_dict[ItemId("cloths")] = TaskItemData(
+            properties={ObjectTypeProp(SimObjectType.CLOTH)},
+            relations={
+                ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+            },
+        )
+
+        return task_description_dict
+
+    def _reset_preprocess(self, controller: Controller) -> bool:
+        """
+        Put towels on the floor, soap bars on the sink, turn off the shower head and put cloths on the floor in front of the agent.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            # === Put cloths on the floor in front of the agent ===
+            if obj_type == SimObjectType.CLOTH:
+                controller.step(
+                    action=Ai2thorAction.PICKUP_OBJECT,
+                    objectId=obj_id,
+                    forceAction=True,
+                )
+                controller.step(
+                    action=Ai2thorAction.DROP_HAND_OBJECT,
+                    forceAction=True,
+                )
+
+        return super()._reset_preprocess(controller)
 
 
 # %% === Constants ===
