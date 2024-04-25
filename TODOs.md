@@ -143,6 +143,10 @@
 
 - [ ] Test CustomGraphTask Class
 
+### Bug TODOs
+
+- [ ] Check the problem with no scene compatible with `PrepareMeal` task (no egg object..?)
+
 ### Benchmark TODOs
 
 - [x] Add Agent position and rotation

@@ -28,9 +28,10 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
     UnknownActionCategoryError,
 )
-from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId
+from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId, undefined_scene
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks_interface import (
+    BaseTask,
     NoTaskBlueprintError,
     TaskBlueprint,
     UndefinedTask,
@@ -38,6 +39,7 @@ from rl_ai2thor.envs.tasks.tasks_interface import (
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
+    from rl_ai2thor.envs.reward import BaseRewardHandler
     from rl_ai2thor.envs.sim_objects import SimObjId
 
 
@@ -109,6 +111,27 @@ class ITHOREnv(
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
         self.task_blueprints = self._create_task_blueprints(self.config)
+
+        # === Type Annotations ===
+        self.config: dict[str, Any]
+        self.action_availabilities: dict[EnvActionName, bool]
+        self.action_idx_to_name: dict[int, EnvActionName]
+        self.action_space: gym.spaces.Dict
+        self.observation_space: gym.spaces.Dict
+        self.controller: Controller
+        self.last_event: Event
+        self.current_scene: SceneId
+        self.current_task_type: type[BaseTask]
+        self.task: BaseTask
+        self.step_count: int
+        self.reward_handler: BaseRewardHandler
+        self.np_random: np.random.Generator
+        self.task_blueprints: list[TaskBlueprint]
+
+    @property
+    def last_frame(self) -> NDArray[np.uint8]:
+        """Return the last frame of the environment."""
+        return self.last_event.frame  # type: ignore
 
     @staticmethod
     def _load_and_override_config(
@@ -293,7 +316,7 @@ class ITHOREnv(
         }
         self.last_event = Event(dummy_metadata)
         # TODO: Check if this is correct ^
-        self.current_scene = None  # TODO: Replace with an undefined scene of type SceneId
+        self.current_scene = undefined_scene  # TODO: Replace with an undefined scene of type SceneId
         self.current_task_type = UndefinedTask
         self.task = UndefinedTask()
         self.step_count = 0
@@ -486,12 +509,13 @@ class ITHOREnv(
             controller (Controller): AI2THOR controller after initializing the scene.
             config (dict): Environment config.
         """
+        last_event = self.last_event
         if config["random_agent_spawn"]:
             positions = controller.step(action="GetReachablePositions").metadata["actionReturn"]
             sampled_position = self.np_random.choice(positions)
             # Sample int from 0 to 11 and multiply by 30 to get a random rotation
             random_rotation = self.np_random.integers(12) * 30
-            controller.step(
+            last_event = controller.step(
                 action="Teleport",
                 position=sampled_position,
                 rotation=random_rotation,
@@ -499,22 +523,24 @@ class ITHOREnv(
                 standing=True,
             )
         if config["random_object_spawn"]:
-            controller.step(
+            last_event = controller.step(
                 action="InitialRandomSpawn",
-                randomSeed=self.np_random.integers(0, sys.maxsize),
+                randomSeed=self.np_random.integers(0, 1000),  # TODO? Add a parameter for the number of different seeds?
                 forceVisible=False,  # TODO: Check if we use this to prevent objects form being hidden inside receptacles
-                numPlacementAttempts=5,
+                numPlacementAttempts=15,
                 placeStationary=True,
             )
         if config["material_randomization"]:
-            controller.step(action="RandomizeMaterials")
+            last_event = controller.step(action="RandomizeMaterials")
         if config["lighting_randomization"]:
-            controller.step(
+            last_event = controller.step(
                 action="RandomizeLighting",
                 synchronized=False,  # TODO: Check we keep this to False
             )
         if config["color_randomization"]:
-            controller.step(action="RandomizeColors")
+            last_event = controller.step(action="RandomizeColors")
+
+        self.last_event = last_event  # type: ignore
 
     def close(self) -> None:
         """

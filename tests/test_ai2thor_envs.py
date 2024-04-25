@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import call, patch
 
 import gymnasium as gym
+import numpy as np
 import pytest
 import yaml
 from PIL import Image
@@ -20,6 +21,7 @@ from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceNSameIn, UnknownTaskTypeEr
 from rl_ai2thor.envs.tasks.tasks_interface import NoTaskBlueprintError
 
 if TYPE_CHECKING:
+    from ai2thor.server import Event
     from numpy.typing import NDArray
 
 # %% === Constants ===
@@ -436,6 +438,197 @@ def test_reset_not_same_scene(ithor_env: ITHOREnv):
     _, info2 = ithor_env.reset(seed=seed + 1)
 
     assert not are_close_dict(info1["metadata"], info2["metadata"], abs_tol=abs_tolerance, rel_tol=rel_tolerance)
+
+
+# === Test randomize_scene ===
+randomize_scene_media_path = test_media_path / "_randomize_scene"
+
+
+def test__randomize_scene_random_agent_spawn(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_random_agent_spawn"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    ithor_env.config.update({
+        "random_agent_spawn": True,
+        "random_object_spawn": False,
+        "material_randomization": False,
+        "lighting_randomization": False,
+        "camera_randomization": False,
+    })
+    config = ithor_env.config
+    controller = ithor_env.controller
+    ithor_env.last_event = controller.reset()  # type: ignore
+
+    initial_event: Event = ithor_env.last_event  # type: ignore
+    metadata_1 = initial_event.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+    ithor_env._randomize_scene(controller, config)
+    event_1: Event = ithor_env.last_event  # type: ignore
+    metadata_2 = event_1.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+    ithor_env._randomize_scene(controller, config)
+    event_2: Event = ithor_env.last_event  # type: ignore
+    metadata_3 = event_2.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
+    # Check cameraOrthSize
+    cameraOrthSize_1 = metadata_1["cameraOrthSize"]
+    cameraOrthSize_2 = metadata_2["cameraOrthSize"]
+    cameraOrthSize_3 = metadata_3["cameraOrthSize"]
+    assert cameraOrthSize_1 != cameraOrthSize_2 or cameraOrthSize_2 != cameraOrthSize_3
+
+    # Check cameraPosition
+    cameraPosition_1 = metadata_1["cameraPosition"]
+    cameraPosition_2 = metadata_2["cameraPosition"]
+    cameraPosition_3 = metadata_3["cameraPosition"]
+    assert cameraPosition_1 != cameraPosition_2
+    assert cameraPosition_2 != cameraPosition_3
+    assert cameraPosition_1 != cameraPosition_3
+
+
+def test__randomize_scene_random_object_spawn(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_random_object_spawn"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    ithor_env.config.update({
+        "random_agent_spawn": False,
+        "random_object_spawn": True,
+        "material_randomization": False,
+        "lighting_randomization": False,
+        "camera_randomization": False,
+    })
+    config = ithor_env.config
+    controller = ithor_env.controller
+    ithor_env.last_event = controller.reset()  # type: ignore
+
+    initial_event: Event = ithor_env.last_event  # type: ignore
+    metadata_1 = initial_event.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+    ithor_env._randomize_scene(controller, config)
+    event_1: Event = ithor_env.last_event  # type: ignore
+    metadata_2 = event_1.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+    ithor_env._randomize_scene(controller, config)
+    event_2: Event = ithor_env.last_event  # type: ignore
+    metadata_3 = event_2.metadata
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
+    # Check object positions
+    objects_1 = {obj["objectId"] for obj in metadata_1["objects"]}
+    objects_2 = {obj["objectId"] for obj in metadata_2["objects"]}
+    objects_3 = {obj["objectId"] for obj in metadata_3["objects"]}
+    assert objects_1 != objects_2
+    assert objects_2 != objects_3
+    assert objects_1 != objects_3
+
+
+def test__randomize_scene_material_randomization(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_material_randomization"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    ithor_env.config.update({
+        "random_agent_spawn": False,
+        "random_object_spawn": False,
+        "material_randomization": True,
+        "lighting_randomization": False,
+        "camera_randomization": False,
+    })
+    config = ithor_env.config
+    controller = ithor_env.controller
+    ithor_env.last_event = controller.reset()  # type: ignore
+
+    initial_event: Event = ithor_env.last_event  # type: ignore
+    metadata_1 = initial_event.metadata
+    frame_1 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+    ithor_env._randomize_scene(controller, config)
+    event_1: Event = ithor_env.last_event  # type: ignore
+    metadata_2 = event_1.metadata
+    frame_2 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+    ithor_env._randomize_scene(controller, config)
+    event_2: Event = ithor_env.last_event  # type: ignore
+    metadata_3 = event_2.metadata
+    frame_3 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
+    # Check frames
+    assert not np.allclose(frame_1, frame_2)
+    assert not np.allclose(frame_2, frame_3)
+    assert not np.allclose(frame_1, frame_3)
+
+
+def test__randomize_scene_lighting_randomization(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_lighting_randomization"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    ithor_env.config.update({
+        "random_agent_spawn": False,
+        "random_object_spawn": False,
+        "material_randomization": False,
+        "lighting_randomization": True,
+        "camera_randomization": False,
+    })
+    config = ithor_env.config
+    controller = ithor_env.controller
+    ithor_env.last_event = controller.reset()  # type: ignore
+
+    initial_event: Event = ithor_env.last_event  # type: ignore
+    metadata_1 = initial_event.metadata
+    frame_1 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+    ithor_env._randomize_scene(controller, config)
+    event_1: Event = ithor_env.last_event  # type: ignore
+    metadata_2 = event_1.metadata
+    frame_2 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+    ithor_env._randomize_scene(controller, config)
+    event_2: Event = ithor_env.last_event  # type: ignore
+    metadata_3 = event_2.metadata
+    frame_3 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
+    # Check frames
+    assert not np.allclose(frame_1, frame_2)
+    assert not np.allclose(frame_2, frame_3)
+    assert not np.allclose(frame_1, frame_3)
+
+
+def test__randomize_scene_color_randomization(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_color_randomization"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    ithor_env.config.update({
+        "random_agent_spawn": False,
+        "random_object_spawn": False,
+        "material_randomization": False,
+        "lighting_randomization": False,
+        "camera_randomization": False,
+        "color_randomization": True,
+    })
+    config = ithor_env.config
+    controller = ithor_env.controller
+    ithor_env.last_event = controller.reset()  # type: ignore
+
+    initial_event: Event = ithor_env.last_event  # type: ignore
+    metadata_1 = initial_event.metadata
+    frame_1 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+    ithor_env._randomize_scene(controller, config)
+    event_1: Event = ithor_env.last_event  # type: ignore
+    metadata_2 = event_1.metadata
+    frame_2 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+    ithor_env._randomize_scene(controller, config)
+    event_2: Event = ithor_env.last_event  # type: ignore
+    metadata_3 = event_2.metadata
+    frame_3 = ithor_env.last_frame
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
+    # Check frames
+    assert not np.allclose(frame_1, frame_2)
+    assert not np.allclose(frame_2, frame_3)
+    assert not np.allclose(frame_1, frame_3)
 
 
 # %% === Utils ===
