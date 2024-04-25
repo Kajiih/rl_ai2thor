@@ -126,14 +126,17 @@ dmypy.json
 ## Directly added
 outputs/
 wandb/
-tests/media/
 models/
 runs/
 
 ## Dev files
 old/
 rl_thor_1
+
+## Test files
 debug_test.py
+tests/media/
+test_info.yaml
 
 # Testing notebooks
 jupytest*.ipynb

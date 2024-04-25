@@ -57,7 +57,7 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
         assert task_advancement == advancement_list[0]
         assert is_terminated == terminated_list[0]
     except AssertionError as e:
-        Image.fromarray(initial_event.frame).save("tests/last_frame.png")
+        Image.fromarray(initial_event.frame).save(task_data_dir / "last_frame.png")
         with test_info_path.open("w") as f:
             yaml.dump(test_info, f)
         raise e from None
@@ -83,7 +83,7 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
             assert task_advancement == expected_advancement
             assert is_terminated == expected_terminated
         except AssertionError as e:
-            Image.fromarray(event.frame).save("tests/last_frame.png")
+            Image.fromarray(event.frame).save(task_data_dir / "last_frame.png")
             with test_info_path.open("w") as f:
                 yaml.dump(test_info, f)
             raise e from None
