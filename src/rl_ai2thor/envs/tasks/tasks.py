@@ -671,9 +671,11 @@ class Open(GraphTask):
 
 # === Complex Tasks ===
 # TODO: Add FillLiquid = Water
-class PrepareMealTask(GraphTask):
+class PrepareMealTaskOld(GraphTask):
     """
-    Task for preparing a meal.
+    old task for preparing a meal.
+
+    !! We changed it because of some impractical behavior of AI2THOR preventing from putting cooked egg in a plate !!
 
     The task requires to put on a counter top a plate with a cooked cracked egg inside and a fresh
     cup of water.
@@ -739,6 +741,80 @@ class PrepareMealTask(GraphTask):
         return "Prepare a meal by putting a plate with a cooked cracked egg inside and a fresh cup of water on a counter top"
 
 
+class PrepareMealTask(GraphTask):
+    """
+    Task for preparing a meal.
+
+    The task requires to put on a counter top a plate with a cooked potato slice with a fork and a
+    knife on the same counter top.
+
+    This task is supposed to be used with Kitchen scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("counter_top"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.COUNTER_TOP)},
+            ),
+            ItemId("plate"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PLATE)},
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("cooked_potato_sliced"): TaskItemData(
+                properties={
+                    ObjectTypeProp(MultiValuePSF({SimObjectType.POTATO, SimObjectType.POTATO_SLICED})),
+                    IsSlicedProp(True),
+                    IsCookedProp(True),
+                },
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("fork"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.FORK),
+                },
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("knife"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.KNIFE),
+                },
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare a meal by putting a plate with a cooked potato slice with a fork and a knife on the same counter top"
+
+
 class ExtendedPrepareMealTask(PrepareMealTask):
     """Extended version of the PrepareMealTask where the plate also has to be cleaned."""
 
@@ -775,6 +851,16 @@ class ExtendedPrepareMealTask(PrepareMealTask):
                     forceAction=True,
                 )
         return super()._reset_preprocess(controller)
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare a meal by putting a plate with a cooked potato slice with a fork and a knife on the same counter top"
 
 
 class PrepareWatchingTVTask(GraphTask):
@@ -926,6 +1012,16 @@ class ExtendedPrepareWatchingTVTask(PrepareWatchingTVTask):
 
         return super()._reset_preprocess(controller)
 
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for watching TV by putting a newspaper and a switched on laptop on a sofa and looking at a turned on TV. Also turn off the light switch"
+
 
 class PrepareGoingToBedTask(GraphTask):
     """
@@ -1073,6 +1169,16 @@ class ExtendedPrepareGoingToBedTask(PrepareGoingToBedTask):
                 )
 
         return super()._reset_preprocess(controller)
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for going to bed by turning off the light switch, turning on a desk lamp and holding an open book close to it. Also close the blinds"
 
 
 class PrepareForShowerTask(GraphTask):
@@ -1249,6 +1355,16 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
                 )
 
         return super()._reset_preprocess(controller)
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
 
 
 # %% === Constants ===
