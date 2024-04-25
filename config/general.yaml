@@ -9,7 +9,7 @@ target_closest_object: True # If True, the closest operable object to the agent 
 
 use_done_action: False # If True, the agent has to explicitly end the episode with the done action after completing the task  # !! Not implemented yet !!
 
-random_agent_spawn: True # If True, the agent will spawn at a random location and rotation at the beginning of each episode
+random_agent_spawn: False # If True, the agent will spawn at a random location and rotation at the beginning of each episode
 random_object_spawn: False # If True, pickupable objects will spawn at random locations at the beginning of each episode
 material_randomization: False # If True, the materials of the objects will be randomized at the beginning of each episode
 lighting_randomization: False # If True, the lighting conditions will be randomized at the beginning of each episode

@@ -49,6 +49,7 @@
 - [ ] Support slicing/cracking objects (`objectType` changes when slicing)
   - [x] Using `MultiValuePSF` with both sliced and basic object types
   - [ ] Automatically changing the `ObjectType` from SingleValuePSF to MultiValuePSF when object has to be sliced/cracked
+  - [ ] Implement the fact that one object can become multiple objects and so some tasks are compatible even if some overlap class have no valid assignment because some sliceable object can count several times after slicing.
 - [ ] Support different liquids (coffee for mugs)
 - [x] Implement a task parser for dictionary that takes a dictionary defining a task with strings and return the correct task dictionary
 

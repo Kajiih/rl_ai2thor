@@ -364,7 +364,7 @@ class ITHOREnv(
 
         environment_obs: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
         observation = {"env_obs": environment_obs, "task_obs": self.task.text_description()}
-        reward, terminated, task_info = self.reward_handler.get_reward(new_event)
+        reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
         info = {"metadata": new_event.metadata, "task_info": task_info}

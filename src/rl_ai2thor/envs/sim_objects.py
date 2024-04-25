@@ -247,6 +247,14 @@ SLICEABLES = {
     for object_type in SimObjectType
     if SimObjFixedProp.SLICEABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
+SLICED_FORMS = {
+    SimObjectType.APPLE_SLICED,
+    SimObjectType.BREAD_SLICED,
+    SimObjectType.EGG_CRACKED,
+    SimObjectType.LETTUCE_SLICED,
+    SimObjectType.POTATO_SLICED,
+    SimObjectType.TOMATO_SLICED,
+}
 OPENABLES = {
     object_type
     for object_type in SimObjectType

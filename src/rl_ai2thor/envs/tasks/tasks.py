@@ -335,7 +335,7 @@ class PlaceCleanedIn(PlaceIn):
 
         return task_description_dict
 
-    def _reset_preprocess(self, controller: Controller) -> None:
+    def _reset_preprocess(self, controller: Controller) -> bool:
         """
         Make all instances of placed_object_type dirty.
 
@@ -354,6 +354,8 @@ class PlaceCleanedIn(PlaceIn):
                     objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
                     forceAction=True,
                 )
+
+        return True
 
     def text_description(self) -> str:
         """
@@ -509,7 +511,7 @@ class LookInLight(GraphTask):
             ),
         }
 
-    def _reset_preprocess(self, controller: Controller) -> None:  # noqa: PLR6301
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
         """
         Switch of all light sources in the scene.
 
@@ -529,6 +531,8 @@ class LookInLight(GraphTask):
                     objectId=obj_metadata[SimObjFixedProp.OBJECT_ID],
                     forceAction=True,
                 )
+
+        return True
 
     def text_description(self) -> str:
         """

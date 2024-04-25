@@ -11,9 +11,11 @@ from typing import Any
 from rl_ai2thor.envs.sim_objects import (
     COOKING_SOURCES,
     HEAT_SOURCES,
+    SLICED_FORMS,
     WATER_SOURCES,
     SimObjectType,
     SimObjFixedProp,
+    SimObjMetadata,
     SimObjProp,
     SimObjVariableProp,
 )
@@ -79,10 +81,21 @@ class CanBeUsedUpProp(ItemFixedProp[bool]):
     target_ai2thor_property = SimObjFixedProp.CAN_BE_USED_UP
 
 
-class CookableProp(ItemFixedProp[bool]):
+class BaseCookableProp(ItemFixedProp[bool]):
     """Is cookable item property."""
 
     target_ai2thor_property = SimObjFixedProp.COOKABLE
+
+
+class CookableProp(BaseCookableProp):
+    """Extension of BaseCookableProp that works with items whose sliced versions are cookable."""
+
+    def is_object_satisfying(self, obj_metadata: SimObjMetadata) -> bool:
+        """Return true if the object is cookable or if it is Bread or Egg object."""
+        return super().is_object_satisfying(obj_metadata) or obj_metadata[SimObjFixedProp.OBJECT_TYPE] in {
+            SimObjectType.BREAD,
+            SimObjectType.EGG,
+        }
 
 
 class IsHeatSourceProp(ItemFixedProp[bool]):
@@ -97,6 +110,7 @@ class IsColdSourceProp(ItemFixedProp[bool]):
     target_ai2thor_property = SimObjFixedProp.IS_COLD_SOURCE
 
 
+# TODO? Add extension for sliced objects to be sliceable..?
 class SliceableProp(ItemFixedProp[bool]):
     """Is sliceable item property."""
 
@@ -140,6 +154,16 @@ class IsToggledProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_TOGGLED
     candidate_required_prop = ToggleableProp(True)
+
+
+class IndirectIsToggledProp(IsToggledProp):
+    """
+    Extension of IsToggledProp that works with objects that are indirectly toggled.
+
+    Indirectly toggled objects (e.g. StoveBurner), don't have the Toggleable fixed property.
+    """
+
+    candidate_required_prop = None
 
 
 class IsUsedUpProp(ItemVariableProp[bool, bool]):
@@ -209,12 +233,13 @@ class IsDirtyProp(ItemVariableProp[bool, bool]):
             t_id="water_source",
             properties={
                 ObjectTypeProp(MultiValuePSF(WATER_SOURCES)),
-                IsToggledProp(True),
+                IndirectIsToggledProp(True),
             },
         )
     })
 
 
+# TODO: Implement better handling for StoveBurner not being directly toggleable.
 # TODO: Implement contextual cooking interactions (e.g. toaster...)
 # TODO: Implement cooking with Microwave that requires to be open to put the object inside first.
 # TODO: Add a contained_in relation with cooking_source instead of the auxiliary property
@@ -233,12 +258,13 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
             t_id="cooking_source",
             properties={
                 ObjectTypeProp(MultiValuePSF(COOKING_SOURCES)),
-                IsToggledProp(True),
+                IndirectIsToggledProp(True),
             },
         )
     })
 
 
+# TODO: Implement better handling for StoveBurner not being directly toggleable.
 # TODO: Implement contextual temperature interactions (e.g. coffee machine and mugs...)
 # TODO: Add the fact that the Microwave has to be open to put the object inside first then closed then turned on.
 # TODO: Add the fact that the Fridge has to be open to put the object inside first then closed.
@@ -282,7 +308,7 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
 
 
 # TODO: Implement the fact that Eggs can be sliced (cracked) without a knife.
-class IsSlicedProp(ItemVariableProp[bool, bool]):
+class BaseIsSlicedProp(ItemVariableProp[bool, bool]):
     """Is sliced item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_SLICED
@@ -296,6 +322,14 @@ class IsSlicedProp(ItemVariableProp[bool, bool]):
             },
         )
     })
+
+
+class IsSlicedProp(BaseIsSlicedProp):
+    """Extension of BaseIsSlicedProp that works sliced versions of the sliceable objects."""
+
+    def is_object_satisfying(self, obj_metadata: SimObjMetadata) -> bool:
+        """Return true if the object is sliced or if it is an Egg object."""
+        return super().is_object_satisfying(obj_metadata) or obj_metadata[SimObjFixedProp.OBJECT_TYPE] in SLICED_FORMS
 
 
 ## %% === Item property mapping ===

@@ -559,6 +559,7 @@ class SimpleItem(ABC):
         self.candidate_required_properties: frozenset[ItemFixedProp]
         self.candidates_data: dict[CandidateId, CandidateData]
         self.step_max_property_advancement: int
+        self.overlap_class: ItemOverlapClass
 
     @property
     def candidate_ids(self) -> set[CandidateId]:
@@ -872,6 +873,8 @@ class AuxItem(TaskItem):
     - A Knife is necessary for the property "is_sliced"
     - A Fridge is necessary for the property "temperature" with the value "cold"
 
+    !! In contrary to the main task items, the candidates of those items never change, so in particular, they can't be sliced.
+
     Attributes:
         linked_prop (ItemVariableProp): The main property of the main item to which the auxiliary item is related.
     """
@@ -929,6 +932,8 @@ class ItemOverlapClass:
             items (list[TaskItem]): The items in the overlap class.
             candidate_ids (list[CandidateId]): The candidate ids of candidates in the overlap class.
         """
+        for item in items:
+            item.overlap_class = self
         self.items = items
         self.candidate_ids = candidate_ids
 
@@ -954,6 +959,37 @@ class ItemOverlapClass:
         self.items: list[TaskItem]
         self.candidate_ids: list[CandidateId]
         self.valid_assignments: list[Assignment]
+
+    def compute_valid_assignments_with_inherited_objects(
+        self, main_object_id: CandidateId, inherited_object_ids: set[CandidateId]
+    ) -> list[Assignment]:
+        """
+        Update the valid assignments with the given main object and inherited objects.
+
+        Replace the main object by its inherited objects in the valid assignments.
+
+        Args:
+            main_object_id (CandidateId): The id of the main object from which the inherited objects
+                are inherited.
+            inherited_object_ids (set[CandidateId]): Set of the ids of the inherited objects.
+
+        Returns:
+            updated_valid_assignments (list[Assignment]): List of the updated valid assignments
+                where the main object has been replaced by its inherited objects.
+        """
+        new_valid_assignments: list[Assignment] = []
+        for assignment in self.valid_assignments:
+            for item, candidate_id in assignment.items():
+                if candidate_id == main_object_id:
+                    for inherited_object_id in inherited_object_ids:
+                        new_assignment = assignment.copy()
+                        new_assignment[item] = inherited_object_id
+                        new_valid_assignments.append(new_assignment)
+                    break
+            else:
+                new_valid_assignments.append(assignment)
+
+        return new_valid_assignments
 
     def prune_assignments(self, compatible_global_assignments: list[Assignment]) -> None:
         """

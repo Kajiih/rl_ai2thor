@@ -1,5 +1,7 @@
 """
-Tasks in AI2-THOR RL environment.
+Task interfaces for AI2THOR RL environment.
+
+TODO: Rename task_interfaces.py
 
 TODO: Finish module docstring.
 """
@@ -13,6 +15,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from rl_ai2thor.envs.actions import Ai2thorAction
 from rl_ai2thor.envs.reward import BaseRewardHandler
 from rl_ai2thor.envs.sim_objects import SimObjectType
 from rl_ai2thor.envs.tasks.item_prop import obj_prop_id_to_item_prop
@@ -23,6 +26,7 @@ from rl_ai2thor.envs.tasks.item_prop_interface import (
 from rl_ai2thor.envs.tasks.items import (
     Assignment,
     AuxItem,
+    CandidateData,
     CandidateId,
     ItemId,
     ItemOverlapClass,
@@ -76,12 +80,18 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         self.task = task
         self.last_step_advancement: float | int = 0
 
-    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
+    def get_reward(
+        self,
+        event: Event,
+        controller_action: dict[str, Any],
+    ) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the reward, task completion and additional information about the task for the given event.
 
         Args:
             event (Event): Event to calculate the reward for.
+            controller_action (dict[str, Any]): Dictionary containing the information about the
+                action executed by the controller.
 
         Returns:
             reward (float): Reward for the event.
@@ -90,7 +100,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         """
         if not event.metadata["lastActionSuccess"]:
             return 0.0, False, {}
-        task_advancement, task_completion, info = self.task.compute_task_advancement(event)
+        task_advancement, task_completion, info = self.task.compute_task_advancement(event, controller_action)
         reward = task_advancement - self.last_step_advancement
         self.last_step_advancement = task_advancement
 
@@ -182,6 +192,7 @@ class BaseTask(ABC):
     def compute_task_advancement(
         self,
         event: Event,
+        controller_action: dict[str, Any],
         scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[float, bool, dict[str, Any]]:
         """
@@ -189,6 +200,8 @@ class BaseTask(ABC):
 
         Args:
             event (Event): Event corresponding to the state of the scene.
+            controller_action (dict[str, Any]): Dictionary containing the information about the
+                action executed by the controller.
             scene_objects_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
                 mapping object ids to their metadata to avoid recomputing it. Defaults to None.
 
@@ -222,6 +235,7 @@ class UndefinedTask(BaseTask):
     def compute_task_advancement(
         self,
         event: Event,
+        controller_action: dict[str, Any],
         scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[float, bool, dict[str, Any]]:
         """Return the task advancement and whether the task is completed."""
@@ -352,6 +366,7 @@ class GraphTask(BaseTask):
             info (dict[str, Any]): Additional information about the task advancement.
         """
         event: Event = controller.last_event  # type: ignore
+        scene_name = event.metadata["sceneName"]
         scene_objects_dict: dict[SimObjId, SimObjMetadata] = {obj["objectId"]: obj for obj in event.metadata["objects"]}
 
         # Initialize the candidates of the items
@@ -370,7 +385,7 @@ class GraphTask(BaseTask):
             auxiliary_item.relations = frozenset()
             auxiliary_item.candidates_data = auxiliary_item.instantiate_candidate_data(scene_objects_dict)
             if not auxiliary_item.candidate_ids:
-                print(f"No candidate found for auxiliary item {auxiliary_item.id}")
+                print(f"{scene_name}: No candidate found for auxiliary item {auxiliary_item.id}")
                 return False, 0, False, {}
 
         # Make sure that there is at least one relation compatible assignment
@@ -397,7 +412,7 @@ class GraphTask(BaseTask):
         # TODO: Make it compatible with weighted properties and relations
         self.maximum_advancement = sum(item.maximum_advancement for item in self.items)
 
-        return True, *self.compute_task_advancement(event, scene_objects_dict)
+        return True, *self.compute_task_advancement(event, controller.last_action, scene_objects_dict)
 
     def _compute_compatible_assignments(self, scene_objects_dict: dict[SimObjId, SimObjMetadata]) -> list[Assignment]:
         """
@@ -499,6 +514,7 @@ class GraphTask(BaseTask):
     def compute_task_advancement(
         self,
         event: Event,
+        controller_action: dict[str, Any],
         scene_objects_dict: dict[SimObjId, SimObjMetadata] | None = None,
     ) -> tuple[int, bool, dict[str, Any]]:
         """
@@ -518,6 +534,8 @@ class GraphTask(BaseTask):
 
         Args:
             event (Event): Event corresponding to the state of the scene.
+            controller_action (dict[str, Any]): Dictionary containing the information about the
+                action executed by the controller.
             scene_objects_dict (dict[SimObjId, SimObjMetadata], optional): Dictionary
                 mapping object ids to their metadata to avoid recomputing it. Defaults to None.
 
@@ -526,11 +544,35 @@ class GraphTask(BaseTask):
             is_completed (bool): True if the task is completed.
             info (dict[str, Any]): Additional information about the task advancement.
         """
-        # TODO: Update this function
-        # Compute the interesting assignments for each overlap class and the results and scores of each candidate for each item
         if scene_objects_dict is None:
             scene_objects_dict = {obj["objectId"]: obj for obj in event.metadata["objects"]}
 
+        # === Update candidates ===
+        if controller_action["action"] == Ai2thorAction.SLICE_OBJECT and event.metadata["lastActionSuccess"] == True:
+            # Update the candidates of items that have the sliced object as a candidate
+            sliced_object_id = controller_action["objectId"]
+            # Identify inherited object
+            inherited_object_ids = {
+                CandidateId(obj_id) for obj_id in scene_objects_dict if obj_id.startswith(f"{sliced_object_id}|")
+            }
+            to_update_overlap_classes: set[ItemOverlapClass] = set()
+            # Update the candidates of the items
+            for item in self.items:
+                if sliced_object_id in item.candidates_data:
+                    item.candidates_data.update({
+                        inherited_object_id: CandidateData(inherited_object_id, item)
+                        for inherited_object_id in inherited_object_ids
+                    })
+                    del item.candidates_data[sliced_object_id]
+                    to_update_overlap_classes.add(item.overlap_class)
+
+            # Update the valid assignments of the overlap classes
+            for overlap_class in to_update_overlap_classes:
+                overlap_class.valid_assignments = overlap_class.compute_valid_assignments_with_inherited_objects(
+                    sliced_object_id, inherited_object_ids
+                )
+
+        # Compute the interesting assignments for each overlap class
         overlap_classes_assignments = [
             overlap_class.compute_interesting_assignments(scene_objects_dict) for overlap_class in self.overlap_classes
         ]

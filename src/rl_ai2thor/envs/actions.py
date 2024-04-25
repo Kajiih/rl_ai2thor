@@ -443,19 +443,6 @@ clean_object_condition: VisibleWaterCondition
 slice_object_condition: HoldingObjectTypeCondition
 
 
-# %% Exceptions
-class MissingParameterRangeError(ValueError):
-    """
-    Exception raised when an action requires a parameter but parameter range has been defined for the action.
-
-    Either the action should not require a parameter, or the action has been incorrectly defined in the environment.
-    """
-
-    def __init__(self, environment_action: EnvironmentAction) -> None:
-        self.environment_action = environment_action
-        super().__init__(f"Action {self.environment_action} requires a parameter but no parameter range is defined.")
-
-
 # %% == Actions definitions ==
 # TODO: Use task enums to define object required properties
 # Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
@@ -824,15 +811,29 @@ ALL_ACTIONS: set[EnvironmentAction] = {
     dirty_object_action,
     clean_object_action,
 }
-ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]] = {category: [] for category in ActionCategory}
+ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]]
+ACTIONS_BY_CATEGORY = {category: [] for category in ActionCategory}
 for action in ALL_ACTIONS:
     category = action.action_category
     ACTIONS_BY_CATEGORY[category].append(action)
 
+ACTIONS_BY_NAME: dict[EnvActionName, EnvironmentAction]
 ACTIONS_BY_NAME = {action.name: action for action in ALL_ACTIONS}
 
 
 # %% === Exceptions ===
+class MissingParameterRangeError(ValueError):
+    """
+    Exception raised when an action requires a parameter but parameter range has been defined for the action.
+
+    Either the action should not require a parameter, or the action has been incorrectly defined in the environment.
+    """
+
+    def __init__(self, environment_action: EnvironmentAction) -> None:
+        self.environment_action = environment_action
+        super().__init__(f"Action {self.environment_action} requires a parameter but no parameter range is defined.")
+
+
 class UnknownActionCategoryError(ValueError):
     """Exception raised for unknown action categories in environment mode config."""
 

@@ -20,12 +20,18 @@ class BaseRewardHandler(ABC):
     """Base class for reward handlers."""
 
     @abstractmethod
-    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, Any]]:
+    def get_reward(
+        self,
+        event: Event,
+        controller_action: dict[str, Any],
+    ) -> tuple[float, bool, dict[str, Any]]:
         """
         Return the reward, task completion and additional information for the given event.
 
         Args:
             event (Event): Event to calculate the reward for.
+            controller_action (dict[str, Any]): Dictionary containing the information about the
+                action executed by the controller, obtained with controller.last_action.
 
         Returns:
             reward (float): Reward for the event.
@@ -62,12 +68,18 @@ class MultiRewardHandler(BaseRewardHandler):
         """
         self.reward_handlers = reward_handlers
 
-    def get_reward(self, event: Event) -> tuple[float, bool, dict[str, dict[str, Any]]]:
+    def get_reward(
+        self,
+        event: Event,
+        controller_action: dict[str, Any],
+    ) -> tuple[float, bool, dict[str, dict[str, Any]]]:
         """
         Return the sum of the rewards from the reward handlers.
 
         Args:
             event (Event): Event to calculate the reward for.
+            controller_action (dict[str, Any]): Dictionary containing the information about the
+                action executed by the controller.
 
         Returns:
             reward (float): Sum of the rewards from the reward handlers for the event.
@@ -75,7 +87,8 @@ class MultiRewardHandler(BaseRewardHandler):
             info (dict[str, Any]): Additional information about the state of the task.
         """
         rewards, task_completions, infos = zip(
-            *(reward_handler.get_reward(event) for reward_handler in self.reward_handlers), strict=True
+            *(reward_handler.get_reward(event, controller_action) for reward_handler in self.reward_handlers),
+            strict=True,
         )
         combined_info = {
             handler.__class__.__name__: info for handler, info in zip(self.reward_handlers, infos, strict=True)
