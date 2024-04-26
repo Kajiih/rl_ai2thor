@@ -11,7 +11,7 @@ from ai2thor.server import Event
 from PIL import Image
 
 from rl_ai2thor.envs.sim_objects import SimObjectType
-from rl_ai2thor.envs.tasks.tasks import LookInLight, Open, Pickup, PlaceCooledIn
+from rl_ai2thor.envs.tasks.tasks import LookInLight, Open, Pickup, PlaceCooledIn, PrepareMealTask
 from rl_ai2thor.envs.tasks.tasks_interface import BaseTask
 
 data_dir = Path(__file__).parent / "data"
@@ -39,7 +39,8 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
 
     initial_event = event_list[0]
     mock_controller = MockController(last_event=initial_event, last_action=controller_action_list[0])
-    reset_successful, task_advancement, is_terminated, _ = task.preprocess_and_reset(mock_controller)
+    # reset_successful, task_advancement, is_terminated, _ = task.preprocess_and_reset(mock_controller)
+    reset_successful, task_advancement, is_terminated, _ = task.reset(mock_controller)
 
     test_info[f"event_0"] = {
         "reset_successful": reset_successful,
@@ -88,8 +89,11 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
                 yaml.dump(test_info, f)
             raise e from None
 
-    with test_info_path.open("w") as f:
-        yaml.dump(test_info, f)
+    # === Clean up test info and last frame when all tests pass ===
+    if (task_data_dir / "last_frame.png").exists():
+        (task_data_dir / "last_frame.png").unlink()
+    if test_info_path.exists():
+        test_info_path.unlink()
 
 
 # Mock ai2thor controller
@@ -149,4 +153,11 @@ def test_look_in_light_book() -> None:
     """Test the LookIn task with a Book object."""
     task = LookInLight(looked_at_object_type=SimObjectType.BOOK)
     task_data_dir = test_task_data_dir / "look_in_light_book"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_prepare_meal() -> None:
+    """Test the PrepareMeal task."""
+    task = PrepareMealTask()
+    task_data_dir = test_task_data_dir / "prepare_meal"
     generate_task_tests_from_saved_data(task, task_data_dir)

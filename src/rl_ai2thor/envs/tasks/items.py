@@ -856,13 +856,13 @@ class TaskItem(SimpleItem):
         # return f"TaskItem({self.id})\n  properties={self.properties})\n  relations={self.relations})"
         return f"TaskItem({self.id})"
 
-    def __hash__(self) -> int:
-        return hash(self.id)
+    # def __hash__(self) -> int:
+    #     return hash(self.id)
 
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, TaskItem):
-            return False
-        return self.id == other.id and self.properties == other.properties and self.relations == other.relations
+    # def __eq__(self, other: Any) -> bool:
+    #     if not isinstance(other, TaskItem):
+    #         return False
+    #     return self.id == other.id and self.properties == other.properties and self.relations == other.relations
 
 
 class AuxItem(TaskItem):

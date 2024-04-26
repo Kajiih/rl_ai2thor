@@ -126,6 +126,8 @@
   - [ ] Add more SB3 algorithms
   - [ ] Add graph visualization with pygraphiz (does it need networkx?)
 
+- [ ] Add an update/reset candidates method to GraphTask so it is possible to use graph tasks without using compute_task_advancement at each step to update the candidates when necessary
+
   - [ ] ManipulaTHOR env
   - [ ] RoboTHOR env
 
@@ -147,6 +149,10 @@
 ### Bug TODOs
 
 - [ ] Check the problem with no scene compatible with `PrepareMeal` task (no egg object..?)
+
+#### AI2THOR related
+
+- [ ] An object contained in a receptacle that is picked up is not considered in the receptacle anymore while this one is picked up (but it is the case again when the receptacle is put down)
 
 ### Benchmark TODOs
 
