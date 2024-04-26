@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, NewType
 
 from rl_ai2thor.envs.sim_objects import (
@@ -188,6 +189,7 @@ class CandidateData:
         )
 
         # === Final advancement ===
+        # TODO: Update this: It's not necessarily x2 for the relations because the inverse relation might not have the same max advancement (we need to implement this)
         self.total_min_advancement = self.property_advancement + 2 * self.relation_min_advancement
         self.total_max_advancement = self.property_advancement + 2 * self.relation_max_advancement
 
@@ -498,7 +500,50 @@ class CandidateData:
         return f"CandidateData({self.id})"
 
     def __repr__(self) -> str:
-        return f"CandidateData({self.item.id}, {self.id})"
+        return f"CandidateData({self.id}\n{self.make_info_dict()})"  # TODO: Check if we keep like this
+
+
+@dataclass
+class AdvancementDetails:
+    """Class storing the advancement details of an item, property or relation."""
+
+    current_advancement: int
+    total_max_advancement: int
+
+    def __str__(self) -> str:
+        return f"{self.current_advancement}/{self.total_max_advancement}"
+
+    def __repr__(self) -> str:
+        return f"AdvancementDetails({self.current_advancement}/{self.total_max_advancement})"
+
+
+# TODO: Create specific advancement details for properties and relations with auxiliary items and properties
+@dataclass
+class ItemAdvancementDetails(AdvancementDetails):
+    """Class storing the advancement details of an item."""
+
+    item: TaskItem
+    assigned_candidate_id: CandidateId
+    properties_advancement_details: dict[ItemVariableProp, AdvancementDetails]
+    relations_advancement_details: dict[Relation, AdvancementDetails]
+    current_advancement: int = field(init=False)
+    total_max_advancement: int = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.current_advancement = sum(
+            prop_advancement.current_advancement for prop_advancement in self.properties_advancement_details.values()
+        ) + sum(rel_advancement.current_advancement for rel_advancement in self.relations_advancement_details.values())
+        self.total_max_advancement = self.item.maximum_advancement
+        # Temp: Delete later
+        assert self.total_max_advancement == sum(
+            prop.maximum_advancement for prop in self.item.scored_properties
+        ) + sum(rel.maximum_advancement for rel in self.item.relations)
+
+    def __str__(self) -> str:
+        return f"{self.item.id} ({self.assigned_candidate_id}): {self.current_advancement}/{self.total_max_advancement}"
+
+    def __repr__(self) -> str:
+        return f"ItemAdvancementDetails({self.item.id} ({self.assigned_candidate_id}): {self.current_advancement}/{self.total_max_advancement}\n{self.properties_advancement_details}\n{self.relations_advancement_details})"
 
 
 # %% === Items ===
@@ -848,6 +893,42 @@ class TaskItem(SimpleItem):
             if self.candidates_data[candidate_id].relation_max_advancement >= max_of_min_advancement
         }
         return interesting_candidates
+
+    def compute_advancement_details(self, global_assignment: Assignment) -> ItemAdvancementDetails:
+        """
+        Compute the advancement details of the item.
+
+        Args:
+            global_assignment (Assignment): Global assignment of the task.
+
+        Returns:
+            advancement_details (ItemAdvancementDetails): Advancement details of the item.
+        """
+        assigned_candidate_id = global_assignment[self]
+        assigned_candidate_data = self.candidates_data[assigned_candidate_id]
+        properties_advancement_details = {
+            prop: AdvancementDetails(
+                current_advancement=assigned_candidate_data.properties_advancement[prop],
+                total_max_advancement=prop.maximum_advancement,
+            )
+            for prop in self.scored_properties
+        }
+        relations_advancement_details = {
+            relation: AdvancementDetails(
+                current_advancement=assigned_candidate_data.compute_relation_advancement_for_related_candidate(
+                    relation, global_assignment[relation.related_item]
+                ),
+                total_max_advancement=relation.maximum_advancement,
+            )
+            for relation in self.relations
+        }
+
+        return ItemAdvancementDetails(
+            item=self,
+            assigned_candidate_id=assigned_candidate_id,
+            properties_advancement_details=properties_advancement_details,
+            relations_advancement_details=relations_advancement_details,
+        )
 
     def __str__(self) -> str:
         return f"{self.id}"
