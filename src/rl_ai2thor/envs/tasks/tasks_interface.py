@@ -599,8 +599,7 @@ class GraphTask(BaseTask):
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
-            # TODO: Compute assignment details only for the best assignment
-            assignment_advancement, advancement_details = self.compute_assignment_advancement(global_assignment)
+            assignment_advancement = self.compute_assignment_advancement(global_assignment)
 
             if assignment_advancement > max_task_advancement:
                 max_task_advancement = assignment_advancement
@@ -614,7 +613,7 @@ class GraphTask(BaseTask):
             # Add best assignment, mapping between item ids and the assigned object ids
             "best_assignment": {item.id: candidate_id for item, candidate_id in best_assignment.items()},
             "candidate_data": {item.id: item.candidates_data[best_assignment[item]] for item in self.items},
-            "advancement_details": advancement_details,
+            "advancement_details": {item: ItemAdvancementDetails(item, best_assignment) for item in self.items},
             "task_advancement": max_task_advancement,
             "scene_objects_dict": scene_objects_dict,
         }
@@ -625,7 +624,7 @@ class GraphTask(BaseTask):
     @staticmethod
     def compute_assignment_advancement(
         global_assignment: Assignment,
-    ) -> tuple[int, dict[TaskItem, ItemAdvancementDetails]]:
+    ) -> int:
         """
         Compute the task advancement for a given assignment.
 
@@ -634,19 +633,24 @@ class GraphTask(BaseTask):
 
         Returns:
             task_advancement (int): Task advancement.
-            advancement_details (dict[TaskItem, ItemAdvancementDetails]): Advancement of each item,
-                property and relation.
         """
-        # TODO: Compute assignment details only for the best assignment
-        items_advancement_details = {
-            item: item.compute_advancement_details(global_assignment) for item in global_assignment
-        }
+        task_advancement = 0
 
-        task_advancement = sum(
-            advancement_details.current_advancement for advancement_details in items_advancement_details.values()
+        # Add property advancement
+        task_advancement += sum(
+            item.candidates_data[candidate_id].property_advancement for item, candidate_id in global_assignment.items()
         )
 
-        return task_advancement, items_advancement_details
+        # Add relation advancement for the given assignment
+        for item, candidate_id in global_assignment.items():
+            for relation in item.relations:
+                main_candidate_data = item.candidates_data[candidate_id]
+                related_candidate_id = global_assignment[relation.related_item]
+                task_advancement += main_candidate_data.compute_relation_advancement_for_related_candidate(
+                    relation, related_candidate_id
+                )
+
+        return task_advancement
 
     # TODO: Add support for overriding relations and keep the most restrictive one
     @staticmethod
