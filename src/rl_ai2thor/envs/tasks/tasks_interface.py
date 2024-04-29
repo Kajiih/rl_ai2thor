@@ -599,6 +599,7 @@ class GraphTask(BaseTask):
                 for overlap_class_assignment in assignment_product
                 for item, obj_id in overlap_class_assignment.items()
             }
+            # TODO: Compute assignment details only for the best assignment
             assignment_advancement, advancement_details = self.compute_assignment_advancement(global_assignment)
 
             if assignment_advancement > max_task_advancement:
@@ -615,6 +616,7 @@ class GraphTask(BaseTask):
             "candidate_data": {item.id: item.candidates_data[best_assignment[item]] for item in self.items},
             "advancement_details": advancement_details,
             "task_advancement": max_task_advancement,
+            "scene_objects_dict": scene_objects_dict,
         }
         # TODO: Add other info
 
@@ -635,6 +637,7 @@ class GraphTask(BaseTask):
             advancement_details (dict[TaskItem, ItemAdvancementDetails]): Advancement of each item,
                 property and relation.
         """
+        # TODO: Compute assignment details only for the best assignment
         items_advancement_details = {
             item: item.compute_advancement_details(global_assignment) for item in global_assignment
         }

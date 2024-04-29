@@ -50,7 +50,7 @@ class CandidateData:
         item (SimpleItem): The item of the candidate.
         id (CandidateId): The ID of the candidate.
         metadata (SimObjMetadata): The metadata of the candidate.
-        _base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item's
+        base_properties_results (dict[ItemVariableProp, bool]): Dictionary mapping the item's
             properties to the results of the property satisfaction for the candidate.
         _props_aux_properties_results (dict[ItemVariableProp, dict[PropAuxProp, bool]]):
             Dictionary mapping the item's scored properties to the results of their auxiliary
@@ -106,13 +106,13 @@ class CandidateData:
         self.item: TaskItem
         self.id: CandidateId
         self.metadata: SimObjMetadata
-        self._base_properties_results: dict[ItemVariableProp, bool]
-        self._props_aux_properties_results = dict[ItemVariableProp, dict[PropAuxProp, bool]]
+        self.base_properties_results: dict[ItemVariableProp, bool]
+        self.props_aux_properties_results = dict[ItemVariableProp, dict[PropAuxProp, bool]]
         self._props_aux_relations_satisfying_related_candidate_ids: dict[
             ItemVariableProp, dict[Relation, set[CandidateId]]
         ]
-        self._props_aux_relations_advancement: dict[ItemVariableProp, dict[Relation, int]]
-        self._props_aux_items_advancement: dict[ItemVariableProp, dict[AuxItem, int]]
+        self.props_aux_relations_advancement: dict[ItemVariableProp, dict[Relation, int]]
+        self.props_aux_items_advancement: dict[ItemVariableProp, dict[AuxItem, int]]
         self.properties_advancement: dict[ItemVariableProp, int]
         self.property_advancement: int
         # === Relations ===
@@ -160,19 +160,29 @@ class CandidateData:
         self.metadata = scene_objects_dict[self.id]
 
         # === Properties ===
-        self._base_properties_results = self._compute_base_properties_results()
-        self._props_aux_properties_results = self._compute_props_aux_properties_results(self._base_properties_results)
-        self._props_aux_relations_advancement = self._compute_props_aux_relations_advancement(
-            self._base_properties_results,
+        self.base_properties_results = self._compute_base_properties_results()
+        self.props_aux_properties_results = self._compute_props_aux_properties_results(self.base_properties_results)
+        # self._props_aux_properties_advancement = self._compute_props_aux_properties_advancement(
+        #     self._props_aux_properties_results
+        # ) # TODO: Delete
+        self.props_aux_properties_advancement = {
+            prop: {
+                aux_prop: aux_prop.maximum_advancement if self.base_properties_results[prop] else 0
+                for aux_prop in prop.auxiliary_properties
+            }
+            for prop in self._scored_properties
+        }
+        self.props_aux_relations_advancement = self._compute_props_aux_relations_advancement(
+            self.base_properties_results,
             scene_objects_dict,
         )
-        self._props_aux_items_advancement = self._compute_props_aux_items_advancement(self._base_properties_results)
+        self.props_aux_items_advancement = self._compute_props_aux_items_advancement(self.base_properties_results)
 
         self.properties_advancement = self._compute_properties_advancement(
-            self._base_properties_results,
-            self._props_aux_properties_results,
-            self._props_aux_relations_advancement,
-            self._props_aux_items_advancement,
+            self.base_properties_results,
+            self.props_aux_properties_results,
+            self.props_aux_relations_advancement,
+            self.props_aux_items_advancement,
         )
         self.property_advancement = sum(self.properties_advancement.values())
 
@@ -561,13 +571,13 @@ class CandidateData:
         info_dict = {
             "id": self.id,
             "item_id": self.item.id,
-            "base_properties_results": self._base_properties_results,
-            "props_aux_properties_results": self._props_aux_properties_results,
+            "base_properties_results": self.base_properties_results,
+            "props_aux_properties_results": self.props_aux_properties_results,
             "props_aux_items_data": {
                 prop: {aux_item: aux_item.candidates_data[self.id].make_info_dict() for aux_item in aux_items}
                 for prop, aux_items in self.item.props_auxiliary_items.items()
             },
-            "props_aux_items_advancement": self._props_aux_items_advancement,
+            "props_aux_items_advancement": self.props_aux_items_advancement,
             "properties_advancement": self.properties_advancement,
             "property_advancement": self.property_advancement,
             "relations_satisfying_related_candidate_ids": self.relations_satisfying_related_candidate_ids,
@@ -602,19 +612,120 @@ class AdvancementDetails:
         return f"AdvancementDetails({self.current_advancement}/{self.total_max_advancement})"
 
 
+class PropAdvancementDetails(AdvancementDetails):
+    """Class storing the advancement details of a property."""
+
+    def __init__(self, prop: ItemVariableProp, assigned_candidate_data: CandidateData) -> None:
+        self.prop = prop
+        self.base_result = assigned_candidate_data.base_properties_results[prop]
+
+        # === Initialize auxiliary properties advancement details ===
+        # TODO? Replace aux_prop.maximum_advancement by 1
+        self.aux_props_advancement_details = {
+            aux_prop: AdvancementDetails(
+                current_advancement=aux_prop.maximum_advancement
+                if self.base_result
+                else int(assigned_candidate_data.props_aux_properties_results[prop][aux_prop]),
+                total_max_advancement=aux_prop.maximum_advancement,
+            )  # TODO: Check why pylance is complaining
+            for aux_prop in prop.auxiliary_properties
+        }
+
+        # === Initialize auxiliary relations advancement details ===
+        self.aux_relations_advancement_details = {
+            relation: AdvancementDetails(
+                current_advancement=relation.maximum_advancement
+                if self.base_result
+                else assigned_candidate_data.props_aux_relations_advancement[prop][relation],
+                total_max_advancement=relation.maximum_advancement,
+            )
+            for relation in prop.auxiliary_relations
+        }
+
+        # === Initialize auxiliary items advancement details ===
+        self.aux_items_advancement_details = {
+            aux_item: AdvancementDetails(
+                current_advancement=aux_item.maximum_advancement
+                if self.base_result
+                else assigned_candidate_data.props_aux_items_advancement[prop][aux_item],
+                total_max_advancement=aux_item.maximum_advancement,
+            )
+            for aux_item in prop.auxiliary_items
+        }
+
+        # === Compute current advancement and total max advancement ===
+        self.current_advancement = (
+            prop.maximum_advancement
+            if self.base_result
+            else (
+                sum(
+                    aux_prop_advancement.current_advancement
+                    for aux_prop_advancement in self.aux_props_advancement_details.values()
+                )
+                + sum(
+                    rel_advancement.current_advancement
+                    for rel_advancement in self.aux_relations_advancement_details.values()
+                )
+                + sum(
+                    item_advancement.current_advancement
+                    for item_advancement in self.aux_items_advancement_details.values()
+                )
+            )
+        )
+        # Temp: Delete later
+        assert self.current_advancement == assigned_candidate_data.properties_advancement[prop]
+
+        self.total_max_advancement = prop.maximum_advancement
+        # Temp: Delete later
+        assert self.total_max_advancement == 1 + sum(
+            aux_prop.maximum_advancement for aux_prop in prop.auxiliary_properties
+        ) + sum(rel.maximum_advancement for rel in prop.auxiliary_relations) + sum(
+            item.maximum_advancement for item in prop.auxiliary_items
+        )
+
+        # === Type annotations ===
+        self.prop: ItemVariableProp
+        self.base_result: bool
+        self.aux_props_advancement_details: dict[PropAuxProp, AdvancementDetails]
+        self.aux_relations_advancement_details: dict[Relation, AdvancementDetails]
+        self.aux_items_advancement_details: dict[AuxItem, AdvancementDetails]
+
+
 # TODO: Create specific advancement details for properties and relations with auxiliary items and properties
-@dataclass
 class ItemAdvancementDetails(AdvancementDetails):
     """Class storing the advancement details of an item."""
 
-    item: TaskItem
-    assigned_candidate_id: CandidateId
     properties_advancement_details: dict[ItemVariableProp, AdvancementDetails]
     relations_advancement_details: dict[Relation, AdvancementDetails]
     current_advancement: int = field(init=False)
     total_max_advancement: int = field(init=False)
 
-    def __post_init__(self) -> None:
+    def __init__(self, item: TaskItem, global_assignment: Assignment) -> None:
+        self.item = item
+        self.assigned_candidate_id = global_assignment[item]
+        assigned_candidate_data = self.item.candidates_data[self.assigned_candidate_id]
+
+        # === Initialize properties advancement details ===
+        self.properties_advancement_details = {
+            prop: PropAdvancementDetails(
+                prop=prop,
+                assigned_candidate_data=assigned_candidate_data,
+            )
+            for prop in self.item.scored_properties
+        }
+
+        # === Initialize relations advancement details ===
+        self.relations_advancement_details = {
+            relation: AdvancementDetails(
+                current_advancement=assigned_candidate_data.compute_relation_advancement_for_related_candidate(
+                    relation, global_assignment[relation.related_item]
+                ),
+                total_max_advancement=relation.maximum_advancement,
+            )
+            for relation in self.item.relations
+        }
+
+        # === Compute current advancement and total max advancement ===
         self.current_advancement = sum(
             prop_advancement.current_advancement for prop_advancement in self.properties_advancement_details.values()
         ) + sum(rel_advancement.current_advancement for rel_advancement in self.relations_advancement_details.values())
@@ -624,11 +735,15 @@ class ItemAdvancementDetails(AdvancementDetails):
             prop.maximum_advancement for prop in self.item.scored_properties
         ) + sum(rel.maximum_advancement for rel in self.item.relations)
 
+        # === Type annotations ===
+        self.item: TaskItem
+        self.assigned_candidate_id: CandidateId
+
     def __str__(self) -> str:
         return f"{self.item.id} ({self.assigned_candidate_id}): {self.current_advancement}/{self.total_max_advancement}"
 
     def __repr__(self) -> str:
-        return f"ItemAdvancementDetails({self.item.id} ({self.assigned_candidate_id}): {self.current_advancement}/{self.total_max_advancement}\n{self.properties_advancement_details}\n{self.relations_advancement_details})"
+        return f"ItemAdvancementDetails({self.item.id} ({self.assigned_candidate_id}): {self.current_advancement}/{self.total_max_advancement})"
 
 
 # %% === Items ===
@@ -1016,6 +1131,7 @@ class TaskItem(SimpleItem):
         }
         return interesting_candidates
 
+    # TODO: Delete?
     def compute_advancement_details(self, global_assignment: Assignment) -> ItemAdvancementDetails:
         """
         Compute the advancement details of the item.
@@ -1026,30 +1142,9 @@ class TaskItem(SimpleItem):
         Returns:
             advancement_details (ItemAdvancementDetails): Advancement details of the item.
         """
-        assigned_candidate_id = global_assignment[self]
-        assigned_candidate_data = self.candidates_data[assigned_candidate_id]
-        properties_advancement_details = {
-            prop: AdvancementDetails(
-                current_advancement=assigned_candidate_data.properties_advancement[prop],
-                total_max_advancement=prop.maximum_advancement,
-            )
-            for prop in self.scored_properties
-        }
-        relations_advancement_details = {
-            relation: AdvancementDetails(
-                current_advancement=assigned_candidate_data.compute_relation_advancement_for_related_candidate(
-                    relation, global_assignment[relation.related_item]
-                ),
-                total_max_advancement=relation.maximum_advancement,
-            )
-            for relation in self.relations
-        }
-
         return ItemAdvancementDetails(
             item=self,
-            assigned_candidate_id=assigned_candidate_id,
-            properties_advancement_details=properties_advancement_details,
-            relations_advancement_details=relations_advancement_details,
+            global_assignment=global_assignment,
         )
 
     def __str__(self) -> str:
