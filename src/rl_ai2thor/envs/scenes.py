@@ -26,5 +26,6 @@ SCENE_IDS: dict[SceneGroup, list[SceneId]] = {
     SceneGroup.BEDROOM: [SceneId(f"FloorPlan{300 + i}") for i in range(1, 31)],
     SceneGroup.BATHROOM: [SceneId(f"FloorPlan{400 + i}") for i in range(1, 31)],
 }
+ALL_SCENES: list[SceneId] = [scene_id for scene_group in SCENE_IDS.values() for scene_id in scene_group]
 
 undefined_scene = SceneId("UndefinedScene")

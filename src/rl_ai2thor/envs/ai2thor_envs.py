@@ -7,7 +7,6 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import operator
-import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -28,7 +27,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
     UnknownActionCategoryError,
 )
-from rl_ai2thor.envs.scenes import SCENE_IDS, SceneGroup, SceneId, undefined_scene
+from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_IDS, SceneGroup, SceneId, undefined_scene
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks_interface import (
     BaseTask,
@@ -109,11 +108,11 @@ class ITHOREnv(
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
         self.config = self._load_and_override_config(config_folder_path, override_config)
+        self.task_blueprints = self._create_task_blueprints(self.config)
         self._create_action_space()
         self._create_observation_space()
         self._initialize_ai2thor_controller()
         self._initialize_other_attributes()
-        self.task_blueprints = self._create_task_blueprints(self.config)
 
         # === Type Annotations ===
         self.config: dict[str, Any]
@@ -236,10 +235,18 @@ class ITHOREnv(
         env_obs_space = gym.spaces.Box(
             low=0, high=255, shape=(resolution[0], resolution[1], nb_channels), dtype=np.uint8
         )
-        task_obs_space = gym.spaces.Text(
-            max_length=1000, charset="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,. "
-        )
+        # task_desc_obs_space = gym.spaces.Text(
+        #     max_length=1000, charset="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,. "
+        # )
+        task_obs_space = gym.spaces.Discrete(len(self.task_blueprints))
+
+        scene_obs_space = gym.spaces.Discrete(
+            len(ALL_SCENES)
+        )  # TODO? Replace by only the number of scenes in the task blueprints?
+
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
+            "env_obs": env_obs_space,
+            # "task_desc_obs": task_desc_obs_space,
             "env_obs": env_obs_space,
             "task_obs": task_obs_space,
         })
@@ -374,7 +381,11 @@ class ITHOREnv(
         reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
-        info = {"metadata": new_event.metadata, "task_info": task_info}
+        info = {
+            "env_obs": environment_obs,
+            # "task_desc_obs": self.task.text_description(),
+            "task_obs": self.task_idx,
+        }
 
         self.last_event = new_event
 
@@ -442,7 +453,8 @@ class ITHOREnv(
         super().reset(seed=seed, options=options)
 
         # Sample a task blueprint
-        task_blueprint = self.task_blueprints[self.np_random.choice(len(self.task_blueprints))]
+        self.task_idx = self.np_random.integers(len(self.task_blueprints))
+        task_blueprint = self.task_blueprints[self.task_idx]
         self.current_task_type = task_blueprint.task_type
 
         self.task = task_blueprint.task_type(**task_blueprint.task_args)
