@@ -136,11 +136,12 @@
   - [ ] Support Stable Baselines3
   - [ ] Support RLlib..?
   - [ ] Support CleanRL
-
+****
 ### Code Improvement TODOs
 
 - [ ] Add SimObjectMetadata class to have more type safety when using the object's metadata?
 - [ ] Implement equality test of tasks, items, relation, properties
+- [ ] Add decoupling prop/relations and relation interfaces/relations and relation and relation/inverse relation
 
 ### Test TODOs
 

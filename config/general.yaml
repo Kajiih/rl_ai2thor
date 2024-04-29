@@ -16,7 +16,7 @@ lighting_randomization: False # If True, the lighting conditions will be randomi
 color_randomization: False # If True, the colors of the objects will be randomized at the beginning of each episode  # Note: Not realistic
 
 
-grayscale: False # !! Not implemented yet !!
+grayscale: False
 
 action_parameters: # ** Not supposed to be modified **
   forceAction: False # If True, some actions will be performed even if they are not valid because it would cause clipping, because the target object is not visible, etc.

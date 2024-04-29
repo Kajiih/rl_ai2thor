@@ -27,7 +27,7 @@ from rl_ai2thor.envs.actions import (
     EnvironmentAction,
     UnknownActionCategoryError,
 )
-from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_IDS, SceneGroup, SceneId, undefined_scene
+from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_ID_TO_INDEX_MAP, SCENE_IDS, SceneGroup, SceneId, undefined_scene
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks_interface import (
     BaseTask,
@@ -247,8 +247,8 @@ class ITHOREnv(
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
             "env_obs": env_obs_space,
             # "task_desc_obs": task_desc_obs_space,
-            "env_obs": env_obs_space,
             "task_obs": task_obs_space,
+            "scene_obs": scene_obs_space,
         })
 
     @staticmethod
@@ -470,7 +470,11 @@ class ITHOREnv(
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
-        observation = {"env_obs": obs_env, "task_obs": self.task.text_description()}
+        observation = {
+            "env_obs": obs_env,
+            "task_obs": self.task.text_description(),
+            "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
+        }
         print(
             f"Resetting environment and starting new episode in {self.current_scene} with task {self.current_task_type}."
         )

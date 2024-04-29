@@ -190,10 +190,12 @@ def test__create_observation_space(ithor_env: ITHOREnv):
     assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
     env_observation = ithor_env.observation_space.spaces["env_obs"]
     task_observation = ithor_env.observation_space.spaces["task_obs"]
+    scene_observation = ithor_env.observation_space.spaces["scene_obs"]
 
     assert isinstance(env_observation, gym.spaces.Box)
     assert env_observation.shape == (84, 44, 3)
-    assert isinstance(task_observation, gym.spaces.Text)
+    assert isinstance(task_observation, gym.spaces.Discrete)
+    assert isinstance(scene_observation, gym.spaces.Discrete)
     # TODO: Need to change this when the task observation can change
 
 
