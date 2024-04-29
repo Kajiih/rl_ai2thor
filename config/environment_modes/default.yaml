@@ -46,10 +46,10 @@ action_parameter_data:
     discrete_value: 0.25
   RotateLeft:
     range: [0, 180]
-    discrete_value: 90
+    discrete_value: 45
   RotateRight:
     range: [0, 180]
-    discrete_value: 90
+    discrete_value: 45
   LookUp:
     range: [0, 90]
     discrete_value: 30

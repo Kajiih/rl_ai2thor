@@ -484,7 +484,7 @@ rotate_left_action = EnvironmentAction(
     action_category=ActionCategory.BODY_ROTATION_ACTIONS,
     parameter_name="degrees",
     parameter_range=(0, 180),
-    parameter_discrete_value=90,
+    parameter_discrete_value=45,
 )
 rotate_right_action = EnvironmentAction(
     name=EnvActionName.ROTATE_RIGHT,
@@ -492,7 +492,7 @@ rotate_right_action = EnvironmentAction(
     action_category=ActionCategory.BODY_ROTATION_ACTIONS,
     parameter_name="degrees",
     parameter_range=(0, 180),
-    parameter_discrete_value=90,
+    parameter_discrete_value=45,
 )
 look_up_action = EnvironmentAction(
     name=EnvActionName.LOOK_UP,
