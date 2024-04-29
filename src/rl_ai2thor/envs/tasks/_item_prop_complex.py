@@ -101,7 +101,6 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_COOKED
     candidate_required_prop = CookableProp(True)
-    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpProp, True)})
     auxiliary_items = frozenset({
         AuxItem(
             t_id="cooking_source",
@@ -131,10 +130,10 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
 
     def __init__(self, target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue) -> None:
         """Initialize the Property object."""
-        super().__init__(target_satisfaction_function)
-        self.target_satisfaction_function: SingleValuePSF[TemperatureValue]
+        if isinstance(target_satisfaction_function, TemperatureValue):
+            target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
 
-        if self.target_satisfaction_function.target_value == TemperatureValue.HOT:
+        if target_satisfaction_function.target_value == TemperatureValue.HOT:
             self.auxiliary_items = frozenset({
                 AuxItem(
                     t_id="heat_source",
@@ -145,7 +144,7 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
                     relation_descriptions={ReceptacleOfRelation: {}},
                 )
             })
-        elif self.target_satisfaction_function.target_value == TemperatureValue.COLD:
+        elif target_satisfaction_function.target_value == TemperatureValue.COLD:
             self.auxiliary_items = frozenset({
                 AuxItem(
                     t_id="cold_source",
@@ -155,6 +154,9 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
                     relation_descriptions={ReceptacleOfRelation: {}},
                 )
             })
+
+        super().__init__(target_satisfaction_function)
+        self.target_satisfaction_function: SingleValuePSF[TemperatureValue]
 
 
 class BaseIsSlicedProp(ItemVariableProp[bool, bool]):

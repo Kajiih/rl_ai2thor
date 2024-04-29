@@ -254,6 +254,9 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2
             first satisfied by any object in the scene in order to satisfy the main property. Those
             items are not considered in the item-candidates assignments of the task since they don't
             represent a unique task item but only an auxiliary item for a property.
+        auxiliary_relations (frozenset[Relation]): The set of auxiliary relations of the property,
+            i.e. the inverse relations of the auxiliary items. They are instantiated during the
+            item initialization.
         maximum_advancement (int): The maximum advancement that can be achieved by satisfying the
             property and all of its auxiliary properties and items.
     """
@@ -263,7 +266,7 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2
     auxiliary_properties: frozenset[PropAuxProp] = frozenset()
     auxiliary_items: frozenset[AuxItem] = (
         frozenset()
-    )  # TODO: Can't directly instantiate the auxiliary items because one need to know the item_id of the item that has the property to instantiate the relation of the auxiliary items. So can't use direct instances of items in the class definition.
+    )  # !! auxiliary_items is not always a class attribute (e.g. in the TemperatureProp class) # TODO: Change the implementation to make it a instance attribute for all classes
 
     def __init__(
         self,
@@ -278,15 +281,29 @@ class ItemVariableProp[T1: ItemPropValue, T2: ItemPropValue](BaseItemProp[T1, T2
         for aux_prop in self.auxiliary_properties:
             aux_prop.linked_prop = self
 
+        # === Type annotations ===
+        self.auxiliary_relations: frozenset[Relation]
+        self.maximum_advancement: int
+
+    def init_maximum_advancement(self) -> None:
+        """
+        Recursively initialize the maximum advancement of the property and its auxiliary properties and relations.
+
+        The maximum advancements of the auxiliary items are already initialized during the item
+        initialization.
+        """
+        # TODO? Remove the recursive initialization since it's always 1 for auxiliary properties?
+        for aux_prop in self.auxiliary_properties:
+            aux_prop.init_maximum_advancement()
+        for aux_relation in self.auxiliary_relations:
+            aux_relation.init_maximum_advancement()
         # TODO? Replace aux_prop.maximum_advancement by 1
         self.maximum_advancement = (
             1
             + sum(aux_prop.maximum_advancement for aux_prop in self.auxiliary_properties)
             + sum(aux_item.maximum_advancement for aux_item in self.auxiliary_items)
+            + sum(aux_rel.maximum_advancement for aux_rel in self.auxiliary_relations)
         )
-
-        # === Type annotations ===
-        self.maximum_advancement: int
 
 
 type ItemProp[T1: ItemPropValue, T2: ItemPropValue] = ItemFixedProp[T1] | ItemVariableProp[T1, T2]
@@ -320,6 +337,7 @@ class BaseAuxProp[T1: ItemPropValue, T2: ItemPropValue](ItemVariableProp[T1, T2]
 
         self.target_ai2thor_property = variable_prop_type.target_ai2thor_property
 
+        self.auxiliary_relations = frozenset()
         # === Type annotations ===
         self.linked_object: ItemVariableProp | Relation
 

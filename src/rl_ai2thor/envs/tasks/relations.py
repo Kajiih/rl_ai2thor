@@ -39,6 +39,7 @@ type RelationParam = int | float | bool
 
 # %% === Relations ===
 # TODO? Optimize the computation of the results and the advancement by reusing the results of the inverse relation when possible?
+# TODO: Separate the initialization of the relation and the initialization of its main and related items
 class Relation(ABC):
     """
     A relation between two items in the definition of a task.
@@ -96,9 +97,6 @@ class Relation(ABC):
         else:
             self.inverse_relation = self._initialize_inverse_relation()
 
-        # TODO? Replace aux_prop.maximum_advancement by 1
-        self.maximum_advancement = 1 + sum(aux_prop.maximum_advancement for aux_prop in self.auxiliary_properties)
-
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
         # === Type Annotations ===
@@ -107,6 +105,15 @@ class Relation(ABC):
         self.inverse_relation: Relation
         self.main_item: TaskItem
         self.related_item: TaskItem
+        self.maximum_advancement: int
+
+    def init_maximum_advancement(self) -> None:
+        """Initialize the maximum advancement of the relation."""
+        # TODO? Remove the recursive initialization since it's always 1 for auxiliary properties?
+        for aux_prop in self.auxiliary_properties:
+            aux_prop.init_maximum_advancement()
+        # TODO? Replace aux_prop.maximum_advancement by 1
+        self.maximum_advancement = 1 + sum(aux_prop.maximum_advancement for aux_prop in self.auxiliary_properties)
 
     @abstractmethod
     def _compute_inverse_relation_parameters(self) -> dict[str, RelationParam]:

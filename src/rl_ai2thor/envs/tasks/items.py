@@ -166,8 +166,7 @@ class CandidateData:
         self.property_advancement = sum(self.properties_advancement.values())
 
         # === Relations ===
-        # Note: We can 
-        # compute a more optimal lower bound on the relation's advancement (min_advancement) by taking into account the fact that several relations might involve the same related item and then computing the relations advancement for each assignment of the related item's candidate
+        # Note: We can compute a more optimal lower bound on the relation's advancement (min_advancement) by taking into account the fact that several relations might involve the same related item and then computing the relations advancement for each assignment of the related item's candidate
         # TODO? Implement this?
         self.relations_satisfying_related_candidate_ids = self._compute_relations_satisfying_related_candidate_ids(
             scene_object_dict
@@ -590,7 +589,6 @@ class SimpleItem(ABC):
         self.id = ItemId(t_id)
         self.properties = frozenset(properties)
         self.scored_properties = frozenset(prop for prop in self.properties if isinstance(prop, ItemVariableProp))
-        self.maximum_advancement = sum(prop.maximum_advancement for prop in self.scored_properties)
 
         # Infer the candidate required properties from the item properties
         self.candidate_required_properties = frozenset(
@@ -626,6 +624,18 @@ class SimpleItem(ABC):
             int: Maximum advancement of the item in the task at the current step.
         """
         return self.step_max_property_advancement
+
+    def _init_maximum_advancement(self) -> None:
+        """
+        Recursively initialize the maximum advancement of the scored properties and then the maximum advancement of the item.
+
+        This has to be called after everything has been fully initialized.
+
+        The maximum advancement is the sum of the maximum advancement of the scored properties.
+        """
+        for prop in self.scored_properties:
+            prop.init_maximum_advancement()
+        self.maximum_advancement = sum(prop.maximum_advancement for prop in self.scored_properties)
 
     def is_candidate(self, obj_metadata: SimObjMetadata) -> bool:
         """
@@ -708,11 +718,14 @@ class TaskItem(SimpleItem):
             used to compute the scores of the candidates.
         max_advancement (int): Maximum advancement of the item in the task: sum of the maximum
             advancement of the scored properties and relations.
-        props_auxiliary_items (dict[ItemProp, frozenset[TaskItem]]): Map of the item's properties to
+        props_auxiliary_items (dict[ItemVariableProp, frozenset[TaskItem]]): Map of the item's properties to
             their auxiliary items.
-        props_auxiliary_properties (dict[ItemProp, frozenset[ItemVariableProp]]): Map of the item's
+        props_auxiliary_relations (dict[ItemVariableProp, frozenset[Relation]]): Map of the item's
+            properties to their auxiliary relations (inverse relations of the auxiliary items'
+            relations).
+        props_auxiliary_properties (dict[ItemVariableProp, frozenset[PropAuxProp]]): Map of the item's
             properties to their auxiliary properties.
-        relations_auxiliary_properties (dict[Relation, frozenset[ItemVariableProp]]): Map of the
+        relations_auxiliary_properties (dict[Relation, frozenset[RelationAuxProp]]): Map of the
             item's relations to their auxiliary properties.
         candidate_ids (set[SimObjId]): Set of candidate ids of the item.
         candidates_data (dict[CandidateId, CandidateData]): Dictionary mapping the candidate ids to
@@ -752,25 +765,29 @@ class TaskItem(SimpleItem):
         super().__init__(t_id, properties)
         #  === Set auxiliary items and their relations with the item ===
         self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
-        auxiliary_relations = set()
-        # Set the related item of the auxiliary items' relations
-        for aux_items in self.props_auxiliary_items.values():
+        # Initialize the relations of the auxiliary items and and the auxiliary relations
+        for prop, aux_items in self.props_auxiliary_items.items():
             for aux_item in aux_items:
-                aux_item.initialize(self.id)
-                # Add auxiliary relations to the item's relations
-                auxiliary_relations.update(aux_relation.inverse_relation for aux_relation in aux_item.relations)
+                aux_item.initialize_relations(self.id)
+            # Set the properties' auxiliary relations
+            prop.auxiliary_relations = frozenset(
+                relation.inverse_relation for aux_item in aux_items for relation in aux_item.relations
+            )
+        self.props_auxiliary_relations = {
+            prop: frozenset(relation.inverse_relation for aux_item in aux_items for relation in aux_item.relations)
+            for prop, aux_items in self.props_auxiliary_items.items()
+        }
 
         # === Set the relations ===
         if relations is not None:
-            self.relations = frozenset(relations | auxiliary_relations)
+            self.relations = frozenset(relations)
         else:
-            self.relations = frozenset(auxiliary_relations)
+            self.relations = frozenset()
         self._check_duplicate_relations(self.relations)
         # Set the main item and related item of the relations and their inverse relations
         for relation in self.relations:
             relation.main_item = self
             relation.inverse_relation.related_item = self
-        self.maximum_advancement += sum(relation.maximum_advancement for relation in self.relations)
 
         relation_required_properties = frozenset(
             relation.candidate_required_prop
@@ -783,11 +800,15 @@ class TaskItem(SimpleItem):
         self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.scored_properties}
         self.relations_auxiliary_properties = {relation: relation.auxiliary_properties for relation in self.relations}
 
+        # === Initialize the maximum advancement of the item and its properties and relations ===
+        self._init_maximum_advancement()
+
         # === Type annotations ===
         self.relations: frozenset[Relation]
-        self.props_auxiliary_items: dict[ItemProp, frozenset[AuxItem]]
-        self.props_auxiliary_properties: dict[ItemProp, frozenset[ItemVariableProp]]
-        self.relations_auxiliary_properties: dict[Relation, frozenset[ItemVariableProp]]
+        self.props_auxiliary_items: dict[ItemVariableProp, frozenset[AuxItem]]
+        self.props_auxiliary_relations: dict[ItemVariableProp, frozenset[Relation]]
+        self.props_auxiliary_properties: dict[ItemVariableProp, frozenset[PropAuxProp]]
+        self.relations_auxiliary_properties: dict[Relation, frozenset[RelationAuxProp]]
         self.step_max_relation_advancement: int
 
     # TODO: Replace to hold a set of relations instead of dict of relation id -> relation
@@ -816,6 +837,20 @@ class TaskItem(SimpleItem):
             int: Maximum advancement of the item in the task at the current step.
         """
         return self.step_max_property_advancement + self.step_max_relation_advancement
+
+    def _init_maximum_advancement(self) -> None:
+        """
+        Recursively initialize the maximum advancement of the scored properties and relations and then the one of the item.
+
+        This has to be called after everything has been fully initialized.
+
+        The maximum advancement is the sum of the maximum advancement of the scored properties and
+        relations.
+        """
+        super()._init_maximum_advancement()
+        for relation in self.relations:
+            relation.init_maximum_advancement()
+        self.maximum_advancement += sum(relation.maximum_advancement for relation in self.relations)
 
     @staticmethod
     def _check_duplicate_relations(relations: frozenset[Relation]) -> None:
@@ -989,13 +1024,27 @@ class AuxItem(TaskItem):
             relation_descriptions = {}
         self._relation_descriptions = relation_descriptions
 
+        # # Temporarily instantiate the item with dummy relation that have a dummy related item id
+        # # To compute the maximum advancement
+        # dummy_relations = {
+        #     relation_type(
+        #         main_item_id=self.t_id,
+        #         related_item_id=ItemId("dummy_item_id"),
+        #         _inverse_relation=None,
+        #         **param,
+        #     )
+        #     for relation_type, param in self._relation_descriptions.items()
+        # }
+        # super().__init__(self.t_id, self.properties, dummy_relations)
+        # TODO: Delete
+
         # === Type annotations ===
         self.linked_prop: ItemVariableProp
         self._relation_descriptions = relation_descriptions
 
-    def initialize(self, linked_item_id: ItemId) -> None:
+    def initialize_relations(self, linked_item_id: ItemId) -> None:
         """
-        Initialize the auxiliary item with the linked item id.
+        Initialize the auxiliary item relations with the linked item id.
 
         This is necessary to instantiate the relations of the auxiliary item with the information
         of the linked item id.

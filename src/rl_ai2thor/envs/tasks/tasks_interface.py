@@ -248,7 +248,13 @@ class UndefinedTask(BaseTask):
 
 
 type TaskArg = ItemPropValue | int
-type RelationsDict = dict[ItemId, dict[RelationTypeId, dict[str, RelationParam]]]
+type RelationsDict = dict[
+    ItemId,
+    dict[
+        RelationTypeId,
+        dict[str, RelationParam],
+    ],
+]  # TODO: Replace RelationTypeId by type[Relation]
 type TaskDict = dict[ItemId, TaskItemData]
 
 
