@@ -232,7 +232,7 @@ class Relation(ABC):
         return f"{self.main_item} is {self.type_id} {self.related_item}"
 
     def __repr__(self) -> str:
-        return f"Relation({self.type_id}, {self.main_item.id}, {self.related_item.id})"
+        return f"({self.__class__.__name__}({self.main_item.id}, {self.related_item.id})"
 
     # TODO: Check if we keep this
     # def __eq__(self, other: Any) -> bool:
@@ -299,6 +299,9 @@ class ReceptacleOfRelation(Relation):
             in OBJECT_TYPES_DATA[related_candidate_metadata["objectType"]].compatible_receptacles
         )
 
+    def __str__(self) -> str:
+        return f"{self.main_item} is a receptacle of {self.related_item}"
+
 
 class ContainedInRelation(Relation):
     """
@@ -352,6 +355,9 @@ class ContainedInRelation(Relation):
             related_candidate_metadata["objectType"]
             in OBJECT_TYPES_DATA[main_candidate_metadata["objectType"]].compatible_receptacles
         )
+
+    def __str__(self) -> str:
+        return f"{self.main_item} is contained in {self.related_item}"
 
 
 class CloseToRelation(Relation):
@@ -414,6 +420,9 @@ class CloseToRelation(Relation):
             candidate_metadata[SimObjFixedProp.PICKUPABLE] or candidate_metadata[SimObjFixedProp.MOVEABLE]
             for candidate_metadata in [main_candidate_metadata, related_candidate_metadata]
         )
+
+    def __str__(self) -> str:
+        return f"{self.main_item} is close to {self.related_item}"
 
 
 # %% === Mappings ===
