@@ -10,7 +10,7 @@ import operator
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import gymnasium as gym
 import numpy as np
@@ -92,6 +92,9 @@ class ITHOREnv(
     the environment observation and the task observation respectively.
     """
 
+    metadata: ClassVar[dict[str, Any]] = {"render_modes": ["rgb_array"], "render_fps": 10}
+    render_mode: str = "rgb_array"
+
     def __init__(
         self,
         config_folder_path: str | Path = "config",
@@ -132,6 +135,10 @@ class ITHOREnv(
     def last_frame(self) -> NDArray[np.uint8]:
         """Return the last frame of the environment."""
         return self.last_event.frame  # type: ignore
+
+    def render(self) -> NDArray[np.uint8]:
+        """Return the last frame of the environment."""
+        return self.last_frame
 
     @staticmethod
     def _load_and_override_config(
