@@ -1,5 +1,8 @@
-"""Run a stable-baselines3 agent in the AI2THOR RL environment."""
-# TODO: Make compatible with multi-task training
+"""
+Run a stable-baselines3 agent in the AI2THOR RL environment on several tasks.
+
+# https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html
+"""
 
 from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Any
@@ -13,7 +16,7 @@ from wandb.integration.sb3 import WandbCallback
 
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 from rl_ai2thor.envs.tasks.tasks import TaskType
-from rl_ai2thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
+from rl_ai2thor.envs.wrappers import SimpleActionSpaceWrapper
 from rl_ai2thor.examples.benchmark.experiment_utils import Exp
 
 if TYPE_CHECKING:
@@ -21,7 +24,7 @@ if TYPE_CHECKING:
 
 
 model_config = {
-    "policy_type": "CnnPolicy",
+    "policy_type": "MultiInputPolicy",
     "verbose": 1,
     "progress_bar": True,
 }
@@ -95,12 +98,11 @@ def get_scenes(task: AvailableTask) -> list[str]:
 def make_env(override_config: dict[str, Any]) -> ITHOREnv:
     """Create the environment for single task and simple action space training with stable-baselines3."""
     env: ITHOREnv = gym.make("rl_ai2thor/ITHOREnv-v0.1_sb3_ready", override_config=override_config)  # type: ignore
-    env = SingleTaskWrapper(SimpleActionSpaceWrapper(env))
+    env = SimpleActionSpaceWrapper(env)
     return env
 
 
 def main(
-    task: AvailableTask,  # TODO: Replace by task config path
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
@@ -110,15 +112,19 @@ def main(
 
     TODO: Improve docstring.
     """
-    scenes = get_scenes(task)
-    task_config = {
-        "type": task,
-        "args": {},
-        "scenes": scenes,
-    }
-    override_config["tasks"] = [task_config]
+    tasks = list(AvailableTask)
+    task_config = [
+        {
+            "type": task,
+            "args": {},
+            "scenes": get_scenes(task),
+        }
+        for task in tasks
+    ]
+    override_config["tasks"] = task_config
     # === Load the experiment configuration ===
-    experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
+    scenes = [scene for task_dict in task_config for scene in task_dict["scenes"]]
+    experiment = Exp(model=model_name, tasks=tasks, scenes=scenes)
     wandb_config = experiment.config["wandb"]
     run: Run = wandb.init(  # type: ignore
         config=experiment.config,
@@ -129,8 +135,8 @@ def main(
         name=experiment.name,
         group=experiment.group,
         job_type=experiment.job_type,
-        tags=["simple_actions", "single_task", experiment.job_type, model_name, *scenes, task],
-        notes=f"Simple {model_name} agent for RL THOR benchmarking on {task} task.",
+        tags=["simple_actions", "multi-tasks", experiment.job_type, model_name, *scenes, *tasks],
+        notes=f"Simple {model_name} agent for RL THOR benchmarking on {tasks} multi-task.",
     )
 
     # === Instantiate the environment ===

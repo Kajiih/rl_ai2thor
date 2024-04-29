@@ -1,6 +1,7 @@
 """Utilities for running experiments."""
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,7 +31,7 @@ class Exp:
     """
 
     model: str
-    tasks: list[str]
+    tasks: Iterable[str]
     scenes: list[str]
     job_type: str = "train"
     id: str | None = None
@@ -50,13 +51,13 @@ class Exp:
     @property
     def name(self) -> str:
         """Return the name of the experiment."""
-        return f"{self.model}_{self.tasks}_{self.scenes}_{self.timestamp}"
+        return f"{self.model}_{"-".join(self.tasks)}_{"-".join(self.scenes)}_{self.timestamp}"
 
     # TODO: Improve group naming
     @property
     def group(self) -> str:
         """Return the group of the experiment."""
-        return f"{self.tasks}_{self.scenes}"
+        return f"{"-".join(self.tasks)}"
 
     @property
     def log_dir(self) -> Path:

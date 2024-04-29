@@ -91,8 +91,9 @@ class ITHOREnv(
     the environment observation and the task observation respectively.
     """
 
-    metadata: ClassVar[dict[str, Any]] = {"render_modes": ["rgb_array"], "render_fps": 10}
+    metadata: ClassVar[dict[str, Any]] = {"render_modes": ["rgb_array"], "render_fps": 15}
     render_mode: str = "rgb_array"
+    # TODO: Change render fps with config
 
     def __init__(
         self,
@@ -377,15 +378,11 @@ class ITHOREnv(
         self.step_count += 1
 
         environment_obs: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
-        observation = {"env_obs": environment_obs, "task_obs": self.task.text_description()}
+        observation = self._get_full_observation(environment_obs)
         reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
-        info = {
-            "env_obs": environment_obs,
-            # "task_desc_obs": self.task.text_description(),
-            "task_obs": self.task_idx,
-        }
+        info = {"metadata": new_event.metadata, "task_info": task_info}
 
         self.last_event = new_event
 
@@ -470,16 +467,30 @@ class ITHOREnv(
         info = {"metadata": self.last_event.metadata, "task_info": task_info}
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
-        observation = {
-            "env_obs": obs_env,
-            "task_obs": self.task.text_description(),
-            "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
-        }
+        observation = self._get_full_observation(obs_env)
         print(
             f"Resetting environment and starting new episode in {self.current_scene} with task {self.current_task_type}."
         )
 
         return observation, info
+
+    def _get_full_observation(self, environment_obs: NDArray[np.uint8]) -> dict[str, Any]:
+        """
+        Get the full observation of the environment.
+
+        Args:
+            environment_obs (NDArray[np.uint8]): Observation of the environment (frame of the
+                agent's view).
+
+        Returns:
+            dict[str, Any]: Full observation of the environment.
+        """
+        return {
+            "env_obs": environment_obs,
+            # "task_desc_obs": self.task.text_description(),
+            "task_obs": self.task_idx,
+            "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
+        }
 
     def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[Event, bool, dict[str, Any]]:
         """
