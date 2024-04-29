@@ -1,6 +1,8 @@
 """
 Task relations in AI2-THOR RL environment.
 
+Don't import item properties from item_prop module to avoid circular imports.
+
 TODO: Finish module docstring.
 """
 
@@ -11,7 +13,8 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from rl_ai2thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
-from rl_ai2thor.envs.tasks.item_prop import IsPickedUpProp, PickupableProp, ReceptacleProp
+from rl_ai2thor.envs.tasks._item_prop_fixed import PickupableProp, ReceptacleProp
+from rl_ai2thor.envs.tasks._item_prop_variable import IsPickedUpProp
 from rl_ai2thor.envs.tasks.item_prop_interface import RelationAuxProp
 from rl_ai2thor.envs.tasks.items import ItemId
 from rl_ai2thor.utils.ai2thor_utils import compute_objects_2d_distance
@@ -290,7 +293,6 @@ class ReceptacleOfRelation(Relation):
         )
 
 
-# TODO: Add IsPickedUp auxiliary property
 class ContainedInRelation(Relation):
     """
     A relation of the form "main_item is_contained_in related_item".
@@ -345,7 +347,6 @@ class ContainedInRelation(Relation):
         )
 
 
-# TODO: Add IsPickedUp auxiliary property
 class CloseToRelation(Relation):
     """
     A relation of the form "main_item is close to related_item".
@@ -364,6 +365,7 @@ class CloseToRelation(Relation):
 
     type_id = RelationTypeId.CLOSE_TO
     inverse_relation_type_id = RelationTypeId.CLOSE_TO
+    auxiliary_properties = frozenset({RelationAuxProp(IsPickedUpProp, True)})
 
     def __init__(
         self,
@@ -407,7 +409,7 @@ class CloseToRelation(Relation):
         )
 
 
-## %% === Mappings ===
+# %% === Mappings ===
 relation_type_id_to_relation: dict[RelationTypeId, type[Relation]]
 relation_type_id_to_relation = {
     RelationTypeId.RECEPTACLE_OF: ReceptacleOfRelation,

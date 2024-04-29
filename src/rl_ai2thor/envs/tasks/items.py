@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         ItemProp,
         PropAuxProp,
     )
-    from rl_ai2thor.envs.tasks.relations import Relation, RelationTypeId
+    from rl_ai2thor.envs.tasks.relations import Relation, RelationParam, RelationTypeId
 
 
 ItemId = NewType("ItemId", str)
@@ -166,7 +166,8 @@ class CandidateData:
         self.property_advancement = sum(self.properties_advancement.values())
 
         # === Relations ===
-        # Note: We compute a more optimal lower bound on the relation's advancement (min_advancement) by taking into account the fact that several relations might involve the same related item and then computing the relations advancement for each assignment of the related item's candidate
+        # Note: We can 
+        # compute a more optimal lower bound on the relation's advancement (min_advancement) by taking into account the fact that several relations might involve the same related item and then computing the relations advancement for each assignment of the related item's candidate
         # TODO? Implement this?
         self.relations_satisfying_related_candidate_ids = self._compute_relations_satisfying_related_candidate_ids(
             scene_object_dict
@@ -189,9 +190,9 @@ class CandidateData:
         )
 
         # === Final advancement ===
-        # TODO: Update this: It's not necessarily x2 for the relations because the inverse relation might not have the same max advancement (we need to implement this)
-        self.total_min_advancement = self.property_advancement + 2 * self.relation_min_advancement
-        self.total_max_advancement = self.property_advancement + 2 * self.relation_max_advancement
+        # TODO: Update this: For each relation that is considered satisfied, we need to add the advancement of the inverse relation too. It's not necessarily x2 for the relations because the inverse relation might not have the same max advancement (we need to implement this)
+        self.total_min_advancement = self.property_advancement + 1 * self.relation_min_advancement
+        self.total_max_advancement = self.property_advancement + 1 * self.relation_max_advancement
 
     def _compute_base_properties_results(self) -> dict[ItemVariableProp, bool]:
         """
@@ -577,7 +578,7 @@ class SimpleItem(ABC):
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[ItemProp],
+        properties: set[ItemProp] | frozenset[ItemProp],
     ) -> None:
         """
         Initialize the attribute of the item.
@@ -734,7 +735,7 @@ class TaskItem(SimpleItem):
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[ItemProp],
+        properties: set[ItemProp] | frozenset[ItemProp],
         relations: set[Relation] | None = None,
     ) -> None:
         """
@@ -749,17 +750,26 @@ class TaskItem(SimpleItem):
             relations (set[Relation], optional): Set of relations of the item.
         """
         super().__init__(t_id, properties)
+        #  === Set auxiliary items and their relations with the item ===
+        self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
+        auxiliary_relations = set()
+        # Set the related item of the auxiliary items' relations
+        for aux_items in self.props_auxiliary_items.values():
+            for aux_item in aux_items:
+                aux_item.initialize(self.id)
+                # Add auxiliary relations to the item's relations
+                auxiliary_relations.update(aux_relation.inverse_relation for aux_relation in aux_item.relations)
+
         # === Set the relations ===
         if relations is not None:
-            self.relations = frozenset(relations)
+            self.relations = frozenset(relations | auxiliary_relations)
         else:
-            self.relations = frozenset()
+            self.relations = frozenset(auxiliary_relations)
         self._check_duplicate_relations(self.relations)
         # Set the main item and related item of the relations and their inverse relations
         for relation in self.relations:
             relation.main_item = self
             relation.inverse_relation.related_item = self
-
         self.maximum_advancement += sum(relation.maximum_advancement for relation in self.relations)
 
         relation_required_properties = frozenset(
@@ -769,15 +779,7 @@ class TaskItem(SimpleItem):
         )
         self.candidate_required_properties |= relation_required_properties
 
-        #  === Auxiliary items and properties ===
-        self.props_auxiliary_items = {prop: prop.auxiliary_items for prop in self.scored_properties}
-        # Set the related item of the auxiliary items' relations
-        for aux_items in self.props_auxiliary_items.values():
-            for aux_item in aux_items:
-                for aux_relation in aux_item.relations:
-                    aux_relation.related_item = self
-                    aux_relation.inverse_relation.main_item = self  # This inverse relation is not used
-
+        # === Auxiliary properties of properties and relations ===
         self.props_auxiliary_properties = {prop: prop.auxiliary_properties for prop in self.scored_properties}
         self.relations_auxiliary_properties = {relation: relation.auxiliary_properties for relation in self.relations}
 
@@ -950,11 +952,15 @@ class AuxItem(TaskItem):
     """
     An auxiliary item in the definition of an item property.
 
+    The relations of an auxiliary item are considered to be relations between the auxiliary item as
+    main item and the linked item (item owning the linked property) as related item. The relations
+    are instantiated when the linked item is known by using the initialize() method.
+
     Example of such auxiliary items:
     - A Knife is necessary for the property "is_sliced"
     - A Fridge is necessary for the property "temperature" with the value "cold"
 
-    !! In contrary to the main task items, the candidates of those items never change, so in particular, they can't be sliced.
+    !! In contrary to the main task items, the candidates of those items never change during an episode, so in particular, they can't be sliced.
 
     Attributes:
         linked_prop (ItemVariableProp): The main property of the main item to which the auxiliary item is related.
@@ -963,21 +969,51 @@ class AuxItem(TaskItem):
     def __init__(
         self,
         t_id: ItemId | str,
-        properties: set[ItemProp],
-        relations: set[Relation] | None = None,
+        properties: set[ItemProp] | frozenset[ItemProp],
+        relation_descriptions: dict[type[Relation], dict[str, RelationParam]] | None = None,
     ) -> None:
         """
-        Initialize the AuxItem object.
+        Initialize the main attributes of the auxiliary item to enable the full initialization later.
 
         Args:
             t_id (ItemId): The ID of the item as defined in the task description.
             properties (set[ItemProp]): Set of properties of the item.
-            relations (set[Relation], optional): Set of relations of the item.
+            relation_descriptions (dict[type[Relation], dict[str, RelationParam]], optional):
+                Dictionary mapping the relation types of the auxiliary items to their parameter
+                dictionaries. We need those to instantiate the relations when we know the linked
+                item.
         """
-        super().__init__(t_id, properties, relations)
+        self.t_id = ItemId(t_id)
+        self.properties = frozenset(properties)
+        if relation_descriptions is None:
+            relation_descriptions = {}
+        self._relation_descriptions = relation_descriptions
 
         # === Type annotations ===
         self.linked_prop: ItemVariableProp
+        self._relation_descriptions = relation_descriptions
+
+    def initialize(self, linked_item_id: ItemId) -> None:
+        """
+        Initialize the auxiliary item with the linked item id.
+
+        This is necessary to instantiate the relations of the auxiliary item with the information
+        of the linked item id.
+
+        Args:
+            linked_item_id (ItemId): The ID of the item owning the linked property.
+        """
+        relations = {
+            relation_type(
+                main_item_id=self.t_id,
+                related_item_id=linked_item_id,
+                _inverse_relation=None,
+                **param,
+            )
+            for relation_type, param in self._relation_descriptions.items()
+        }
+
+        super().__init__(self.t_id, self.properties, relations)
 
     def __str__(self) -> str:
         return f"AuxItem({self.id})"
