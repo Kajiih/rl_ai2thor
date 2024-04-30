@@ -225,6 +225,10 @@ class BaseTask(ABC):
             description (str): Text description of the task.
         """
 
+    def __str__(self) -> str:
+        """Return the text description of the task."""
+        return f"{self.__class__.__name__}"
+
 
 class UndefinedTask(BaseTask):
     """Undefined task that is never completed and has no advancement."""
@@ -735,9 +739,7 @@ class GraphTask(BaseTask):
 
     # TODO: Improve this
     def __repr__(self) -> str:
-        nb_items = len(self.items)
-        nb_relations = sum(len(item.relations) for item in self.items)
-        return f"GraphTask({nb_items} items, {nb_relations} relations)"
+        return f"{self.__class__.__name__}({self.task_description_dict})"
 
 
 # %% === Utility Functions ===

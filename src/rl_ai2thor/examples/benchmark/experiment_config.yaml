@@ -8,7 +8,13 @@ wandb:
     model_save_freq: 100_000
     gradient_save_freq: 10_000
 
-record:
-  frequency: 100_000
+evaluation:
+  nb_episodes: 10
+  frequency: 10_000
+  deterministic: true
+  verbose: 1
+
+video_recorder:
+  frequency: 50_000
   length: 2000
   prefix: "rl-video"

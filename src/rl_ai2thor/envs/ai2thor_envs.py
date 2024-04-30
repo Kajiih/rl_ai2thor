@@ -382,7 +382,12 @@ class ITHOREnv(
         reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
 
         truncated = self.step_count >= self.config["max_episode_steps"]
-        info = {"metadata": new_event.metadata, "task_info": task_info}
+        info = {
+            "metadata": new_event.metadata,
+            "task_info": task_info,
+            "is_success": terminated,
+            "task_advancement": task_info.get("task_advancement", None),
+        }
 
         self.last_event = new_event
 
@@ -464,7 +469,12 @@ class ITHOREnv(
             self.reset()
 
         self.step_count = 0
-        info = {"metadata": self.last_event.metadata, "task_info": task_info}
+        info = {
+            "metadata": self.last_event.metadata,
+            "task_info": task_info,
+            "is_success": task_completion,
+            "task_advancement": task_info.get("task_advancement", None),
+        }
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
         observation = self._get_full_observation(obs_env)

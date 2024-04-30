@@ -114,6 +114,10 @@ class Ai2thorAction(StrEnum):
     DIRTY_OBJECT = "DirtyObject"
     CLEAN_OBJECT = "CleanObject"
 
+    def __repr__(self) -> str:
+        cls_name = self.__class__.__name__
+        return f"{cls_name}.{self.name}"
+
 
 class ActionCategory(StrEnum):
     """Enum for action categories."""

@@ -10,7 +10,7 @@
 - Add enabling or disabling object properties from config (`openable`, `pickupable`, `receptacle`, ...)
 - Add switching from on and off toggle actions to single toggle action from config
 
-## TODOs
+## **TODOs**
 
 ### Dev TODOs
 
@@ -136,10 +136,11 @@
   - [ ] Support Stable Baselines3
   - [ ] Support RLlib..?
   - [ ] Support CleanRL
-****
+
 ### Code Improvement TODOs
 
 - [ ] Add SimObjectMetadata class to have more type safety when using the object's metadata?
+- [ ] Add TaskInfo dataclass instead of returning a dictionary in compute_task_advancement
 - [ ] Implement equality test of tasks, items, relation, properties
 - [ ] Add decoupling prop/relations and relation interfaces/relations and relation and relation/inverse relation
 
@@ -158,7 +159,16 @@
 ### Benchmark TODOs
 
 - [x] Add Agent position and rotation
-- [ ] Create train script with command line arguments
+- [x] Create train script with command line arguments
+- [ ] Add callbacks to:
+  - [ ] Stop training if no improvement for a long time
+  - [ ] Stop training when the model reaches the optimal task advancement
+  - [x] Evaluate the model every x epochs
+  - [ ] Checkpoint the model every x steps
+  - [ ] Checkpoint the n best models
+    - [x] Top 1 best model during eval
+    - [ ] Top n best models during training
+- [ ] Add training parameters to config (model dependant...)
 
 ### Final TODOs
 
