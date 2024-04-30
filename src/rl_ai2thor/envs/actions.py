@@ -29,7 +29,14 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from rl_ai2thor.envs.sim_objects import WATER_SOURCES, SimObjectType, SimObjFixedProp, SimObjVariableProp
+from rl_ai2thor.envs.sim_objects import (
+    OPENABLES,
+    WATER_SOURCES,
+    SimObjectType,
+    SimObjFixedProp,
+    SimObjMetadata,
+    SimObjVariableProp,
+)
 from rl_ai2thor.utils.general_utils import nested_dict_get
 
 if TYPE_CHECKING:
@@ -143,8 +150,9 @@ class ActionCategory(StrEnum):
 
 
 # === Action Classes ===
-# TODO: Change perform to not need the environment
-# TODO: Add target value to object required property
+# TODO? Change perform to not need the environment?
+# TODO? Add target value to object required property?
+# TODO: Create a separate class for action with target objects (and then object_required_property too)
 @dataclass(frozen=True)
 class EnvironmentAction:
     """
@@ -158,19 +166,19 @@ class EnvironmentAction:
             for MoveAhead).
         has_target_object (bool, optional): Whether the action requires a target
             object.
-        object_required_property (SimObjFixedProp, optional): Name of the required property
+        _object_required_property (SimObjFixedProp, optional): Name of the required property
             of the target object.
-        parameter_name (str, optional): Name of the quantitative parameter of
+        _parameter_name (str, optional): Name of the quantitative parameter of
             the action.
-        parameter_range (tuple[float, float], optional): Range of the quantitative
+        _parameter_range (tuple[float, float], optional): Range of the quantitative
             parameter of the action. Can be overridden by the config.
-        parameter_discrete_value (float, optional): Value of the quantitative
+        _parameter_discrete_value (float, optional): Value of the quantitative
             parameter of the action in discrete environment mode. Can be
             overridden by the config.
-        other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor
+        _other_ai2thor_parameters (dict[str, Any], optional): Other ai2thor
             parameters of the action that take a fixed value (e.g. "up" and
             "right" for MoveHeldObject) and their value.
-        config_dependent_parameters (set[str], optional): Set of parameters
+        _config_dependent_parameters (set[str], optional): Set of parameters
             that depend on the environment config.
 
     Methods:
@@ -193,12 +201,26 @@ class EnvironmentAction:
     action_category: ActionCategory
     _: dataclasses.KW_ONLY  # Following arguments are keyword-only
     has_target_object: bool = False
-    object_required_property: SimObjFixedProp | None = None
-    parameter_name: str | None = None
-    parameter_range: tuple[float, float] | None = None
-    parameter_discrete_value: float | None = None
-    other_ai2thor_parameters: dict[str, Any] = field(default_factory=dict)
-    config_dependent_parameters: set[str] = field(default_factory=set)
+    _object_required_property: SimObjFixedProp | None = None
+    _parameter_name: str | None = None
+    _parameter_range: tuple[float, float] | None = None
+    _parameter_discrete_value: float | None = None
+    _other_ai2thor_parameters: dict[str, Any] = field(default_factory=dict)
+    _config_dependent_parameters: set[str] = field(default_factory=set)
+
+    def is_object_operable(self, obj_metadata: SimObjMetadata) -> bool:
+        """
+        Return whether the object is operable by the action.
+
+        Args:
+            obj_metadata (SimObjMetadata): Metadata of the object to check.
+
+        Returns:
+            is_operable (bool): Whether the object is operable by the action.
+        """
+        if self._object_required_property is None:
+            return True
+        return obj_metadata[self._object_required_property]
 
     def perform(
         self,
@@ -217,33 +239,33 @@ class EnvironmentAction:
         Returns:
             event (Event): Event returned by the controller.
         """
-        action_parameters = self.other_ai2thor_parameters.copy()
-        if self.parameter_name is not None:
+        action_parameters = self._other_ai2thor_parameters.copy()
+        if self._parameter_name is not None:
             # Deal with the discrete/continuous environment mode
             if action_parameter is None:
-                assert self.parameter_discrete_value is not None
+                assert self._parameter_discrete_value is not None
                 assert env.config["discrete_actions"]
                 # Override the action parameter with the value from the config
                 action_parameter = nested_dict_get(
                     d=env.config,
                     keys=["action_parameter_data", self.name, "discrete_value"],
-                    default=self.parameter_discrete_value,
+                    default=self._parameter_discrete_value,
                 )
-            elif self.parameter_range is not None:
+            elif self._parameter_range is not None:
                 # Override the range with the value from the config
                 parameter_range = nested_dict_get(
                     d=env.config,
                     keys=["action_parameter_data", self.name, "range"],
-                    default=self.parameter_range,
+                    default=self._parameter_range,
                 )
                 action_parameter = parameter_range[0] + action_parameter * (parameter_range[1] - parameter_range[0])
             else:
                 raise MissingParameterRangeError(self)
 
-            action_parameters[self.parameter_name] = action_parameter
+            action_parameters[self._parameter_name] = action_parameter
         if self.has_target_object:
             action_parameters["objectId"] = target_object_id
-        for parameter_name in self.config_dependent_parameters:
+        for parameter_name in self._config_dependent_parameters:
             action_parameters[parameter_name] = env.config["action_parameters"][parameter_name]
 
         event: Event = env.controller.step(action=self.ai2thor_action, **action_parameters)  # type: ignore
@@ -447,6 +469,44 @@ clean_object_condition: VisibleWaterCondition
 slice_object_condition: HoldingObjectTypeCondition
 
 
+# %% === Specific action classes ===
+# TODO: Create a specific class for each action group?
+class OpenCloseEnvAction(EnvironmentAction):
+    """
+    Base class for "OpenObject" and "CloseObject" actions.
+
+    We need a specific class for this action because the object type needs to be in the OPENABLES
+    list to avoid TimeoutErrors when trying to open or close objects like `Blinds`.
+    """
+
+    def __init__(self, name: EnvActionName, ai2thor_action: Ai2thorAction) -> None:
+        super().__init__(
+            name=name,
+            ai2thor_action=ai2thor_action,
+            action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
+            has_target_object=True,
+            _object_required_property=SimObjFixedProp.OPENABLE,
+            _config_dependent_parameters={"forceAction"},
+        )
+
+    def is_object_operable(self, obj_metadata: SimObjMetadata) -> bool:
+        """
+        Return whether the object is operable by the "OpenObject" and "CloseObject" actions in ai2thor.
+
+        We need to add the check for the object type to be in the OPENABLES list because `Blinds`
+        are considered openable by ai2thor but they cause a TimeoutError when trying to open or
+        close them.
+
+        Args:
+            obj_metadata (SimObjMetadata): Metadata of the object to check.
+
+        Returns:
+            is_operable (bool): Whether the object is operable by the action.
+        """
+        obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+        return obj_type in OPENABLES and super().is_object_operable(obj_metadata)
+
+
 # %% == Actions definitions ==
 # TODO: Use task enums to define object required properties
 # Navigation actions (see: https://ai2thor.allenai.org/ithor/documentation/navigation)
@@ -454,65 +514,65 @@ move_ahead_action = EnvironmentAction(
     name=EnvActionName.MOVE_AHEAD,
     ai2thor_action=Ai2thorAction.MOVE_AHEAD,
     action_category=ActionCategory.MOVEMENT_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 1),
-    parameter_discrete_value=0.25,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 1),
+    _parameter_discrete_value=0.25,
 )
 move_back_action = EnvironmentAction(
     name=EnvActionName.MOVE_BACK,
     ai2thor_action=Ai2thorAction.MOVE_BACK,
     action_category=ActionCategory.MOVEMENT_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 1),
-    parameter_discrete_value=0.25,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 1),
+    _parameter_discrete_value=0.25,
 )
 move_left_action = EnvironmentAction(
     name=EnvActionName.MOVE_LEFT,
     ai2thor_action=Ai2thorAction.MOVE_LEFT,
     action_category=ActionCategory.MOVEMENT_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 1),
-    parameter_discrete_value=0.25,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 1),
+    _parameter_discrete_value=0.25,
 )
 move_right_action = EnvironmentAction(
     name=EnvActionName.MOVE_RIGHT,
     ai2thor_action=Ai2thorAction.MOVE_RIGHT,
     action_category=ActionCategory.MOVEMENT_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 1),
-    parameter_discrete_value=0.25,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 1),
+    _parameter_discrete_value=0.25,
 )
 rotate_left_action = EnvironmentAction(
     name=EnvActionName.ROTATE_LEFT,
     ai2thor_action=Ai2thorAction.ROTATE_LEFT,
     action_category=ActionCategory.BODY_ROTATION_ACTIONS,
-    parameter_name="degrees",
-    parameter_range=(0, 180),
-    parameter_discrete_value=45,
+    _parameter_name="degrees",
+    _parameter_range=(0, 180),
+    _parameter_discrete_value=45,
 )
 rotate_right_action = EnvironmentAction(
     name=EnvActionName.ROTATE_RIGHT,
     ai2thor_action=Ai2thorAction.ROTATE_RIGHT,
     action_category=ActionCategory.BODY_ROTATION_ACTIONS,
-    parameter_name="degrees",
-    parameter_range=(0, 180),
-    parameter_discrete_value=45,
+    _parameter_name="degrees",
+    _parameter_range=(0, 180),
+    _parameter_discrete_value=45,
 )
 look_up_action = EnvironmentAction(
     name=EnvActionName.LOOK_UP,
     ai2thor_action=Ai2thorAction.LOOK_UP,
     action_category=ActionCategory.CAMERA_ROTATION_ACTIONS,
-    parameter_name="degrees",
-    parameter_range=(0, 90),
-    parameter_discrete_value=30,
+    _parameter_name="degrees",
+    _parameter_range=(0, 90),
+    _parameter_discrete_value=30,
 )
 look_down_action = EnvironmentAction(
     name=EnvActionName.LOOK_DOWN,
     ai2thor_action=Ai2thorAction.LOOK_DOWN,
     action_category=ActionCategory.CAMERA_ROTATION_ACTIONS,
-    parameter_name="degrees",
-    parameter_range=(0, 90),
-    parameter_discrete_value=30,
+    _parameter_name="degrees",
+    _parameter_range=(0, 90),
+    _parameter_discrete_value=30,
 )
 crouch_action = EnvironmentAction(
     name=EnvActionName.CROUCH,
@@ -535,158 +595,150 @@ move_held_object_ahead_back_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_AHEAD_BACK,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="ahead",
-    parameter_range=(-0.5, 0.5),
-    other_ai2thor_parameters={"right": 0, "up": 0},
-    config_dependent_parameters={"forceVisible"},
+    _parameter_name="ahead",
+    _parameter_range=(-0.5, 0.5),
+    _other_ai2thor_parameters={"right": 0, "up": 0},
+    _config_dependent_parameters={"forceVisible"},
 )
 move_held_object_right_left_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_RIGHT_LEFT,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="right",
-    parameter_range=(-0.5, 0.5),
-    other_ai2thor_parameters={"ahead": 0, "up": 0},
-    config_dependent_parameters={"forceVisible"},
+    _parameter_name="right",
+    _parameter_range=(-0.5, 0.5),
+    _other_ai2thor_parameters={"ahead": 0, "up": 0},
+    _config_dependent_parameters={"forceVisible"},
 )
 move_held_object_up_down_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_UP_DOWN,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="up",
-    parameter_range=(-0.5, 0.5),
-    other_ai2thor_parameters={"ahead": 0, "right": 0},
-    config_dependent_parameters={"forceVisible"},
+    _parameter_name="up",
+    _parameter_range=(-0.5, 0.5),
+    _other_ai2thor_parameters={"ahead": 0, "right": 0},
+    _config_dependent_parameters={"forceVisible"},
 )
 rotate_held_object_roll_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_ROLL,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="roll",
-    parameter_range=(-180, 180),
-    other_ai2thor_parameters={"pitch": 0, "yaw": 0},
+    _parameter_name="roll",
+    _parameter_range=(-180, 180),
+    _other_ai2thor_parameters={"pitch": 0, "yaw": 0},
 )
 rotate_held_object_pitch_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_PITCH,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="pitch",
-    parameter_range=(-180, 180),
-    other_ai2thor_parameters={"roll": 0, "yaw": 0},
+    _parameter_name="pitch",
+    _parameter_range=(-180, 180),
+    _other_ai2thor_parameters={"roll": 0, "yaw": 0},
 )
 rotate_held_object_yaw_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_YAW,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
     action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
-    parameter_name="yaw",
-    parameter_range=(-180, 180),
-    other_ai2thor_parameters={"roll": 0, "pitch": 0},
+    _parameter_name="yaw",
+    _parameter_range=(-180, 180),
+    _other_ai2thor_parameters={"roll": 0, "pitch": 0},
 )
 pickup_object_action = EnvironmentAction(
     name=EnvActionName.PICKUP_OBJECT,
     ai2thor_action=Ai2thorAction.PICKUP_OBJECT,
     action_category=ActionCategory.PICKUP_PUT_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.PICKUPABLE,
-    config_dependent_parameters={"forceAction", "manualInteract"},
+    _object_required_property=SimObjFixedProp.PICKUPABLE,
+    _config_dependent_parameters={"forceAction", "manualInteract"},
 )
 put_object_action = EnvironmentAction(
     name=EnvActionName.PUT_OBJECT,
     ai2thor_action=Ai2thorAction.PUT_OBJECT,
     action_category=ActionCategory.PICKUP_PUT_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.RECEPTACLE,
-    config_dependent_parameters={"forceAction", "placeStationary"},
+    _object_required_property=SimObjFixedProp.RECEPTACLE,
+    _config_dependent_parameters={"forceAction", "placeStationary"},
 )
 drop_hand_object_action = EnvironmentAction(
     name=EnvActionName.DROP_HAND_OBJECT,
     ai2thor_action=Ai2thorAction.DROP_HAND_OBJECT,
     action_category=ActionCategory.DROP_ACTIONS,
-    config_dependent_parameters={"forceAction"},
+    _config_dependent_parameters={"forceAction"},
 )
 throw_object_action = EnvironmentAction(
     name=EnvActionName.THROW_OBJECT,
     ai2thor_action=Ai2thorAction.THROW_OBJECT,
     action_category=ActionCategory.THROW_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 100),
-    parameter_discrete_value=50,
-    config_dependent_parameters={"forceAction"},
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 100),
+    _parameter_discrete_value=50,
+    _config_dependent_parameters={"forceAction"},
 )
 push_object_action = EnvironmentAction(
     name=EnvActionName.PUSH_OBJECT,
     ai2thor_action=Ai2thorAction.PUSH_OBJECT,
     action_category=ActionCategory.PUSH_PULL_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 200),
-    parameter_discrete_value=100,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 200),
+    _parameter_discrete_value=100,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.MOVEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.MOVEABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 pull_object_action = EnvironmentAction(
     name=EnvActionName.PULL_OBJECT,
     ai2thor_action=Ai2thorAction.PULL_OBJECT,
     action_category=ActionCategory.PUSH_PULL_ACTIONS,
-    parameter_name="moveMagnitude",
-    parameter_range=(0, 200),
-    parameter_discrete_value=100,
+    _parameter_name="moveMagnitude",
+    _parameter_range=(0, 200),
+    _parameter_discrete_value=100,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.MOVEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.MOVEABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 # Note: "DirectionalPush", "TouchThenApplyForce" are not available because we keep only actions with a single parameter
 # Object interaction actions (see: https://ai2thor.allenai.org/ithor/documentation/object-state-changes)
-open_object_action = EnvironmentAction(
+open_object_action = OpenCloseEnvAction(
     name=EnvActionName.OPEN_OBJECT,
     ai2thor_action=Ai2thorAction.OPEN_OBJECT,
-    action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
-    has_target_object=True,
-    object_required_property=SimObjFixedProp.OPENABLE,
-    config_dependent_parameters={"forceAction"},
 )
-close_object_action = EnvironmentAction(
+close_object_action = OpenCloseEnvAction(
     name=EnvActionName.CLOSE_OBJECT,
     ai2thor_action=Ai2thorAction.CLOSE_OBJECT,
-    action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
-    has_target_object=True,
-    object_required_property=SimObjFixedProp.OPENABLE,
-    config_dependent_parameters={"forceAction"},
 )
 partial_open_object_action = EnvironmentAction(
     name=EnvActionName.PARTIAL_OPEN_OBJECT,
     ai2thor_action=Ai2thorAction.OPEN_OBJECT,
     action_category=ActionCategory.SPECIAL,
-    parameter_name="openness",
-    parameter_range=(0, 1),
+    _parameter_name="openness",
+    _parameter_range=(0, 1),
     has_target_object=True,
-    object_required_property=SimObjFixedProp.OPENABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.OPENABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 toggle_object_on_action = EnvironmentAction(
     name=EnvActionName.TOGGLE_OBJECT_ON,
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_ON,
     action_category=ActionCategory.TOGGLE_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.TOGGLEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.TOGGLEABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 toggle_object_off_action = EnvironmentAction(
     name=EnvActionName.TOGGLE_OBJECT_OFF,
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_OFF,
     action_category=ActionCategory.TOGGLE_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.TOGGLEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.TOGGLEABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 fill_object_with_liquid_action = ConditionalExecutionAction(
     name=EnvActionName.FILL_OBJECT_WITH_LIQUID,
     ai2thor_action=Ai2thorAction.FILL_OBJECT_WITH_LIQUID,
     action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
-    other_ai2thor_parameters={"fillLiquid": "water"},
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
+    _other_ai2thor_parameters={"fillLiquid": "water"},
+    _config_dependent_parameters={"forceAction"},
     action_condition=fill_object_with_liquid_condition,
 )
 empty_liquid_from_object_action = EnvironmentAction(
@@ -694,24 +746,24 @@ empty_liquid_from_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.EMPTY_LIQUID_FROM_OBJECT,
     action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
+    _config_dependent_parameters={"forceAction"},
 )
 break_object_action = EnvironmentAction(
     name=EnvActionName.BREAK_OBJECT,
     ai2thor_action=Ai2thorAction.BREAK_OBJECT,
     action_category=ActionCategory.BREAK_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.BREAKABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.BREAKABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 slice_object_action = ConditionalExecutionAction(
     name=EnvActionName.SLICE_OBJECT,
     ai2thor_action=Ai2thorAction.SLICE_OBJECT,
     action_category=ActionCategory.SLICE_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.SLICEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.SLICEABLE,
+    _config_dependent_parameters={"forceAction"},
     action_condition=slice_object_condition,
 )
 use_up_object_action = EnvironmentAction(
@@ -719,24 +771,24 @@ use_up_object_action = EnvironmentAction(
     ai2thor_action=Ai2thorAction.USE_UP_OBJECT,
     action_category=ActionCategory.USE_UP_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.SLICEABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.SLICEABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 dirty_object_action = EnvironmentAction(
     name=EnvActionName.DIRTY_OBJECT,
     ai2thor_action=Ai2thorAction.DIRTY_OBJECT,
     action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.DIRTYABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.DIRTYABLE,
+    _config_dependent_parameters={"forceAction"},
 )
 clean_object_action = ConditionalExecutionAction(
     name=EnvActionName.CLEAN_OBJECT,
     ai2thor_action=Ai2thorAction.CLEAN_OBJECT,
     action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
-    object_required_property=SimObjFixedProp.DIRTYABLE,
-    config_dependent_parameters={"forceAction"},
+    _object_required_property=SimObjFixedProp.DIRTYABLE,
+    _config_dependent_parameters={"forceAction"},
     action_condition=clean_object_condition,
 )
 # Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)

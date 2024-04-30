@@ -15,7 +15,6 @@ import gymnasium as gym
 import numpy as np
 import yaml
 from ai2thor.controller import Controller
-from ai2thor.server import Event
 from numpy.typing import NDArray
 
 from rl_ai2thor.envs.actions import (
@@ -28,6 +27,7 @@ from rl_ai2thor.envs.actions import (
     UnknownActionCategoryError,
 )
 from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_ID_TO_INDEX_MAP, SCENE_IDS, SceneGroup, SceneId, undefined_scene
+from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjMetadata, SimObjVariableProp
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks_interface import (
     BaseTask,
@@ -38,6 +38,8 @@ from rl_ai2thor.envs.tasks.tasks_interface import (
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
 if TYPE_CHECKING:
+    from ai2thor.server import Event
+
     from rl_ai2thor.envs.reward import BaseRewardHandler
     from rl_ai2thor.envs.sim_objects import SimObjId
 
@@ -109,11 +111,12 @@ class ITHOREnv(
             override_config (dict, Optional): Dictionary whose keys will override the default config.
         """
         self.config = self._load_and_override_config(config_folder_path, override_config)
+        # Initialize gymnasium seed
+        super().reset(seed=self.config["seed"])
         self.task_blueprints = self._create_task_blueprints(self.config)
         self._create_action_space()
         self._create_observation_space()
         self._initialize_ai2thor_controller()
-        self._initialize_other_attributes()
 
         # === Type Annotations ===
         self.config: dict[str, Any]
@@ -324,20 +327,6 @@ class ITHOREnv(
             **self.config["controller_parameters"],
         )
 
-    def _initialize_other_attributes(self) -> None:
-        dummy_metadata = {
-            "screenWidth": self.config["controller_parameters"]["width"],
-            "screenHeight": self.config["controller_parameters"]["height"],
-        }
-        self.last_event = Event(dummy_metadata)
-        # TODO: Check if this is correct ^
-        self.current_scene = undefined_scene  # TODO: Replace with an undefined scene of type SceneId
-        self.current_task_type = UndefinedTask
-        self.task = UndefinedTask()
-        self.step_count = 0
-        # Initialize gymnasium seed
-        super().reset(seed=self.config["seed"])
-
     def step(
         self, action: dict[str, Any]
     ) -> tuple[dict[str, NDArray[np.uint8] | str], float, bool, bool, dict[str, Any]]:
@@ -359,9 +348,12 @@ class ITHOREnv(
         env_action = ACTIONS_BY_NAME[action_name]
         target_object_coordinates: tuple[float, float] | None = action.get("target_object_coordinates")
         action_parameter: float | None = action.get("action_parameter")
+        scene_objects_dict = {obj["objectId"]: obj for obj in self.last_event.metadata["objects"]}
 
         # === Identify the target object if needed for the action ===
-        target_object_id, failed_action_event = self._identify_target_object(env_action, target_object_coordinates)
+        target_object_id, failed_action_event = self._identify_target_object(
+            env_action, target_object_coordinates, scene_objects_dict
+        )
 
         # === Perform the action ===
         if failed_action_event is None:
@@ -394,7 +386,10 @@ class ITHOREnv(
         return observation, reward, terminated, truncated, info
 
     def _identify_target_object(
-        self, env_action: EnvironmentAction, target_object_coordinates: tuple[float, float] | None
+        self,
+        env_action: EnvironmentAction,
+        target_object_coordinates: tuple[float, float] | None,
+        scene_objects_dict: dict[SimObjId, SimObjMetadata],
     ) -> tuple[SimObjId | None, Event | None]:
         """
         Identify the target object the given action (if any) and a failed action event if their is no valid target object.
@@ -402,6 +397,8 @@ class ITHOREnv(
         Args:
             env_action (EnvironmentAction): Action to perform.
             target_object_coordinates (tuple[float, float] | None): Coordinates of the target object.
+            scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping object ids to
+                their metadata.
 
         Returns:
             target_object_id (SimObjId | None): Id of the target object.
@@ -414,9 +411,15 @@ class ITHOREnv(
         # Closest object case
         if self.config["target_closest_object"]:
             # Look for the closest operable object for the action
-            visible_objects = [obj for obj in self.last_event.metadata["objects"] if obj["visible"]]
+            visible_objects_metadata = [
+                obj_metadata for obj_metadata in scene_objects_dict.values() if obj_metadata[SimObjVariableProp.VISIBLE]
+            ]
             closest_operable_object = min(
-                (obj for obj in visible_objects if obj[env_action.object_required_property]),
+                (
+                    obj_metadata
+                    for obj_metadata in visible_objects_metadata
+                    if env_action.is_object_operable(obj_metadata)
+                ),
                 key=operator.itemgetter("distance"),
                 default=None,
             )
@@ -436,11 +439,15 @@ class ITHOREnv(
             checkVisible=False,  # TODO: Check if the behavior is correct (object not detected if not visible)
         )
         if bool(query):
-            return query.metadata["actionReturn"], None
-        return None, env_action.fail_perform(
+            selected_object_id = query.metadata["actionReturn"]
+            if env_action.is_object_operable(scene_objects_dict[selected_object_id]):
+                return selected_object_id, None
+
+        failed_action = env_action.fail_perform(
             env=self,
-            error_message=f"No object found at position {target_object_coordinates} to perform action {env_action.name}.",
+            error_message=f"No operable object found at position {target_object_coordinates} to perform action {env_action.name}.",
         )
+        return None, failed_action
 
     # TODO: Adapt this with general task and reward handling
     def reset(

@@ -143,10 +143,13 @@
 - [ ] Add TaskInfo dataclass instead of returning a dictionary in compute_task_advancement
 - [ ] Implement equality test of tasks, items, relation, properties
 - [ ] Add decoupling prop/relations and relation interfaces/relations and relation and relation/inverse relation
+- [ ] Add a separate class for actions with target object
+- [ ] Add specific action classes for each action group (like `OpenCloseEnvAction`)
 
 ### Test TODOs
 
 - [ ] Test CustomGraphTask Class
+- [ ] Test each environment actions
 
 ### Bug TODOs
 
@@ -157,6 +160,7 @@
 - [ ] An object contained in a receptacle that is picked up is not considered in the receptacle anymore while this one is picked up (but it is the case again when the receptacle is put down)
   - Similar problem described in this [issue](https://github.com/allenai/ai2thor/issues/1209)
 - [ ] Opening or closing blinds in `FloorPlan301` (`Bedroom`) makes the environment crash because of a timeout error. Also happens on `FloorPlan302` (`Bedroom`) and `FloorPlan15` (`Kitchen`) and probably all scenes with `Blinds`.
+  - I opened this [issue](https://github.com/allenai/ai2thor/issues/1213)
 - [ ] We can't put a `CrackedEgg` in a `Plate`, `Pan` and maybe other receptacles. Apparently there's not enough space for it but it works correctly when putting the not broken `Egg` and then breaking it.
   - Inconsistent but apparently expected behavior: see this [issue](https://github.com/allenai/ai2thor/issues/631)
 
@@ -196,7 +200,7 @@ Error encountered when running action {'action': 'OpenObject', 'objectId': 'Blin
 - [ ] Double check pyproject.toml file, especially dependencies
 - [ ] Actually upload package to PyPI
 
-- [ ] Create a section in the `README` to list the AI2THOR related bugs.
+- [ ] Create a `Known Issues` section in the `README` to list the AI2THOR related bugs.
 
 ## Interesting Github Issues
 
