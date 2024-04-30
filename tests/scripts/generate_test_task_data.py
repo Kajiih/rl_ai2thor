@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from ai2thor.controller import Controller
 
+from rl_ai2thor.envs.tasks.tasks import PrepareGoingToBedTask
+from rl_ai2thor.envs.tasks.tasks_interface import BaseTask
+
 if TYPE_CHECKING:
     from ai2thor.server import Event
 
@@ -23,6 +26,7 @@ def main():
     # generate_place_cooled_in_apple_counter_top_data(controller)
     # generate_look_in_light_book_data(controller)
     # generate_prepare_meal_data(controller)
+    generate_prepare_going_to_bed_data(controller)
 
     controller.stop()
 
@@ -36,6 +40,7 @@ class TaskDataRecorder:
         controller: Controller,
         scene_name: str,
         test_task_data_dir: Path | str,
+        task: BaseTask | None = None,
         init_advancement: int = 0,
         init_terminated: bool = False,
         reset_args: dict[str, Any] | None = None,
@@ -44,10 +49,13 @@ class TaskDataRecorder:
         self.task_name = task_name
         if reset_args is None:
             reset_args = {}
+
+        controller.reset(scene_name, **reset_args)
+        if task is not None:
+            task.preprocess_and_reset(controller)
         self.controller = controller
         self.step_number = 0
-        event = controller.reset(scene_name, **reset_args)
-        self.event_list = [event]  # type: ignore
+        self.event_list = [controller.last_event]  # type: ignore
         self.controller_action_list = [controller.last_action]
         self.advancement_list = [init_advancement]
         self.terminated_list = [init_terminated]
@@ -104,9 +112,11 @@ class TaskDataRecorder:
         if self.error_dict:
             with error_dict_path.open("w") as f:
                 yaml.dump(self.error_dict, f)
+        elif error_dict_path.exists():
+            error_dict_path.unlink()
 
 
-# TODO: Update when improving task advancement computation and aux properties/items
+# TODO: Update when implementing order in task advancement computation
 def generate_prepare_meal_data(controller: Controller) -> None:
     """Generate data for the PrepareMeal task."""
     data_recorder = TaskDataRecorder("prepare_meal", controller, "FloorPlan1", test_task_data_dir)
@@ -265,6 +275,154 @@ def generate_prepare_meal_data(controller: Controller) -> None:
     data_recorder.write_data()
 
 
+def generate_prepare_going_to_bed_data(controller: Controller) -> None:
+    """Generate data for the PrepareGoingToBed task."""
+    task = PrepareGoingToBedTask()
+    data_recorder = TaskDataRecorder(
+        "prepare_going_to_bed",
+        controller,
+        "FloorPlan301",
+        test_task_data_dir,
+        task=task,
+        reset_args={"gridSize": 0.05},
+    )
+    # Note: Desk lamps are toggled off
+
+    # === Event 1: Toggle off light switch ===
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOff",
+            "objectId": "LightSwitch|+02.66|+01.28|+01.90",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # light_switch IsToggled=False) 1/1 (
+
+    # === Event 2: Pick up the book ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Book|-00.90|+00.56|+01.18",
+            "forceAction": True,
+        },
+        advancement=3,
+    )
+    # light_switch (IsToggled=False) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 1) 2/4
+
+    # === Event 3: Move to the desk lamp ===
+    data_recorder.record_step(
+        action_args={
+            "action": "MoveAhead",
+            "moveMagnitude": 1.5,
+            "forceAction": False,
+        },
+        advancement=3,
+    )
+    # light_switch (IsToggled=False) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 1) 2/4
+
+    # === Event 4: Move to the desk lamp ===
+    data_recorder.record_step(
+        action_args={
+            "action": "MoveLeft",
+            "moveMagnitude": 1.45,
+            "forceAction": False,
+        },
+        advancement=3,
+    )
+    # light_switch (IsToggled=False) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 1) 2/4
+
+    # === Event 5: Move to the desk lamp ===
+    data_recorder.record_step(
+        action_args={
+            "action": "RotateLeft",
+            "degrees": 5,
+            "forceAction": False,
+        },
+        advancement=3,
+    )
+    # light_switch (IsToggled=False) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 1) 2/4
+
+    # === Event 6: Put down the book ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Bed|-00.64|+00.01|+00.87",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # light_switch (IsToggled=False) 1/1
+
+    # === Event 7: Move to the desk lamp ===
+    data_recorder.record_step(
+        action_args={
+            "action": "MoveAhead",
+            "moveMagnitude": 1.2,
+            "forceAction": False,
+        },
+        advancement=1,
+    )
+    # light_switch (IsToggled=False) 1/1
+
+    # === Event 8: Toggle the desk lamp on ===
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOn",
+            "objectId": "DeskLamp|-01.32|+01.24|-00.99",
+            "forceAction": True,
+        },
+        advancement=2,
+    )
+    # light_switch (IsToggled=False 1) 1/1
+    # desk_lamp (sToggled=True 1) 1/3
+
+    # === Event 9: Pick up the book ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Book|-00.90|+00.56|+01.18",
+            "forceAction": True,
+        },
+        advancement=7,
+    )
+    # light_switch (IsToggled=False 1) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 2) 3/4
+    # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    # === Event 10: Open the book ===
+    data_recorder.record_step(
+        action_args={
+            "action": "OpenObject",
+            "objectId": "Book|-00.90|+00.56|+01.18",
+            "forceAction": True,
+        },
+        advancement=8,
+        terminated=True,
+    )
+    # light_switch (IsToggled=False 1) 1/1
+    # book (IsPickedUp 1 + IsCloseTo 2 + IsOpen 1) 4/4
+    # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    # === Event 11: Switch on the light switch ===
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOn",
+            "objectId": "LightSwitch|+02.66|+01.28|+01.90",
+            "forceAction": True,
+        },
+        advancement=7,
+    )
+    # book (IsPickedUp 1 + IsCloseTo 2 + IsOpen 1) 4/4
+    # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    data_recorder.write_data()
+
+
 def generate_pickup_mug_data(controller: Controller) -> None:
     """Generate data for the Pickup task with a mug."""
     data_recorder = TaskDataRecorder("pickup_mug", controller, "FloorPlan1", test_task_data_dir)
@@ -351,7 +509,7 @@ def generate_open_fridge_data(controller: Controller) -> None:
     data_recorder.write_data()
 
 
-# TODO: Update when improving task advancement computation
+# TODO: Update when implementing order in task advancement computation
 def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> None:
     """Generate data for the PlaceCooledIn task with an apple on a counter top."""
     data_recorder = TaskDataRecorder(

@@ -260,6 +260,8 @@ OPENABLES = {
     for object_type in SimObjectType
     if SimObjFixedProp.OPENABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
+OPENABLES.remove(SimObjectType.BLINDS)
+# !! Blinds are not openable because it produces a `TimeOutError`, see README
 TOGGLEABLES = {
     object_type
     for object_type in SimObjectType
