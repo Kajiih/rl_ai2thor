@@ -100,7 +100,7 @@ def make_env(override_config: dict[str, Any], experiment: Exp) -> gym.Env:
     env = Monitor(
         env,
         filename=str(experiment.log_dir / "monitor.csv"),  # TODO: Check if we need the str() conversion
-        info_keywords=("task_advancement", "is_success"),
+        info_keywords=("task_advancement", "is_success"),  # TODO: Implement the logging of the task advancement
     )
     return env
 

@@ -117,7 +117,7 @@ class CandidateData:
         self.property_advancement: int
         # === Relations ===
         self.relations_satisfying_related_candidate_ids: dict[Relation, set[CandidateId]]
-        self._relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
+        self.relations_aux_properties_results: dict[Relation, dict[RelationAuxProp, bool]]
         self.relations_aux_property_advancement: dict[Relation, int]
         self.relations_min_max_advancement: dict[Relation, tuple[int, int]]
         self.relation_min_advancement: int
@@ -581,7 +581,7 @@ class CandidateData:
             "properties_advancement": self.properties_advancement,
             "property_advancement": self.property_advancement,
             "relations_satisfying_related_candidate_ids": self.relations_satisfying_related_candidate_ids,
-            "relations_aux_properties_results": self._relations_aux_properties_results,
+            "relations_aux_properties_results": self.relations_aux_properties_results,
             "relations_aux_property_advancement": self.relations_aux_property_advancement,
             "relations_min_max_advancement": self.relations_min_max_advancement,
             "relation_min_advancement": self.relation_min_advancement,
