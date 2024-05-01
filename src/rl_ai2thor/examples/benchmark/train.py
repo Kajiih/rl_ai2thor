@@ -158,6 +158,7 @@ def main(
         env=env,
         verbose=model_config["verbose"],
         tensorboard_log=str(experiment.log_dir),  # TODO: Check if we need the str() conversion
+        seed=experiment.config["seed"],
     )
     wandb_callback_config = wandb_config["sb3_callback"]
     eval_callback_config = experiment.config["evaluation"]

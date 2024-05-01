@@ -11,6 +11,8 @@ import gymnasium as gym
 import typer
 import wandb
 from stable_baselines3 import A2C, DQN, PPO
+from stable_baselines3.common.callbacks import CallbackList, EvalCallback
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from wandb.integration.sb3 import WandbCallback
 
@@ -95,10 +97,15 @@ def get_scenes(task: AvailableTask) -> list[str]:
             return ["FloorPlan401"]
 
 
-def make_env(override_config: dict[str, Any]) -> ITHOREnv:
+def make_env(override_config: dict[str, Any], experiment: Exp) -> gym.Env:
     """Create the environment for single task and simple action space training with stable-baselines3."""
-    env: ITHOREnv = gym.make("rl_ai2thor/ITHOREnv-v0.1_sb3_ready", override_config=override_config)  # type: ignore
+    env = gym.make("rl_ai2thor/ITHOREnv-v0.1_sb3_ready", override_config=override_config)  # type: ignore
     env = SimpleActionSpaceWrapper(env)
+    env = Monitor(
+        env,
+        filename=str(experiment.log_dir / "monitor.csv"),  # TODO: Check if we need the str() conversion
+        info_keywords=("task_advancement", "is_success"),  # TODO: Implement the logging of the task advancement
+    )
     return env
 
 
@@ -140,9 +147,9 @@ def main(
     )
 
     # === Instantiate the environment ===
-    env = DummyVecEnv([lambda: make_env(override_config)])
+    env = DummyVecEnv([lambda: make_env(override_config, experiment)])
     if record:
-        record_config = experiment.config["record"]
+        record_config = experiment.config["video_recorder"]
         env = VecVideoRecorder(
             venv=env,
             video_folder=str(experiment.log_dir / "videos"),  # TODO: Check if we need the str() conversion
@@ -152,23 +159,38 @@ def main(
         )
 
     # === Instantiate the model ===
-    wandb_callback_config = wandb_config["sb3_callback"]
     sb3_model = get_model(model_name)
     train_model = sb3_model(
         policy=model_config["policy_type"],
         env=env,
         verbose=model_config["verbose"],
         tensorboard_log=str(experiment.log_dir),  # TODO: Check if we need the str() conversion
+        seed=experiment.config["seed"],
     )
-    train_model.learn(
-        total_timesteps=total_timesteps,
-        progress_bar=model_config["progress_bar"],
-        callback=WandbCallback(
+    wandb_callback_config = wandb_config["sb3_callback"]
+    eval_callback_config = experiment.config["evaluation"]
+    # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
+    callbacks = [
+        EvalCallback(
+            eval_env=env,  # TODO? Make a different environment for evaluation?
+            n_eval_episodes=eval_callback_config["nb_episodes"],
+            eval_freq=eval_callback_config["frequency"],
+            log_path=str(experiment.log_dir),
+            best_model_save_path=str(experiment.checkpoint_dir),
+            deterministic=eval_callback_config["deterministic"],
+            verbose=eval_callback_config["verbose"],
+        ),
+        WandbCallback(
             verbose=wandb_callback_config["verbose"],
-            model_save_path=f"models/{run.id}",
+            model_save_path=str(experiment.checkpoint_dir),
             model_save_freq=wandb_callback_config["gradient_save_freq"],
             gradient_save_freq=wandb_callback_config["gradient_save_freq"],
         ),
+    ]
+    train_model.learn(
+        total_timesteps=total_timesteps,
+        progress_bar=model_config["progress_bar"],
+        callback=CallbackList(callbacks),
     )
     env.close()
     run.finish()
