@@ -12,7 +12,7 @@ import pytest
 import yaml
 from PIL import Image
 
-from rl_ai2thor.envs.actions import EnvActionName, UnknownActionCategoryError
+from rl_ai2thor.envs.actions import ActionGroup, EnvActionName, UnknownActionCategoryError
 from rl_ai2thor.envs.ai2thor_envs import (
     ITHOREnv,
 )
@@ -89,13 +89,13 @@ def test__load_and_override_config():
 
 partial_config = {
     "action_categories": {
-        "movement_actions": True,
-        "body_rotation_actions": True,
-        "camera_rotation_actions": True,
-        "crouch_actions": False,
-        "open_close_actions": True,
-        "pickup_put_actions": True,
-        "toggle_actions": True,
+        ActionGroup.MOVEMENT_ACTIONS: True,
+        ActionGroup.ROTATION_ACTIONS: True,
+        ActionGroup.HEAD_MOVEMENT_ACTIONS: True,
+        ActionGroup.CROUCH_ACTIONS: False,
+        ActionGroup.OPEN_CLOSE_ACTIONS: True,
+        ActionGroup.PICKUP_PUT_ACTIONS: True,
+        ActionGroup.TOGGLE_ACTIONS: True,
     },
     "use_done_action": False,
     "partial_openness": True,

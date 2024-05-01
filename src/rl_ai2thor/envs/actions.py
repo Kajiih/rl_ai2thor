@@ -126,19 +126,22 @@ class Ai2thorAction(StrEnum):
         return f"{cls_name}.{self.name}"
 
 
-class ActionCategory(StrEnum):
-    """Enum for action categories."""
+class ActionGroup(StrEnum):
+    """Enum for action groups."""
 
+    # === Navigation actions ===
     MOVEMENT_ACTIONS = "movement_actions"
-    BODY_ROTATION_ACTIONS = "body_rotation_actions"
-    CAMERA_ROTATION_ACTIONS = "camera_rotation_actions"
+    ROTATION_ACTIONS = "rotation_actions"
+    HEAD_MOVEMENT_ACTIONS = "head_movement_actions"
     CROUCH_ACTIONS = "crouch_actions"
     DONE_ACTIONS = "done_actions"  # TODO: Check if we keep this action category
-    HAND_MOVEMENT_ACTIONS = "hand_movement_actions"
+    # === Object manipulation actions ===
     PICKUP_PUT_ACTIONS = "pickup_put_actions"
     DROP_ACTIONS = "drop_actions"
     THROW_ACTIONS = "throw_actions"
     PUSH_PULL_ACTIONS = "push_pull_actions"
+    HAND_CONTROL_ACTIONS = "hand_control_actions"
+    # === Object interaction actions ===
     OPEN_CLOSE_ACTIONS = "open_close_actions"
     TOGGLE_ACTIONS = "toggle_actions"
     LIQUID_MANIPULATION_ACTIONS = "liquid_manipulation_actions"
@@ -146,7 +149,7 @@ class ActionCategory(StrEnum):
     SLICE_ACTIONS = "slice_actions"
     USE_UP_ACTIONS = "use_up_actions"
     CLEAN_DIRTY_ACTIONS = "clean_dirty_actions"
-    SPECIAL = "_special"  # For categories that shouldn't be directly enabled from config
+    SPECIAL = "_special"  # For actions that shouldn't be directly enabled from config
 
 
 # === Action Classes ===
@@ -198,7 +201,7 @@ class EnvironmentAction:
 
     name: EnvActionName
     ai2thor_action: Ai2thorAction
-    action_category: ActionCategory
+    action_category: ActionGroup
     _: dataclasses.KW_ONLY  # Following arguments are keyword-only
     has_target_object: bool = False
     _object_required_property: SimObjFixedProp | None = None
@@ -471,6 +474,25 @@ slice_object_condition: HoldingObjectTypeCondition
 
 # %% === Specific action classes ===
 # TODO: Create a specific class for each action group?
+class MovementEnvAction(EnvironmentAction):
+    """
+    Base class for movement actions.
+
+    We need a specific class for this action because the movement actions have a specific
+    parameter name and range.
+    """
+
+    def __init__(self, name: EnvActionName, ai2thor_action: Ai2thorAction) -> None:
+        super().__init__(
+            name=name,
+            ai2thor_action=ai2thor_action,
+            action_category=ActionGroup.MOVEMENT_ACTIONS,
+            _parameter_name="moveMagnitude",
+            _parameter_range=(0, 1),
+            _parameter_discrete_value=0.25,
+        )
+
+
 class OpenCloseEnvAction(EnvironmentAction):
     """
     Base class for "OpenObject" and "CloseObject" actions.
@@ -483,7 +505,7 @@ class OpenCloseEnvAction(EnvironmentAction):
         super().__init__(
             name=name,
             ai2thor_action=ai2thor_action,
-            action_category=ActionCategory.OPEN_CLOSE_ACTIONS,
+            action_category=ActionGroup.OPEN_CLOSE_ACTIONS,
             has_target_object=True,
             _object_required_property=SimObjFixedProp.OPENABLE,
             _config_dependent_parameters={"forceAction"},
@@ -513,7 +535,7 @@ class OpenCloseEnvAction(EnvironmentAction):
 move_ahead_action = EnvironmentAction(
     name=EnvActionName.MOVE_AHEAD,
     ai2thor_action=Ai2thorAction.MOVE_AHEAD,
-    action_category=ActionCategory.MOVEMENT_ACTIONS,
+    action_category=ActionGroup.MOVEMENT_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 1),
     _parameter_discrete_value=0.25,
@@ -521,7 +543,7 @@ move_ahead_action = EnvironmentAction(
 move_back_action = EnvironmentAction(
     name=EnvActionName.MOVE_BACK,
     ai2thor_action=Ai2thorAction.MOVE_BACK,
-    action_category=ActionCategory.MOVEMENT_ACTIONS,
+    action_category=ActionGroup.MOVEMENT_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 1),
     _parameter_discrete_value=0.25,
@@ -529,7 +551,7 @@ move_back_action = EnvironmentAction(
 move_left_action = EnvironmentAction(
     name=EnvActionName.MOVE_LEFT,
     ai2thor_action=Ai2thorAction.MOVE_LEFT,
-    action_category=ActionCategory.MOVEMENT_ACTIONS,
+    action_category=ActionGroup.MOVEMENT_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 1),
     _parameter_discrete_value=0.25,
@@ -537,7 +559,7 @@ move_left_action = EnvironmentAction(
 move_right_action = EnvironmentAction(
     name=EnvActionName.MOVE_RIGHT,
     ai2thor_action=Ai2thorAction.MOVE_RIGHT,
-    action_category=ActionCategory.MOVEMENT_ACTIONS,
+    action_category=ActionGroup.MOVEMENT_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 1),
     _parameter_discrete_value=0.25,
@@ -545,7 +567,7 @@ move_right_action = EnvironmentAction(
 rotate_left_action = EnvironmentAction(
     name=EnvActionName.ROTATE_LEFT,
     ai2thor_action=Ai2thorAction.ROTATE_LEFT,
-    action_category=ActionCategory.BODY_ROTATION_ACTIONS,
+    action_category=ActionGroup.ROTATION_ACTIONS,
     _parameter_name="degrees",
     _parameter_range=(0, 180),
     _parameter_discrete_value=45,
@@ -553,7 +575,7 @@ rotate_left_action = EnvironmentAction(
 rotate_right_action = EnvironmentAction(
     name=EnvActionName.ROTATE_RIGHT,
     ai2thor_action=Ai2thorAction.ROTATE_RIGHT,
-    action_category=ActionCategory.BODY_ROTATION_ACTIONS,
+    action_category=ActionGroup.ROTATION_ACTIONS,
     _parameter_name="degrees",
     _parameter_range=(0, 180),
     _parameter_discrete_value=45,
@@ -561,7 +583,7 @@ rotate_right_action = EnvironmentAction(
 look_up_action = EnvironmentAction(
     name=EnvActionName.LOOK_UP,
     ai2thor_action=Ai2thorAction.LOOK_UP,
-    action_category=ActionCategory.CAMERA_ROTATION_ACTIONS,
+    action_category=ActionGroup.HEAD_MOVEMENT_ACTIONS,
     _parameter_name="degrees",
     _parameter_range=(0, 90),
     _parameter_discrete_value=30,
@@ -569,7 +591,7 @@ look_up_action = EnvironmentAction(
 look_down_action = EnvironmentAction(
     name=EnvActionName.LOOK_DOWN,
     ai2thor_action=Ai2thorAction.LOOK_DOWN,
-    action_category=ActionCategory.CAMERA_ROTATION_ACTIONS,
+    action_category=ActionGroup.HEAD_MOVEMENT_ACTIONS,
     _parameter_name="degrees",
     _parameter_range=(0, 90),
     _parameter_discrete_value=30,
@@ -577,24 +599,24 @@ look_down_action = EnvironmentAction(
 crouch_action = EnvironmentAction(
     name=EnvActionName.CROUCH,
     ai2thor_action=Ai2thorAction.CROUCH,
-    action_category=ActionCategory.CROUCH_ACTIONS,
+    action_category=ActionGroup.CROUCH_ACTIONS,
 )
 stand_action = EnvironmentAction(
     name=EnvActionName.STAND,
     ai2thor_action=Ai2thorAction.STAND,
-    action_category=ActionCategory.CROUCH_ACTIONS,
+    action_category=ActionGroup.CROUCH_ACTIONS,
 )
 done_action = EnvironmentAction(
     name=EnvActionName.DONE,
     ai2thor_action=Ai2thorAction.DONE,
-    action_category=ActionCategory.DONE_ACTIONS,
+    action_category=ActionGroup.DONE_ACTIONS,
 )
 # Note: "Teleport", "TeleportFull" are not available to the agent
 # Object manipulation actions (see: https://ai2thor.allenai.org/ithor/documentation/interactive-physics)
 move_held_object_ahead_back_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_AHEAD_BACK,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="ahead",
     _parameter_range=(-0.5, 0.5),
     _other_ai2thor_parameters={"right": 0, "up": 0},
@@ -603,7 +625,7 @@ move_held_object_ahead_back_action = EnvironmentAction(
 move_held_object_right_left_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_RIGHT_LEFT,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="right",
     _parameter_range=(-0.5, 0.5),
     _other_ai2thor_parameters={"ahead": 0, "up": 0},
@@ -612,7 +634,7 @@ move_held_object_right_left_action = EnvironmentAction(
 move_held_object_up_down_action = EnvironmentAction(
     name=EnvActionName.MOVE_HELD_OBJECT_UP_DOWN,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="up",
     _parameter_range=(-0.5, 0.5),
     _other_ai2thor_parameters={"ahead": 0, "right": 0},
@@ -621,7 +643,7 @@ move_held_object_up_down_action = EnvironmentAction(
 rotate_held_object_roll_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_ROLL,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="roll",
     _parameter_range=(-180, 180),
     _other_ai2thor_parameters={"pitch": 0, "yaw": 0},
@@ -629,7 +651,7 @@ rotate_held_object_roll_action = EnvironmentAction(
 rotate_held_object_pitch_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_PITCH,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="pitch",
     _parameter_range=(-180, 180),
     _other_ai2thor_parameters={"roll": 0, "yaw": 0},
@@ -637,7 +659,7 @@ rotate_held_object_pitch_action = EnvironmentAction(
 rotate_held_object_yaw_action = EnvironmentAction(
     name=EnvActionName.ROTATE_HELD_OBJECT_YAW,
     ai2thor_action=Ai2thorAction.ROTATE_HELD_OBJECT,
-    action_category=ActionCategory.HAND_MOVEMENT_ACTIONS,
+    action_category=ActionGroup.HAND_CONTROL_ACTIONS,
     _parameter_name="yaw",
     _parameter_range=(-180, 180),
     _other_ai2thor_parameters={"roll": 0, "pitch": 0},
@@ -645,7 +667,7 @@ rotate_held_object_yaw_action = EnvironmentAction(
 pickup_object_action = EnvironmentAction(
     name=EnvActionName.PICKUP_OBJECT,
     ai2thor_action=Ai2thorAction.PICKUP_OBJECT,
-    action_category=ActionCategory.PICKUP_PUT_ACTIONS,
+    action_category=ActionGroup.PICKUP_PUT_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.PICKUPABLE,
     _config_dependent_parameters={"forceAction", "manualInteract"},
@@ -653,7 +675,7 @@ pickup_object_action = EnvironmentAction(
 put_object_action = EnvironmentAction(
     name=EnvActionName.PUT_OBJECT,
     ai2thor_action=Ai2thorAction.PUT_OBJECT,
-    action_category=ActionCategory.PICKUP_PUT_ACTIONS,
+    action_category=ActionGroup.PICKUP_PUT_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.RECEPTACLE,
     _config_dependent_parameters={"forceAction", "placeStationary"},
@@ -661,13 +683,13 @@ put_object_action = EnvironmentAction(
 drop_hand_object_action = EnvironmentAction(
     name=EnvActionName.DROP_HAND_OBJECT,
     ai2thor_action=Ai2thorAction.DROP_HAND_OBJECT,
-    action_category=ActionCategory.DROP_ACTIONS,
+    action_category=ActionGroup.DROP_ACTIONS,
     _config_dependent_parameters={"forceAction"},
 )
 throw_object_action = EnvironmentAction(
     name=EnvActionName.THROW_OBJECT,
     ai2thor_action=Ai2thorAction.THROW_OBJECT,
-    action_category=ActionCategory.THROW_ACTIONS,
+    action_category=ActionGroup.THROW_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 100),
     _parameter_discrete_value=50,
@@ -676,7 +698,7 @@ throw_object_action = EnvironmentAction(
 push_object_action = EnvironmentAction(
     name=EnvActionName.PUSH_OBJECT,
     ai2thor_action=Ai2thorAction.PUSH_OBJECT,
-    action_category=ActionCategory.PUSH_PULL_ACTIONS,
+    action_category=ActionGroup.PUSH_PULL_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 200),
     _parameter_discrete_value=100,
@@ -687,7 +709,7 @@ push_object_action = EnvironmentAction(
 pull_object_action = EnvironmentAction(
     name=EnvActionName.PULL_OBJECT,
     ai2thor_action=Ai2thorAction.PULL_OBJECT,
-    action_category=ActionCategory.PUSH_PULL_ACTIONS,
+    action_category=ActionGroup.PUSH_PULL_ACTIONS,
     _parameter_name="moveMagnitude",
     _parameter_range=(0, 200),
     _parameter_discrete_value=100,
@@ -708,7 +730,7 @@ close_object_action = OpenCloseEnvAction(
 partial_open_object_action = EnvironmentAction(
     name=EnvActionName.PARTIAL_OPEN_OBJECT,
     ai2thor_action=Ai2thorAction.OPEN_OBJECT,
-    action_category=ActionCategory.SPECIAL,
+    action_category=ActionGroup.SPECIAL,
     _parameter_name="openness",
     _parameter_range=(0, 1),
     has_target_object=True,
@@ -718,7 +740,7 @@ partial_open_object_action = EnvironmentAction(
 toggle_object_on_action = EnvironmentAction(
     name=EnvActionName.TOGGLE_OBJECT_ON,
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_ON,
-    action_category=ActionCategory.TOGGLE_ACTIONS,
+    action_category=ActionGroup.TOGGLE_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.TOGGLEABLE,
     _config_dependent_parameters={"forceAction"},
@@ -726,7 +748,7 @@ toggle_object_on_action = EnvironmentAction(
 toggle_object_off_action = EnvironmentAction(
     name=EnvActionName.TOGGLE_OBJECT_OFF,
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_OFF,
-    action_category=ActionCategory.TOGGLE_ACTIONS,
+    action_category=ActionGroup.TOGGLE_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.TOGGLEABLE,
     _config_dependent_parameters={"forceAction"},
@@ -734,7 +756,7 @@ toggle_object_off_action = EnvironmentAction(
 fill_object_with_liquid_action = ConditionalExecutionAction(
     name=EnvActionName.FILL_OBJECT_WITH_LIQUID,
     ai2thor_action=Ai2thorAction.FILL_OBJECT_WITH_LIQUID,
-    action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
+    action_category=ActionGroup.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     _other_ai2thor_parameters={"fillLiquid": "water"},
@@ -744,7 +766,7 @@ fill_object_with_liquid_action = ConditionalExecutionAction(
 empty_liquid_from_object_action = EnvironmentAction(
     name=EnvActionName.EMPTY_LIQUID_FROM_OBJECT,
     ai2thor_action=Ai2thorAction.EMPTY_LIQUID_FROM_OBJECT,
-    action_category=ActionCategory.LIQUID_MANIPULATION_ACTIONS,
+    action_category=ActionGroup.LIQUID_MANIPULATION_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.CAN_FILL_WITH_LIQUID,
     _config_dependent_parameters={"forceAction"},
@@ -752,7 +774,7 @@ empty_liquid_from_object_action = EnvironmentAction(
 break_object_action = EnvironmentAction(
     name=EnvActionName.BREAK_OBJECT,
     ai2thor_action=Ai2thorAction.BREAK_OBJECT,
-    action_category=ActionCategory.BREAK_ACTIONS,
+    action_category=ActionGroup.BREAK_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.BREAKABLE,
     _config_dependent_parameters={"forceAction"},
@@ -760,7 +782,7 @@ break_object_action = EnvironmentAction(
 slice_object_action = ConditionalExecutionAction(
     name=EnvActionName.SLICE_OBJECT,
     ai2thor_action=Ai2thorAction.SLICE_OBJECT,
-    action_category=ActionCategory.SLICE_ACTIONS,
+    action_category=ActionGroup.SLICE_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.SLICEABLE,
     _config_dependent_parameters={"forceAction"},
@@ -769,7 +791,7 @@ slice_object_action = ConditionalExecutionAction(
 use_up_object_action = EnvironmentAction(
     name=EnvActionName.USE_UP_OBJECT,
     ai2thor_action=Ai2thorAction.USE_UP_OBJECT,
-    action_category=ActionCategory.USE_UP_ACTIONS,
+    action_category=ActionGroup.USE_UP_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.SLICEABLE,
     _config_dependent_parameters={"forceAction"},
@@ -777,7 +799,7 @@ use_up_object_action = EnvironmentAction(
 dirty_object_action = EnvironmentAction(
     name=EnvActionName.DIRTY_OBJECT,
     ai2thor_action=Ai2thorAction.DIRTY_OBJECT,
-    action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
+    action_category=ActionGroup.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.DIRTYABLE,
     _config_dependent_parameters={"forceAction"},
@@ -785,7 +807,7 @@ dirty_object_action = EnvironmentAction(
 clean_object_action = ConditionalExecutionAction(
     name=EnvActionName.CLEAN_OBJECT,
     ai2thor_action=Ai2thorAction.CLEAN_OBJECT,
-    action_category=ActionCategory.CLEAN_DIRTY_ACTIONS,
+    action_category=ActionGroup.CLEAN_DIRTY_ACTIONS,
     has_target_object=True,
     _object_required_property=SimObjFixedProp.DIRTYABLE,
     _config_dependent_parameters={"forceAction"},
@@ -867,8 +889,8 @@ ALL_ACTIONS: set[EnvironmentAction] = {
     dirty_object_action,
     clean_object_action,
 }
-ACTIONS_BY_CATEGORY: dict[ActionCategory, list[EnvironmentAction]]
-ACTIONS_BY_CATEGORY = {category: [] for category in ActionCategory}
+ACTIONS_BY_CATEGORY: dict[ActionGroup, list[EnvironmentAction]]
+ACTIONS_BY_CATEGORY = {category: [] for category in ActionGroup}
 for action in ALL_ACTIONS:
     category = action.action_category
     ACTIONS_BY_CATEGORY[category].append(action)
@@ -897,5 +919,5 @@ class UnknownActionCategoryError(ValueError):
         self.action_category = action_category
         super().__init__(
             f"Unknown action category '{action_category}' in environment mode config. "
-            f"Available action categories are {[category.value for category in ActionCategory]}."
+            f"Available action categories are {[category.value for category in ActionGroup]}."
         )

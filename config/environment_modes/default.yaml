@@ -3,8 +3,8 @@
 action_categories:
   # === Navigation actions ===
   movement_actions: True
-  body_rotation_actions: True
-  camera_rotation_actions: True
+  rotation_actions: True
+  head_movement_actions: True
   crouch_actions: True
 
   # === Object manipulation actions ===
@@ -12,7 +12,7 @@ action_categories:
   drop_actions: True # Need pickup_put_actions to be True
   throw_actions: True # Need pickup_put_actions to be True
   push_pull_actions: True
-  hand_movement_actions: False # Need pickup_put_actions to be True
+  hand_control_actions: False # Need pickup_put_actions to be True
 
   # === Object interaction actions ===
   open_close_actions: True

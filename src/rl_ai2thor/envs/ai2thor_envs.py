@@ -21,7 +21,7 @@ from rl_ai2thor.envs.actions import (
     ACTIONS_BY_CATEGORY,
     ACTIONS_BY_NAME,
     ALL_ACTIONS,
-    ActionCategory,
+    ActionGroup,
     EnvActionName,
     EnvironmentAction,
     UnknownActionCategoryError,
@@ -184,7 +184,7 @@ class ITHOREnv(
         action_availabilities = {action.name: False for action in ALL_ACTIONS}
 
         for action_category in config["action_categories"]:
-            if action_category not in ActionCategory:
+            if action_category not in ActionGroup:
                 raise UnknownActionCategoryError(action_category)
 
             if config["action_categories"][action_category]:
