@@ -12,13 +12,14 @@ import pytest
 import yaml
 from PIL import Image
 
-from rl_ai2thor.envs.actions import ActionGroup, EnvActionName, UnknownActionCategoryError
+from rl_ai2thor.envs._config import EnvConfig
+from rl_ai2thor.envs.actions import ActionGroup, EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import (
     ITHOREnv,
+    NoTaskBlueprintError,
 )
 from rl_ai2thor.envs.sim_objects import SimObjectType
 from rl_ai2thor.envs.tasks.tasks import PlaceIn, PlaceNSameIn, UnknownTaskTypeError
-from rl_ai2thor.envs.tasks.tasks_interface import NoTaskBlueprintError
 
 if TYPE_CHECKING:
     from ai2thor.server import Event
@@ -68,7 +69,7 @@ def test__load_and_override_config():
         patch("pathlib.Path.is_file", return_value=True),
     ):
         # Call the _load_and_override_config method with the override config
-        config = ITHOREnv._load_and_override_config("config", override_config)
+        config = ITHOREnv._load_config("config/environment_config.yaml", override_config)
 
         # Assert the expected configuration values
         assert config == {
@@ -87,8 +88,8 @@ def test__load_and_override_config():
     mock_read_text.assert_has_calls(expected_calls, any_order=False)
 
 
-partial_config = {
-    "action_categories": {
+action_groups = {
+    "action_groups": {
         ActionGroup.MOVEMENT_ACTIONS: True,
         ActionGroup.ROTATION_ACTIONS: True,
         ActionGroup.HEAD_MOVEMENT_ACTIONS: True,
@@ -97,12 +98,14 @@ partial_config = {
         ActionGroup.PICKUP_PUT_ACTIONS: True,
         ActionGroup.TOGGLE_ACTIONS: True,
     },
-    "use_done_action": False,
-    "partial_openness": True,
-    "discrete_actions": False,
-    "simple_movement_actions": True,
-    "target_closest_object": False,
+    "action_modifiers": {
+        "partial_openness": True,
+        "discrete_actions": False,
+        "simple_movement_actions": True,
+        "target_closest_object": False,
+    },
 }
+partial_config = EnvConfig.init_from_dict(action_groups)
 
 
 def test__compute_action_availabilities():
@@ -122,7 +125,6 @@ def test__compute_action_availabilities():
         EnvActionName.PUT_OBJECT: True,
         EnvActionName.TOGGLE_OBJECT_ON: True,
         EnvActionName.TOGGLE_OBJECT_OFF: True,
-        EnvActionName.DONE: False,
         EnvActionName.CROUCH: False,
         EnvActionName.STAND: False,
         EnvActionName.MOVE_HELD_OBJECT_AHEAD_BACK: False,
@@ -140,10 +142,9 @@ def test__compute_action_availabilities():
         EnvActionName.BREAK_OBJECT: False,
         EnvActionName.SLICE_OBJECT: False,
         EnvActionName.USE_UP_OBJECT: False,
-        EnvActionName.CLEAN_OBJECT: False,
-        EnvActionName.DIRTY_OBJECT: False,
+        # EnvActionName.CLEAN_OBJECT: False,
+        # EnvActionName.DIRTY_OBJECT: False,
     }
-
     action_availabilities = ITHOREnv._compute_action_availabilities(partial_config)
 
     assert action_availabilities == expected_availabilities
@@ -159,13 +160,13 @@ def test_compute_action_availabilities_unknown_action_category():
     with pytest.raises(UnknownActionCategoryError) as exc_info:
         ITHOREnv._compute_action_availabilities(config)
 
-    assert exc_info.value.action_category == "_unknown_action_category"
+    assert exc_info.value.action_group == "_unknown_action_category"
 
 
 def test__action_space(ithor_env: ITHOREnv):
-    ithor_env.config = partial_config
+    ithor_env.old_config = partial_config
 
-    ithor_env._create_action_space()
+    ithor_env._initialize_action_space()
 
     assert isinstance(ithor_env.action_space, gym.spaces.Dict)
     assert "action_index" in ithor_env.action_space.spaces
@@ -177,7 +178,7 @@ def test__action_space(ithor_env: ITHOREnv):
 
 
 def test__create_observation_space(ithor_env: ITHOREnv):
-    ithor_env.config = {
+    ithor_env.old_config = {
         "controller_parameters": {
             "height": 84,
             "width": 44,
@@ -185,7 +186,7 @@ def test__create_observation_space(ithor_env: ITHOREnv):
         "grayscale": False,
     }
 
-    ithor_env._create_observation_space()
+    ithor_env._initialize_observation_space()
 
     assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
     env_observation = ithor_env.observation_space.spaces["env_obs"]
@@ -200,7 +201,7 @@ def test__create_observation_space(ithor_env: ITHOREnv):
 
 
 def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
-    ithor_env.config = {
+    ithor_env.old_config = {
         "controller_parameters": {
             "height": 84,
             "width": 44,
@@ -208,7 +209,7 @@ def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
         "grayscale": True,
     }
 
-    ithor_env._create_observation_space()
+    ithor_env._initialize_observation_space()
 
     assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
     env_observation = ithor_env.observation_space.spaces["env_obs"]
@@ -450,14 +451,14 @@ def test__randomize_scene_random_agent_spawn(ithor_env: ITHOREnv):
     image_path = randomize_scene_media_path / "randomize_scene_random_agent_spawn"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.config.update({
+    ithor_env.old_config.update({
         "random_agent_spawn": True,
         "random_object_spawn": False,
-        "material_randomization": False,
-        "lighting_randomization": False,
+        "random_object_materials": False,
+        "random_lighting": False,
         "camera_randomization": False,
     })
-    config = ithor_env.config
+    config = ithor_env.old_config
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -492,14 +493,14 @@ def test__randomize_scene_random_object_spawn(ithor_env: ITHOREnv):
     image_path = randomize_scene_media_path / "randomize_scene_random_object_spawn"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.config.update({
+    ithor_env.old_config.update({
         "random_agent_spawn": False,
         "random_object_spawn": True,
-        "material_randomization": False,
-        "lighting_randomization": False,
+        "random_object_materials": False,
+        "random_lighting": False,
         "camera_randomization": False,
     })
-    config = ithor_env.config
+    config = ithor_env.old_config
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -524,18 +525,18 @@ def test__randomize_scene_random_object_spawn(ithor_env: ITHOREnv):
     assert objects_1 != objects_3
 
 
-def test__randomize_scene_material_randomization(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_material_randomization"
+def test__randomize_scene_random_object_materials(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_random_object_materials"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.config.update({
+    ithor_env.old_config.update({
         "random_agent_spawn": False,
         "random_object_spawn": False,
-        "material_randomization": True,
-        "lighting_randomization": False,
+        "random_object_materials": True,
+        "random_lighting": False,
         "camera_randomization": False,
     })
-    config = ithor_env.config
+    config = ithor_env.old_config
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -560,18 +561,18 @@ def test__randomize_scene_material_randomization(ithor_env: ITHOREnv):
     assert not np.allclose(frame_1, frame_3)
 
 
-def test__randomize_scene_lighting_randomization(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_lighting_randomization"
+def test__randomize_scene_random_lighting(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_random_lighting"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.config.update({
+    ithor_env.old_config.update({
         "random_agent_spawn": False,
         "random_object_spawn": False,
-        "material_randomization": False,
-        "lighting_randomization": True,
+        "random_object_materials": False,
+        "random_lighting": True,
         "camera_randomization": False,
     })
-    config = ithor_env.config
+    config = ithor_env.old_config
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -596,19 +597,19 @@ def test__randomize_scene_lighting_randomization(ithor_env: ITHOREnv):
     assert not np.allclose(frame_1, frame_3)
 
 
-def test__randomize_scene_color_randomization(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_color_randomization"
+def test__randomize_scene_random_object_colors(ithor_env: ITHOREnv):
+    image_path = randomize_scene_media_path / "randomize_scene_random_object_colors"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.config.update({
+    ithor_env.old_config.update({
         "random_agent_spawn": False,
         "random_object_spawn": False,
-        "material_randomization": False,
-        "lighting_randomization": False,
+        "random_object_materials": False,
+        "random_lighting": False,
         "camera_randomization": False,
-        "color_randomization": True,
+        "random_object_colors": True,
     })
-    config = ithor_env.config
+    config = ithor_env.old_config
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 

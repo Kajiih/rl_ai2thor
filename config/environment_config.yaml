@@ -1,0 +1,77 @@
+# === General ===
+seed: 1
+max_episode_steps: 1000
+
+# === Simulator ===
+controller_parameters:
+  platform: null # set to "CloudRendering" for headless cloud rendering
+  visibility_distance: 1.5
+  # Camera properties
+  frame_width: 300
+  frame_height: 300
+  field_of_view: 90
+
+scene_randomization:
+  random_agent_spawn: False # If True, the agent will spawn at a random location and rotation at the beginning of each episode
+  random_object_spawn: False # If True, pickupable objects will spawn at random locations at the beginning of each episode
+  random_object_materials: False # If True, the materials of the objects will be randomized at the beginning of each episode
+  random_object_colors: False # If True, the colors of the objects will be randomized at the beginning of each episode  # Note: Not realistic
+  random_lighting: False # If True, the lighting conditions will be randomized at the beginning of each episode
+
+# === Actions ===
+action_groups:
+  # === Navigation actions ===
+  movement_actions: True
+  rotation_actions: True
+  head_movement_actions: True
+  crouch_actions: False
+  # === Object manipulation actions ===
+  pickup_put_actions: True
+  drop_actions: False
+  throw_actions: False
+  push_pull_actions: False
+  hand_control_actions: False
+  # === Object interaction actions ===
+  open_close_actions: True
+  toggle_actions: True
+  slice_actions: False
+  use_up_actions: False
+  liquid_manipulation_actions: False
+  break_actions: False
+
+action_modifiers:
+  discrete_actions: True # If True, all actions requiring a parameter will be discretized and use their discrete value
+  target_closest_object: True # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
+  simple_movement_actions: False # Only keep MoveAhead action (no MoveBack, MoveRight and MoveLeft Actions), should at least be used with body_rotation_actions
+  static_pickup: False # Picked up objects don't teleport to hand
+  stationary_placement: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
+  partial_openness: False # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled and environment is continuous) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
+
+action_discrete_param_values: # If run in discrete mode
+  movement_magnitude: 0.25
+  rotation_degrees: 45
+  head_movement_degrees: 30
+  throw_strength: 50
+  push_pull_strength: 100
+
+# === Tasks ===
+tasks:
+  globally_excluded_scenes: [] # List of scene names to exclude for all tasks(only full names like "FloorPlan1", "FloorPlan201", ...)
+  task_blueprints:
+    - task_type: PlaceIn
+      args:
+        placed_object_type: Apple
+        receptacle_type: CounterTop
+      scenes: &ALL_SCENES [Kitchen, LivingRoom, Bedroom, Bathroom] # List of scene names to use for the task (e.g. scene groups: "Kitchen", "LivingRoom", "Bedroom", "Bathroom" or full names like "FloorPlan1", "FloorPlan201", ...)
+    - task_type: PlaceNSameIn
+      args:
+        n: 1
+        placed_object_type: Apple
+        receptacle_type: CounterTop
+      scenes: *ALL_SCENES
+    - task_type: PlaceWithMoveableRecepIn
+      args:
+        placed_object_type: Apple
+        pickupable_receptacle_type: Plate
+        receptacle_type: CounterTop
+      scenes: *ALL_SCENES

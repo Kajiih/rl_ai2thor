@@ -25,19 +25,21 @@ def ithor_env():
 
 # %% === SingleTaskWrapper tests ===
 single_task_override_config = {
-    "tasks": [
-        {
-            "type": "PlaceIn",
-            "args": {"placed_object_type": "Apple", "receptacle_type": "Bowl"},
-            "scenes": ["Kitchen", "LivingRoom", "Bedroom", "Bathroom"],
-        }
-    ]
+    "tasks": {
+        "task_blueprints": [
+            {
+                "type": "PlaceIn",
+                "args": {"placed_object_type": "Apple", "receptacle_type": "Bowl"},
+                "scenes": ["Kitchen", "LivingRoom", "Bedroom", "Bathroom"],
+            }
+        ]
+    }
 }
 
 
 @pytest.fixture()
 def single_task_ithor_env():
-    env = ITHOREnv(override_config=single_task_override_config)
+    env = ITHOREnv(override_dict=single_task_override_config)
     yield env
     env.close()
 
@@ -62,10 +64,10 @@ def test_single_task_wrapper_more_than_one_task_blueprint_error():
             },
         ]
     }
-    env = ITHOREnv(override_config=multi_task_config)
+    env = ITHOREnv(override_dict=multi_task_config)
     with pytest.raises(MoreThanOneTaskBlueprintError) as exc_info:
         SingleTaskWrapper(env)
-    assert exc_info.value.config == env.config
+    assert exc_info.value.config == env.old_config
 
 
 def test_single_task_wrapper_reset(single_task_ithor_env):
@@ -96,7 +98,7 @@ def channel_last_ithor_env():
         "width": 300,
         "height": 300,
     }
-    env = ITHOREnv(override_config=override_config)
+    env = ITHOREnv(override_dict=override_config)
     yield env
     env.close()
 
@@ -151,7 +153,7 @@ def simple_action_space_ithor_env():
         "discrete_actions": True,
         "target_closest_object": True,
     }
-    env = ITHOREnv(override_config=override_config)
+    env = ITHOREnv(override_dict=override_config)
     yield env
     env.close()
 
@@ -161,10 +163,10 @@ def test_simple_action_space_wrapper_not_simple_action_space_error():
         "discrete_actions": False,
         "target_closest_object": True,
     }
-    env = ITHOREnv(override_config=override_config)
+    env = ITHOREnv(override_dict=override_config)
     with pytest.raises(NotSimpleActionEnvironmentMode) as exc_info:
         SimpleActionSpaceWrapper(env)
-    assert exc_info.value.config == env.config
+    assert exc_info.value.config == env.old_config
 
 
 def test_simple_action_space_wrapper_action_space(simple_action_space_ithor_env):

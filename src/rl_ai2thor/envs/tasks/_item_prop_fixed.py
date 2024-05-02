@@ -25,12 +25,6 @@ class ObjectTypeProp(ItemFixedProp[SimObjectType]):
     target_ai2thor_property = SimObjFixedProp.OBJECT_TYPE
 
 
-class IsInteractableProp(ItemFixedProp[bool]):
-    """Is interactable item property."""
-
-    target_ai2thor_property = SimObjFixedProp.IS_INTERACTABLE
-
-
 class ReceptacleProp(ItemFixedProp[bool]):
     """Is receptacle item property."""
 

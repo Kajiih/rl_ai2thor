@@ -17,23 +17,20 @@ import yaml
 from ai2thor.controller import Controller
 from numpy.typing import NDArray
 
+from rl_ai2thor.envs._config import EnvConfig
 from rl_ai2thor.envs.actions import (
-    ACTIONS_BY_CATEGORY,
+    ACTIONS_BY_GROUP,
     ACTIONS_BY_NAME,
     ALL_ACTIONS,
-    ActionGroup,
     EnvActionName,
     EnvironmentAction,
-    UnknownActionCategoryError,
 )
-from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_ID_TO_INDEX_MAP, SCENE_IDS, SceneGroup, SceneId, undefined_scene
-from rl_ai2thor.envs.sim_objects import SimObjFixedProp, SimObjMetadata, SimObjVariableProp
+from rl_ai2thor.envs.scenes import ALL_SCENES, SCENE_ID_TO_INDEX_MAP, SCENE_IDS, SceneGroup, SceneId
+from rl_ai2thor.envs.sim_objects import SimObjMetadata, SimObjVariableProp
 from rl_ai2thor.envs.tasks.tasks import ALL_TASKS, UnknownTaskTypeError
 from rl_ai2thor.envs.tasks.tasks_interface import (
     BaseTask,
-    NoTaskBlueprintError,
     TaskBlueprint,
-    UndefinedTask,
 )
 from rl_ai2thor.utils.general_utils import ROOT_DIR, update_nested_dict
 
@@ -99,27 +96,28 @@ class ITHOREnv(
 
     def __init__(
         self,
-        config_folder_path: str | Path = "config",
-        override_config: dict | None = None,
+        config_path: str | Path = Path("config/environment_config.yaml"),
+        override_dict: dict | None = None,
     ) -> None:
         """
         Initialize the environment.
 
         Args:
-            config_folder_path (str | Path): Relative path to the folder containing the configs.
-                The folder should contain a general.yaml file and a folder named environment_modes containing the environment mode configs.
-            override_config (dict, Optional): Dictionary whose keys will override the default config.
+            config_path (str | Path): Relative path to the environment config file. Default is
+                "config/environment_config.yaml".
+            override_dict (dict, Optional): Dictionary whose keys will override the given config.
         """
-        self.config = self._load_and_override_config(config_folder_path, override_config)
+        self.config = self._load_config(config_path, override_dict)
         # Initialize gymnasium seed
-        super().reset(seed=self.config["seed"])
+        super().reset(seed=self.config.seed)
+        # TODO: Add the possibility to add task blueprints directly instead of going through the config
         self.task_blueprints = self._create_task_blueprints(self.config)
-        self._create_action_space()
-        self._create_observation_space()
-        self._initialize_ai2thor_controller()
+        self._initialize_action_space()
+        self._initialize_observation_space()
+        self.controller = self._create_ai2thor_controller(self.config)
 
         # === Type Annotations ===
-        self.config: dict[str, Any]
+        self.config: EnvConfig
         self.action_availabilities: dict[EnvActionName, bool]
         self.action_idx_to_name: dict[int, EnvActionName]
         self.action_space: gym.spaces.Dict
@@ -144,74 +142,56 @@ class ITHOREnv(
         return self.last_frame
 
     @staticmethod
-    def _load_and_override_config(
-        config_folder_path: str | Path, override_config: dict | None = None
-    ) -> dict[str, Any]:
+    def _load_config(config_path: str | Path, override_dict: dict | None = None) -> EnvConfig:
         """
-        Load and update the config of the environment according to the override config.
-
-        The environment mode config is added to the base config and given keys are overridden.
+        Load the environment config from a yaml file.
 
         Args:
-            config_folder_path (str | Path): Relative path to the folder containing the configs.
-            override_config (dict, Optional): Dictionary whose keys will override the default config.
+            config_path (str | Path): Relative path to the environment config file.
+            override_dict (dict, Optional): Dictionary whose keys will override the given config.
+
+        Returns:
+            dict: Environment config.
         """
-        config_dir = Path(ROOT_DIR, config_folder_path)
-        general_config_path = config_dir / "general.yaml"
-        config = yaml.safe_load(general_config_path.read_text(encoding="utf-8"))
-
-        env_mode_config_path = config_dir / "environment_modes" / f"{config["environment_mode"]}.yaml"
-        env_mode_config = yaml.safe_load(env_mode_config_path.read_text(encoding="utf-8"))
-
-        update_nested_dict(config, env_mode_config)
-
-        if override_config is not None:
-            update_nested_dict(config, override_config)
-
-        return config
+        config_path = Path(ROOT_DIR) / config_path
+        with config_path.open("r") as file:
+            config = yaml.safe_load(file)
+        if override_dict is not None:
+            update_nested_dict(config, override_dict)
+        return EnvConfig.init_from_dict(config)
 
     @staticmethod
-    def _compute_action_availabilities(config: dict[str, Any]) -> dict[EnvActionName, bool]:
+    def _compute_action_availabilities(config: EnvConfig) -> dict[EnvActionName, bool]:
         """
         Compute the action availabilities based on the environment mode config.
 
         Args:
-            config (dict): Environment config.
+            config (EnvConfig): Environment config.
 
         Returns:
             dict[EnvActionName, bool]: Dictionary indicating which actions are available.
         """
         action_availabilities = {action.name: False for action in ALL_ACTIONS}
 
-        for action_category in config["action_categories"]:
-            if action_category not in ActionGroup:
-                raise UnknownActionCategoryError(action_category)
-
-            if config["action_categories"][action_category]:
-                # Enable all actions in the category
-                for action in ACTIONS_BY_CATEGORY[action_category]:
+        for action_group in config.action_groups:
+            if config.action_groups[action_group]:
+                # Enable all actions in the action group
+                for action in ACTIONS_BY_GROUP[action_group]:
                     action_availabilities[action.name] = True
 
         # Handle specific cases
-        if config["simple_movement_actions"]:
+        if config.action_modifiers.simple_movement_actions:
             for action_name in [EnvActionName.MOVE_BACK, EnvActionName.MOVE_LEFT, EnvActionName.MOVE_RIGHT]:
                 action_availabilities[action_name] = False
 
-        if config["use_done_action"]:
-            action_availabilities[EnvActionName.DONE] = True
-
-        if (
-            config["partial_openness"]
-            and config["action_categories"]["open_close_actions"]
-            and not config["discrete_actions"]
-        ):
+        if config.action_modifiers.partial_openness:
             for action_name in [EnvActionName.OPEN_OBJECT, EnvActionName.CLOSE_OBJECT]:
                 action_availabilities[action_name] = False
             action_availabilities[EnvActionName.PARTIAL_OPEN_OBJECT] = True
 
         return action_availabilities
 
-    def _create_action_space(self) -> None:
+    def _initialize_action_space(self) -> None:
         """Create the action space according to the available action groups in the environment mode config."""
         self.action_availabilities = self._compute_action_availabilities(self.config)
 
@@ -221,24 +201,20 @@ class ITHOREnv(
         # Create the action space dictionary
         action_space_dict: dict[str, gym.Space] = {"action_index": gym.spaces.Discrete(len(self.action_idx_to_name))}
 
-        if not self.config["discrete_actions"]:
+        if not self.config.action_modifiers.discrete_actions:
             action_space_dict["action_parameter"] = gym.spaces.Box(low=0, high=1, shape=())
 
-        if not self.config["target_closest_object"]:
+        if not self.config.action_modifiers.target_closest_object:
             action_space_dict["target_object_coordinates"] = gym.spaces.Box(low=0, high=1, shape=(2,))
 
         self.action_space = gym.spaces.Dict(action_space_dict)
 
-    def _create_observation_space(self) -> None:
-        controller_parameters = self.config["controller_parameters"]
+    def _initialize_observation_space(self) -> None:
         resolution = (
-            controller_parameters["height"],
-            controller_parameters["width"],
+            self.config.controller_parameters.frame_height,
+            self.config.controller_parameters.frame_width,
         )
-        nb_channels = 1 if self.config["grayscale"] else 3
-        env_obs_space = gym.spaces.Box(
-            low=0, high=255, shape=(resolution[0], resolution[1], nb_channels), dtype=np.uint8
-        )
+        env_obs_space = gym.spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], 3), dtype=np.uint8)
         # task_desc_obs_space = gym.spaces.Text(
         #     max_length=1000, charset="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,. "
         # )
@@ -285,47 +261,61 @@ class ITHOREnv(
         return available_scenes
 
     @staticmethod
-    def _create_task_blueprints(config: dict[str, Any]) -> list[TaskBlueprint]:
+    def _create_task_blueprints(config: EnvConfig) -> list[TaskBlueprint]:
         """
         Create the task blueprints based on the environment mode config.
 
         Args:
-            config (dict): Environment config.
+            config (EnvConfig): Environment config.
 
         Returns:
             list[TaskBlueprint]: List of task blueprints.
         """
-        tasks_config = config["tasks"]
-        if not isinstance(tasks_config, list):
-            tasks_config = [tasks_config]
+        task_blueprints_config = config.tasks.task_blueprints
         task_blueprints = []
-        globally_excluded_scenes = set(config["globally_excluded_scenes"])
-        for task_description in tasks_config:
-            task_type = task_description["type"]
+        globally_excluded_scenes = set(config.tasks.globally_excluded_scenes)
+        for task_blueprint_config in task_blueprints_config:
+            task_type = task_blueprint_config.task_type
             if task_type not in ALL_TASKS:
                 raise UnknownTaskTypeError(task_type)
-            task_args = task_description.get("args", {})
 
             task_blueprints.append(
                 TaskBlueprint(
                     task_type=ALL_TASKS[task_type],
                     scenes=ITHOREnv._compute_config_available_scenes(
-                        task_description["scenes"], excluded_scenes=globally_excluded_scenes
+                        task_blueprint_config.scenes, excluded_scenes=globally_excluded_scenes
                     ),
-                    task_args=task_args,
+                    task_args=task_blueprint_config.args,
                 )
             )
 
         if not task_blueprints:
-            raise NoTaskBlueprintError(config)
+            raise NoTaskBlueprintError()
 
         return task_blueprints
 
-    def _initialize_ai2thor_controller(self) -> None:
-        self.config["controller_parameters"]["agentMode"] = "default"
-        self.controller = Controller(
-            **self.config["controller_parameters"],
-        )
+    @staticmethod
+    def _create_ai2thor_controller(config: EnvConfig) -> Controller:
+        """
+        Initialize the AI2THOR controller.
+
+        Args:
+            config (EnvConfig): Environment config.
+
+        Returns:
+            controller (Controller): AI2THOR controller.
+        """
+        # Hardcoded parameters
+        controller_parameters = {
+            "agentMode": "default",
+            "snapToGrid": False,
+            "rotateStepDegrees": config.action_discrete_param_values.rotation_degrees,
+            "gridSize": config.action_discrete_param_values.movement_magnitude,
+        }
+        # Parameters from the config
+        controller_parameters.update(config.controller_parameters.get_controller_parameters())
+
+        return Controller(**controller_parameters)
 
     def step(
         self, action: dict[str, Any]
@@ -373,7 +363,7 @@ class ITHOREnv(
         observation = self._get_full_observation(environment_obs)
         reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
 
-        truncated = self.step_count >= self.config["max_episode_steps"]
+        truncated = self.step_count >= self.config.max_episode_steps
         info = {
             "metadata": new_event.metadata,
             "task_info": task_info,
@@ -409,10 +399,12 @@ class ITHOREnv(
             return None, None
 
         # Closest object case
-        if self.config["target_closest_object"]:
+        if self.config.action_modifiers.target_closest_object:
             # Look for the closest operable object for the action
             visible_objects_metadata = [
-                obj_metadata for obj_metadata in scene_objects_dict.values() if obj_metadata[SimObjVariableProp.VISIBLE]
+                obj_metadata
+                for obj_metadata in scene_objects_dict.values()
+                if obj_metadata[SimObjVariableProp.IS_INTERACTABLE]
             ]
             closest_operable_object = min(
                 (
@@ -531,9 +523,7 @@ class ITHOREnv(
             print(f"Sampled scene: {sampled_scene}.")
 
             # Instantiate the scene
-            controller_parameters = self.config["controller_parameters"]
-            controller_parameters["scene"] = sampled_scene
-            initial_event: Event = self.controller.reset(sampled_scene)  # type: ignore
+            initial_event: Event = self.controller.reset(scene=sampled_scene)  # type: ignore
 
             successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
             if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
@@ -548,20 +538,20 @@ class ITHOREnv(
 
         return initial_event, task_completion, task_info
 
+    # TODO: Check why this is used nowhere
     def _randomize_scene(
         self,
         controller: Controller,
-        config: dict[str, Any],
     ) -> None:
         """
         Randomize the scene according to the environment config.
 
         Args:
             controller (Controller): AI2THOR controller after initializing the scene.
-            config (dict): Environment config.
         """
         last_event = self.last_event
-        if config["random_agent_spawn"]:
+        config = self.config.scene_randomization
+        if config.random_agent_spawn:
             positions = controller.step(action="GetReachablePositions").metadata["actionReturn"]
             sampled_position = self.np_random.choice(positions)
             # Sample int from 0 to 11 and multiply by 30 to get a random rotation
@@ -573,22 +563,22 @@ class ITHOREnv(
                 horizon=0,
                 standing=True,
             )
-        if config["random_object_spawn"]:
+        if config.random_object_spawn:
             last_event = controller.step(
                 action="InitialRandomSpawn",
                 randomSeed=self.np_random.integers(0, 1000),  # TODO? Add a parameter for the number of different seeds?
-                forceVisible=False,  # TODO: Check if we use this to prevent objects form being hidden inside receptacles
+                forceVisible=True,  # TODO: Force object to be visible even without randomizing object spawn.
                 numPlacementAttempts=15,
                 placeStationary=True,
             )
-        if config["material_randomization"]:
+        if config.random_object_materials:
             last_event = controller.step(action="RandomizeMaterials")
-        if config["lighting_randomization"]:
+        if config.random_lighting:
             last_event = controller.step(
                 action="RandomizeLighting",
                 synchronized=False,  # TODO: Check we keep this to False
             )
-        if config["color_randomization"]:
+        if config.random_object_colors:
             last_event = controller.step(action="RandomizeColors")
 
         self.last_event = last_event  # type: ignore
@@ -616,3 +606,10 @@ class NoCompatibleSceneError(ValueError):
 
     def __str__(self) -> str:
         return f"No compatible scene found to instantiate a task from the task blueprint {self.task_blueprint}.\n Make sure that the task is possible in the environment and that the available scenes are compatible with the task blueprint."
+
+
+class NoTaskBlueprintError(Exception):
+    """Exception raised when no task blueprint is found in the environment mode config."""
+
+    def __str__(self) -> str:
+        return f"No task blueprint found in the environment mode config. Task blueprints should be defined in the section 'tasks/task_blueprints' of the config."

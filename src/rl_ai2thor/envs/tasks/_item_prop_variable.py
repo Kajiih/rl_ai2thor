@@ -31,6 +31,12 @@ class VisibleProp(ItemVariableProp[bool, Any]):
     target_ai2thor_property = SimObjVariableProp.VISIBLE
 
 
+class IsInteractableProp(ItemVariableProp[bool, Any]):
+    """Is interactable item property."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_INTERACTABLE
+
+
 class IsPickedUpProp(ItemVariableProp[bool, bool]):
     """Is picked up item property."""
 

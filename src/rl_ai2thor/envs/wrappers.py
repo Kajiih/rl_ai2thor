@@ -7,6 +7,7 @@ import numpy as np
 from gymnasium import ActionWrapper, ObservationWrapper
 from numpy.typing import NDArray
 
+from rl_ai2thor.envs._config import EnvConfig
 from rl_ai2thor.envs.ai2thor_envs import ITHOREnv
 
 
@@ -101,7 +102,10 @@ class SimpleActionSpaceWrapper(ActionWrapper, ITHOREnv):
         self.env: ITHOREnv  # Only for type hinting
         self.unwrapped: ITHOREnv  # Only for type hinting
         self.action_space = self.unwrapped.action_space.spaces["action_index"]  # type: ignore
-        if not (self.unwrapped.config["discrete_actions"] and self.unwrapped.config["target_closest_object"]):
+        if not (
+            self.unwrapped.config.action_modifiers.discrete_actions
+            and self.unwrapped.config.action_modifiers.target_closest_object
+        ):
             raise NotSimpleActionEnvironmentMode(self.unwrapped.config)
 
     def action(self, action: int) -> dict[str, Any]:  # noqa: PLR6301
@@ -113,11 +117,11 @@ class SimpleActionSpaceWrapper(ActionWrapper, ITHOREnv):
 class MoreThanOneTaskBlueprintError(Exception):
     """Exception raised when there is more than one task blueprint in an environment wrapped by SingleTaskWrapper."""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: EnvConfig) -> None:
         self.config = config
 
     def __str__(self) -> str:
-        return f"The environment has more than one task blueprint, which is incompatible with {SingleTaskWrapper.__name__}; config['tasks']]: {self.config["tasks"]}"
+        return f"The environment has more than one task blueprint, which is incompatible with {SingleTaskWrapper.__name__}; task blueprints: {self.config.tasks.task_blueprints}"
 
 
 # TODO: Delete; deprecated since task blueprint don't support multiple arguments values anymore
@@ -134,8 +138,8 @@ class MoreThanOneArgumentValueError(Exception):
 class NotSimpleActionEnvironmentMode(Exception):
     """Exception raised when the environment is not in discrete actions and target closest object mode and it is wrapped by SimpleActionSpaceWrapper."""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: EnvConfig) -> None:
         self.config = config
 
     def __str__(self) -> str:
-        return f"The environment is not in the required mode (discrete_actions=True and target_closest_object=True) for {SimpleActionSpaceWrapper.__name__}; discrete_actions: {self.config["discrete_actions"]}, target_closest_object: {self.config["target_closest_object"]}"
+        return f"The environment is not in the required mode (discrete_actions=True and target_closest_object=True) for {SimpleActionSpaceWrapper.__name__}; action modifiers: {self.config.action_modifiers}"

@@ -35,7 +35,6 @@ from rl_ai2thor.envs.tasks.item_prop_interface import (
     FillableLiquid,
     ItemVariableProp,
     MultiValuePSF,
-    PropAuxProp,
     SingleValuePSF,
     TemperatureValue,
 )

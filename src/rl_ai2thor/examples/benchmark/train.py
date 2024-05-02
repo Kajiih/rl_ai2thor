@@ -164,6 +164,7 @@ def main(
     eval_callback_config = experiment.config["evaluation"]
     # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
     callbacks = [
+        # TODO: Check EvalCallback really works with different tasks
         EvalCallback(
             eval_env=env,  # TODO? Make a different environment for evaluation?
             n_eval_episodes=eval_callback_config["nb_episodes"],

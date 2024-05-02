@@ -151,7 +151,6 @@ class SimObjFixedProp(StrEnum):
 
     OBJECT_ID = "objectId"
     OBJECT_TYPE = "objectType"
-    IS_INTERACTABLE = "isInteractable"
     RECEPTACLE = "receptacle"
     TOGGLEABLE = "toggleable"
     BREAKABLE = "breakable"
@@ -174,6 +173,7 @@ class SimObjVariableProp(StrEnum):
     """Variable properties of sim objects in AI2-THOR."""
 
     VISIBLE = "visible"
+    IS_INTERACTABLE = "isInteractable"
     IS_TOGGLED = "isToggled"
     IS_BROKEN = "isBroken"
     IS_FILLED_WITH_LIQUID = "isFilledWithLiquid"

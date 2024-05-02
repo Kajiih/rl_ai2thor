@@ -21,7 +21,6 @@ from rl_ai2thor.envs.tasks._item_prop_fixed import (
     DirtyableProp,
     IsColdSourceProp,
     IsHeatSourceProp,
-    IsInteractableProp,
     MoveableProp,
     ObjectTypeProp,
     OpenableProp,
@@ -32,6 +31,7 @@ from rl_ai2thor.envs.tasks._item_prop_fixed import (
 )
 from rl_ai2thor.envs.tasks._item_prop_variable import (
     IsBrokenProp,
+    IsInteractableProp,
     IsOpenProp,
     IsPickedUpProp,
     IsToggledProp,
@@ -46,7 +46,6 @@ obj_prop_id_to_item_prop: dict[SimObjProp | str, type[ItemProp]]
 obj_prop_id_to_item_prop = {
     # === Fixed Item Properties ===
     SimObjFixedProp.OBJECT_TYPE: ObjectTypeProp,
-    SimObjFixedProp.IS_INTERACTABLE: IsInteractableProp,
     SimObjFixedProp.RECEPTACLE: ReceptacleProp,
     SimObjFixedProp.TOGGLEABLE: ToggleableProp,
     SimObjFixedProp.BREAKABLE: BreakableProp,
@@ -62,6 +61,7 @@ obj_prop_id_to_item_prop = {
     SimObjFixedProp.MOVEABLE: MoveableProp,
     # === Variable Item Properties ===
     SimObjVariableProp.VISIBLE: VisibleProp,
+    SimObjVariableProp.IS_INTERACTABLE: IsInteractableProp,
     SimObjVariableProp.IS_TOGGLED: IsToggledProp,
     SimObjVariableProp.IS_BROKEN: IsBrokenProp,
     SimObjVariableProp.IS_USED_UP: IsUsedUpProp,

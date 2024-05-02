@@ -12,7 +12,6 @@ from __future__ import annotations
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from rl_ai2thor.envs.actions import Ai2thorAction
@@ -797,14 +796,3 @@ def parse_task_description_dict(task_description_dict: dict[str, dict[str, Any]]
         parsed_task_description_dict[ItemId(item_id)] = TaskItemData(property_dict, relation_dict)
 
     return parsed_task_description_dict
-
-
-# %% === Exceptions ===
-class NoTaskBlueprintError(Exception):
-    """Exception raised when no task blueprint is found in the environment mode config."""
-
-    def __init__(self, config: dict[str, Any]) -> None:
-        self.config = config
-
-    def __str__(self) -> str:
-        return f"No task blueprint found in the environment mode config. Task blueprints should be defined in config['tasks']. Current config: {self.config}."
