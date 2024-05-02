@@ -58,7 +58,7 @@ class TaskBlueprint:
 
     task_type: type[BaseTask]
     scenes: set[SceneId]
-    task_args: Mapping[str, TaskArg] = field(default_factory=dict)
+    task_args: Mapping[str, TaskArgValue] = field(default_factory=dict)
 
 
 # %% === Reward handlers ===
@@ -251,7 +251,7 @@ class UndefinedTask(BaseTask):
         raise NotImplementedError("Undefined task")
 
 
-type TaskArg = ItemPropValue | int
+type TaskArgValue = ItemPropValue | int
 type RelationsDict = dict[
     ItemId,
     dict[
@@ -797,23 +797,6 @@ def parse_task_description_dict(task_description_dict: dict[str, dict[str, Any]]
         parsed_task_description_dict[ItemId(item_id)] = TaskItemData(property_dict, relation_dict)
 
     return parsed_task_description_dict
-
-
-# %% === Constants ===
-class TaskType(StrEnum):
-    """Enumeration of task types."""
-
-    # === Alfred tasks ===
-    PLACE_IN = "PlaceIn"
-    PLACE_N_SAME_IN = "PlaceNSameIn"
-    PLACE_WITH_MOVEABLE_RECEP_IN = "PlaceWithMoveableRecepIn"
-    PLACE_CLEANED_IN = "PlaceCleanedIn"
-    PLACE_HEATED_IN = "PlaceHeatedIn"
-    PLACE_COOLED_IN = "PlaceCooledIn"
-    LOOK_IN_LIGHT = "LookInLight"
-    # === Custom tasks ===
-    PICKUP = "Pickup"
-    OPEN = "Open"
 
 
 # %% === Exceptions ===
