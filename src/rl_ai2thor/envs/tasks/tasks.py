@@ -62,6 +62,7 @@ class TaskType(StrEnum):
     # === Simple tasks ===
     PICKUP = "Pickup"
     OPEN = "Open"
+    OPEN_ANY = "OpenAny"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
     PREPARE_WATCHING_TV = "PrepareWatchingTV"
@@ -1381,6 +1382,7 @@ ALL_TASKS = {
     # === Simple tasks ===
     TaskType.PICKUP: Pickup,
     TaskType.OPEN: Open,
+    TaskType.OPEN_ANY: OpenAny,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
     TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,
@@ -1393,7 +1395,7 @@ ALL_TASKS = {
 class UnknownTaskTypeError(ValueError):
     """Exception raised for unknown task types in environment mode config."""
 
-    def __init__(self, task_type: str) -> None:
+    def __init__(self, task_type: type[TaskType]) -> None:
         self.task_type = task_type
         super().__init__(
             f"Unknown task type '{task_type}' in environment mode config."

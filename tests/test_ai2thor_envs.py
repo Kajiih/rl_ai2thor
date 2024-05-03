@@ -4,15 +4,13 @@ import pickle as pkl  # noqa: S403
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import call, patch
 
 import gymnasium as gym
 import numpy as np
 import pytest
-import yaml
 from PIL import Image
 
-from rl_ai2thor.envs._config import EnvConfig
+from rl_ai2thor.envs._config import EnvConfig, InvalidActionGroupError  # noqa: PLC2701
 from rl_ai2thor.envs.actions import ActionGroup, EnvActionName
 from rl_ai2thor.envs.ai2thor_envs import (
     ITHOREnv,
@@ -52,43 +50,7 @@ def ithor_env_2():
 
 
 # %% === Init tests ===
-def test__load_and_override_config():
-    base_config = {"environment_mode": "default", "key0": "value0", "key1": "value1", "key2": "value2"}
-    env_mode_config = {"key2": "new_value2", "key3": "new_value3"}
-    override_config = {"key1": "overridden_value1", "key2": "overridden_value2"}
-
-    # Mock the 'read_text' method to return the base and environment mode configs
-    with (
-        patch(
-            "pathlib.Path.read_text",
-            side_effect=[
-                yaml.dump(base_config),
-                yaml.dump(env_mode_config),
-            ],
-        ) as mock_read_text,
-        patch("pathlib.Path.is_file", return_value=True),
-    ):
-        # Call the _load_and_override_config method with the override config
-        config = ITHOREnv._load_config("config/environment_config.yaml", override_config)
-
-        # Assert the expected configuration values
-        assert config == {
-            "environment_mode": "default",
-            "key0": "value0",
-            "key1": "overridden_value1",
-            "key2": "overridden_value2",
-            "key3": "new_value3",
-        }
-
-    # Check that the 'read_text' method was called with the expected arguments
-    expected_calls = [
-        call(encoding="utf-8"),
-        call(encoding="utf-8"),
-    ]
-    mock_read_text.assert_has_calls(expected_calls, any_order=False)
-
-
-action_groups = {
+partial_config_dict = {
     "action_groups": {
         ActionGroup.MOVEMENT_ACTIONS: True,
         ActionGroup.ROTATION_ACTIONS: True,
@@ -105,7 +67,7 @@ action_groups = {
         "target_closest_object": False,
     },
 }
-partial_config = EnvConfig.init_from_dict(action_groups)
+partial_config = EnvConfig.init_from_dict(partial_config_dict)
 
 
 def test__compute_action_availabilities():
@@ -151,20 +113,20 @@ def test__compute_action_availabilities():
 
 
 def test_compute_action_availabilities_unknown_action_category():
-    config = {
-        "action_categories": {
+    config_dict = {
+        "action_groups": {
             "_unknown_action_category": None,
         }
     }
 
-    with pytest.raises(UnknownActionCategoryError) as exc_info:
-        ITHOREnv._compute_action_availabilities(config)
+    with pytest.raises(InvalidActionGroupError) as exc_info:
+        EnvConfig.init_from_dict(config_dict)
 
     assert exc_info.value.action_group == "_unknown_action_category"
 
 
-def test__action_space(ithor_env: ITHOREnv):
-    ithor_env.old_config = partial_config
+def test__action_space():
+    ithor_env = ITHOREnv(override_dict=partial_config_dict)
 
     ithor_env._initialize_action_space()
 
@@ -177,14 +139,15 @@ def test__action_space(ithor_env: ITHOREnv):
     assert isinstance(ithor_env.action_space.spaces["target_object_coordinates"], gym.spaces.Box)
 
 
-def test__create_observation_space(ithor_env: ITHOREnv):
-    ithor_env.old_config = {
-        "controller_parameters": {
-            "height": 84,
-            "width": 44,
-        },
-        "grayscale": False,
-    }
+def test__create_observation_space():
+    ithor_env = ITHOREnv(
+        override_dict={
+            "controller_parameters": {
+                "frame_height": 84,
+                "frame_width": 44,
+            },
+        }
+    )
 
     ithor_env._initialize_observation_space()
 
@@ -198,24 +161,6 @@ def test__create_observation_space(ithor_env: ITHOREnv):
     assert isinstance(task_observation, gym.spaces.Discrete)
     assert isinstance(scene_observation, gym.spaces.Discrete)
     # TODO: Need to change this when the task observation can change
-
-
-def test__create_observation_space_grayscale(ithor_env: ITHOREnv):
-    ithor_env.old_config = {
-        "controller_parameters": {
-            "height": 84,
-            "width": 44,
-        },
-        "grayscale": True,
-    }
-
-    ithor_env._initialize_observation_space()
-
-    assert isinstance(ithor_env.observation_space, gym.spaces.Dict)
-    env_observation = ithor_env.observation_space.spaces["env_obs"]
-
-    assert isinstance(env_observation, gym.spaces.Box)
-    assert env_observation.shape == (84, 44, 1)
 
 
 def test__compute_available_scenes():
@@ -261,28 +206,31 @@ def test__compute_available_scenes():
 
 
 def test__create_task_blueprints():
-    config = {
-        "globally_excluded_scenes": ["FloorPlan1"],
-        "tasks": [
-            {
-                "type": "PlaceIn",
-                "args": {
-                    "placed_object_type": "Knife",
-                    "receptacle_type": "Sink",
+    config_dict = {
+        "tasks": {
+            "globally_excluded_scenes": ["FloorPlan1"],
+            "task_blueprints": [
+                {
+                    "task_type": "PlaceIn",
+                    "args": {
+                        "placed_object_type": "Knife",
+                        "receptacle_type": "Sink",
+                    },
+                    "scenes": ["FloorPlan1", "FloorPlan2"],
                 },
-                "scenes": ["FloorPlan1", "FloorPlan2"],
-            },
-            {
-                "type": "PlaceNSameIn",
-                "args": {"placed_object_type": "Apple", "receptacle_type": "Plate", "n": 2},
-                "scenes": "FloorPlan3",
-            },
-        ],
+                {
+                    "task_type": "PlaceNSameIn",
+                    "args": {"placed_object_type": "Apple", "receptacle_type": "Plate", "n": 2},
+                    "scenes": "FloorPlan3",
+                },
+            ],
+        }
     }
+    config = EnvConfig.init_from_dict(config_dict)
 
     task_blueprints = ITHOREnv._create_task_blueprints(config)
 
-    assert len(task_blueprints) == len(config["tasks"])
+    assert len(task_blueprints) == len(config_dict["tasks"])
 
     # Check task blueprint 1
     task_blueprint_1 = task_blueprints[0]
@@ -305,16 +253,19 @@ def test__create_task_blueprints():
 
 
 def test__create_task_blueprints_unknown_task():
-    config = {
-        "globally_excluded_scenes": [],
-        "tasks": [
-            {
-                "type": "_unknown_task",
-                "args": {},
-                "scenes": [],
-            },
-        ],
+    config_dict = {
+        "tasks": {
+            "globally_excluded_scenes": [],
+            "task_blueprints": [
+                {
+                    "task_type": "_unknown_task",
+                    "args": {},
+                    "scenes": [],
+                },
+            ],
+        }
     }
+    config = EnvConfig.init_from_dict(config_dict)
 
     with pytest.raises(UnknownTaskTypeError) as exc_info:
         ITHOREnv._create_task_blueprints(config)
@@ -325,14 +276,17 @@ def test__create_task_blueprints_unknown_task():
 # More with empty task config
 def test__create_task_blueprints_empty_task_config():
     config = {
-        "globally_excluded_scenes": [],
-        "tasks": [],
+        "tasks": {
+            "task_blueprints": [],
+            "globally_excluded_scenes": [],
+        }
     }
+    config = EnvConfig.init_from_dict(config)
 
     with pytest.raises(NoTaskBlueprintError) as exc_info:
         ITHOREnv._create_task_blueprints(config)
 
-    assert exc_info.value.config == {"globally_excluded_scenes": [], "tasks": []}
+    assert isinstance(exc_info.value, NoTaskBlueprintError)
 
 
 # %% === Reproducibility tests ===
@@ -447,29 +401,31 @@ def test_reset_not_same_scene(ithor_env: ITHOREnv):
 randomize_scene_media_path = test_media_path / "_randomize_scene"
 
 
-def test__randomize_scene_random_agent_spawn(ithor_env: ITHOREnv):
+def test__randomize_scene_random_agent_spawn():  # noqa: PLR0914
     image_path = randomize_scene_media_path / "randomize_scene_random_agent_spawn"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.old_config.update({
-        "random_agent_spawn": True,
-        "random_object_spawn": False,
-        "random_object_materials": False,
-        "random_lighting": False,
-        "camera_randomization": False,
-    })
-    config = ithor_env.old_config
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": True,
+            "random_object_spawn": False,
+            "random_object_materials": False,
+            "random_lighting": False,
+            "random_object_colors": False,
+        }
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
     initial_event: Event = ithor_env.last_event  # type: ignore
     metadata_1 = initial_event.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_1: Event = ithor_env.last_event  # type: ignore
     metadata_2 = event_1.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_2: Event = ithor_env.last_event  # type: ignore
     metadata_3 = event_2.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
@@ -489,29 +445,31 @@ def test__randomize_scene_random_agent_spawn(ithor_env: ITHOREnv):
     assert cameraPosition_1 != cameraPosition_3
 
 
-def test__randomize_scene_random_object_spawn(ithor_env: ITHOREnv):
+def test__randomize_scene_random_object_spawn():
     image_path = randomize_scene_media_path / "randomize_scene_random_object_spawn"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.old_config.update({
-        "random_agent_spawn": False,
-        "random_object_spawn": True,
-        "random_object_materials": False,
-        "random_lighting": False,
-        "camera_randomization": False,
-    })
-    config = ithor_env.old_config
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": False,
+            "random_object_spawn": True,
+            "random_object_materials": False,
+            "random_lighting": False,
+            "random_object_colors": False,
+        }
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
     initial_event: Event = ithor_env.last_event  # type: ignore
     metadata_1 = initial_event.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_1: Event = ithor_env.last_event  # type: ignore
     metadata_2 = event_1.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_2: Event = ithor_env.last_event  # type: ignore
     metadata_3 = event_2.metadata
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
@@ -525,18 +483,20 @@ def test__randomize_scene_random_object_spawn(ithor_env: ITHOREnv):
     assert objects_1 != objects_3
 
 
-def test__randomize_scene_random_object_materials(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_random_object_materials"
+def test__randomize_scene_random_object_materials():
+    image_path = randomize_scene_media_path / "randomize_scene_object_materials"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.old_config.update({
-        "random_agent_spawn": False,
-        "random_object_spawn": False,
-        "random_object_materials": True,
-        "random_lighting": False,
-        "camera_randomization": False,
-    })
-    config = ithor_env.old_config
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": False,
+            "random_object_spawn": False,
+            "random_object_materials": True,
+            "random_lighting": False,
+            "random_object_colors": False,
+        }
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -544,12 +504,12 @@ def test__randomize_scene_random_object_materials(ithor_env: ITHOREnv):
     metadata_1 = initial_event.metadata
     frame_1 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_1: Event = ithor_env.last_event  # type: ignore
     metadata_2 = event_1.metadata
     frame_2 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_2: Event = ithor_env.last_event  # type: ignore
     metadata_3 = event_2.metadata
     frame_3 = ithor_env.last_frame
@@ -561,18 +521,20 @@ def test__randomize_scene_random_object_materials(ithor_env: ITHOREnv):
     assert not np.allclose(frame_1, frame_3)
 
 
-def test__randomize_scene_random_lighting(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_random_lighting"
+def test__randomize_scene_random_lighting():
+    image_path = randomize_scene_media_path / "randomize_scene_lighting"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.old_config.update({
-        "random_agent_spawn": False,
-        "random_object_spawn": False,
-        "random_object_materials": False,
-        "random_lighting": True,
-        "camera_randomization": False,
-    })
-    config = ithor_env.old_config
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": False,
+            "random_object_spawn": False,
+            "random_object_materials": False,
+            "random_lighting": True,
+            "random_object_colors": False,
+        }
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -580,12 +542,12 @@ def test__randomize_scene_random_lighting(ithor_env: ITHOREnv):
     metadata_1 = initial_event.metadata
     frame_1 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_1: Event = ithor_env.last_event  # type: ignore
     metadata_2 = event_1.metadata
     frame_2 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_2: Event = ithor_env.last_event  # type: ignore
     metadata_3 = event_2.metadata
     frame_3 = ithor_env.last_frame
@@ -597,19 +559,20 @@ def test__randomize_scene_random_lighting(ithor_env: ITHOREnv):
     assert not np.allclose(frame_1, frame_3)
 
 
-def test__randomize_scene_random_object_colors(ithor_env: ITHOREnv):
-    image_path = randomize_scene_media_path / "randomize_scene_random_object_colors"
+def test__randomize_scene_random_object_colors():
+    image_path = randomize_scene_media_path / "randomize_scene_object_colors"
     image_path.mkdir(exist_ok=True, parents=True)
 
-    ithor_env.old_config.update({
-        "random_agent_spawn": False,
-        "random_object_spawn": False,
-        "random_object_materials": False,
-        "random_lighting": False,
-        "camera_randomization": False,
-        "random_object_colors": True,
-    })
-    config = ithor_env.old_config
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": False,
+            "random_object_spawn": False,
+            "random_object_materials": False,
+            "random_lighting": False,
+            "random_object_colors": True,
+        }
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -617,18 +580,58 @@ def test__randomize_scene_random_object_colors(ithor_env: ITHOREnv):
     metadata_1 = initial_event.metadata
     frame_1 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_1: Event = ithor_env.last_event  # type: ignore
     metadata_2 = event_1.metadata
     frame_2 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
-    ithor_env._randomize_scene(controller, config)
+    ithor_env._randomize_scene(controller)
     event_2: Event = ithor_env.last_event  # type: ignore
     metadata_3 = event_2.metadata
     frame_3 = ithor_env.last_frame
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
 
     # Check frames
+    assert not np.allclose(frame_1, frame_2)
+    assert not np.allclose(frame_2, frame_3)
+    assert not np.allclose(frame_1, frame_3)
+
+
+def test_reset_scene_randomization_materials():
+    image_path = randomize_scene_media_path / "reset_scene_randomization_materials"
+    image_path.mkdir(exist_ok=True, parents=True)
+
+    config_dict = {
+        "scene_randomization": {
+            "random_agent_spawn": True,
+            "random_object_spawn": True,
+            "random_object_materials": True,
+            "random_lighting": True,
+            "random_object_colors": True,
+        },
+        "tasks": {
+            "task_blueprints": [
+                {
+                    "task_type": "Open",
+                    "args": {"opened_object_type": "Fridge"},
+                    "scenes": ["FloorPlan1"],
+                }
+            ],
+        },
+    }
+    ithor_env = ITHOREnv(override_dict=config_dict)
+    obs1, _info1 = ithor_env.reset()
+    frame_1 = obs1["env_obs"]
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
+
+    obs2, _info2 = ithor_env.reset()
+    frame_2 = obs2["env_obs"]
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_1.png")
+
+    obs3, _info3 = ithor_env.reset()
+    frame_3 = obs3["env_obs"]
+    Image.fromarray(ithor_env.last_frame).save(image_path / "frame_2.png")
+
     assert not np.allclose(frame_1, frame_2)
     assert not np.allclose(frame_2, frame_3)
     assert not np.allclose(frame_1, frame_3)

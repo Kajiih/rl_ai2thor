@@ -123,7 +123,6 @@ class ITHOREnv(
         self.action_space: gym.spaces.Dict
         self.observation_space: gym.spaces.Dict
         self.controller: Controller
-        self.last_event: Event
         self.current_scene: SceneId
         self.current_task_type: type[BaseTask]
         self.task: BaseTask
@@ -131,6 +130,11 @@ class ITHOREnv(
         self.reward_handler: BaseRewardHandler
         self.np_random: np.random.Generator
         self.task_blueprints: list[TaskBlueprint]
+
+    @property
+    def last_event(self) -> Event:
+        """Return the last event of the environment."""
+        return self.controller.last_event  # type: ignore
 
     @property
     def last_frame(self) -> NDArray[np.uint8]:
@@ -371,8 +375,6 @@ class ITHOREnv(
             "task_advancement": task_info.get("task_advancement", None),
         }
 
-        self.last_event = new_event
-
         return observation, reward, terminated, truncated, info
 
     def _identify_target_object(
@@ -463,9 +465,7 @@ class ITHOREnv(
         self.reward_handler = self.task.get_reward_handler()
 
         # Reset the controller, task and reward handler
-        self.last_event, task_completion, task_info = self._reset_controller_task_reward(task_blueprint)
-        if task_completion:
-            self.reset()
+        task_completion, task_info = self._reset_controller_task_reward(task_blueprint)
 
         self.step_count = 0
         info = {
@@ -477,9 +477,7 @@ class ITHOREnv(
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
         observation = self._get_full_observation(obs_env)
-        print(
-            f"Resetting environment and starting new episode in {self.current_scene} with task {self.current_task_type}."
-        )
+        print(f"Starting new episode in {self.current_scene} with task {self.current_task_type}.")
 
         return observation, info
 
@@ -501,7 +499,7 @@ class ITHOREnv(
             "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
         }
 
-    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[Event, bool, dict[str, Any]]:
+    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[bool, dict[str, Any]]:
         """
         Sample a task from the task blueprint compatible with the given event.
 
@@ -509,7 +507,6 @@ class ITHOREnv(
             task_blueprint (TaskBlueprint): Task blueprint to sample from.
 
         Returns:
-            initial_event (Event): Initial event of the episode.
             task_completion (bool): Whether the task is completed.
             task_info (dict[str, Any]): Additional information about the task.
 
@@ -524,6 +521,7 @@ class ITHOREnv(
 
             # Instantiate the scene
             initial_event: Event = self.controller.reset(scene=sampled_scene)  # type: ignore
+            self._randomize_scene(self.controller)
 
             successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
             if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
@@ -531,12 +529,17 @@ class ITHOREnv(
                     f"Scene {sampled_scene} is not compatible with the task blueprint {task_blueprint}. Removing it from the task blueprint."
                 )
                 task_blueprint.scenes.remove(sampled_scene)
-                if not task_blueprint.scenes:
-                    raise NoCompatibleSceneError(task_blueprint)
+            elif task_completion:
+                print(
+                    f"Task is already completed in scene {sampled_scene}. Removing the scene from the task blueprint and sampling a new one."
+                )
+                task_blueprint.scenes.remove(sampled_scene)
+            if not task_blueprint.scenes:
+                raise NoCompatibleSceneError(task_blueprint)
 
         self.current_scene = sampled_scene
 
-        return initial_event, task_completion, task_info
+        return task_completion, task_info
 
     # TODO: Check why this is used nowhere
     def _randomize_scene(
@@ -549,39 +552,36 @@ class ITHOREnv(
         Args:
             controller (Controller): AI2THOR controller after initializing the scene.
         """
-        last_event = self.last_event
-        config = self.config.scene_randomization
-        if config.random_agent_spawn:
+        randomization_config = self.config.scene_randomization
+        if randomization_config.random_agent_spawn:
             positions = controller.step(action="GetReachablePositions").metadata["actionReturn"]
             sampled_position = self.np_random.choice(positions)
             # Sample int from 0 to 11 and multiply by 30 to get a random rotation
             random_rotation = self.np_random.integers(12) * 30
-            last_event = controller.step(
+            controller.step(
                 action="Teleport",
                 position=sampled_position,
                 rotation=random_rotation,
                 horizon=0,
                 standing=True,
             )
-        if config.random_object_spawn:
-            last_event = controller.step(
+        if randomization_config.random_object_spawn:
+            controller.step(
                 action="InitialRandomSpawn",
                 randomSeed=self.np_random.integers(0, 1000),  # TODO? Add a parameter for the number of different seeds?
                 forceVisible=True,  # TODO: Force object to be visible even without randomizing object spawn.
                 numPlacementAttempts=15,
                 placeStationary=True,
             )
-        if config.random_object_materials:
-            last_event = controller.step(action="RandomizeMaterials")
-        if config.random_lighting:
-            last_event = controller.step(
+        if randomization_config.random_object_materials:
+            controller.step(action="RandomizeMaterials")
+        if randomization_config.random_lighting:
+            controller.step(
                 action="RandomizeLighting",
                 synchronized=False,  # TODO: Check we keep this to False
             )
-        if config.random_object_colors:
-            last_event = controller.step(action="RandomizeColors")
-
-        self.last_event = last_event  # type: ignore
+        if randomization_config.random_object_colors:
+            controller.step(action="RandomizeColors")
 
     def close(self) -> None:
         """
