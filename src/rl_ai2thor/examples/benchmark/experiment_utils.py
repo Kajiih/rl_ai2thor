@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 
 # TODO: Handle config path better
-experiment_config_path = Path(__file__).parent / "experiment_config.yaml"
+experiment_config_path = Path(__file__).parent / "config/experiment_config.yaml"
 
 
 @dataclass
@@ -32,9 +32,10 @@ class Exp:
 
     model: str
     tasks: Iterable[str]
-    scenes: list[str]
+    scenes: set[str]
     job_type: str = "train"
     id: str | None = None
+    experiment_config_path: Path = experiment_config_path
 
     def __post_init__(self) -> None:
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%Z")
@@ -42,6 +43,7 @@ class Exp:
         if self.id is None:
             self.id = str(uuid.uuid4())
         self.config = self.load_config()
+        self.sorted_scenes = sorted(self.scenes)
 
         # === Type Annotations ===
         self.timestamp: str
@@ -51,7 +53,7 @@ class Exp:
     @property
     def name(self) -> str:
         """Return the name of the experiment."""
-        return f"{self.model}_{"-".join(self.tasks)}_{"-".join(self.scenes)}_{self.timestamp}"
+        return f"{self.model}_{"-".join(self.tasks)}_{"-".join(self.sorted_scenes)}_{self.timestamp}"
 
     # TODO: Improve group naming
     @property
@@ -71,7 +73,7 @@ class Exp:
 
     def load_config(self) -> dict[str, Any]:
         """Load the experiment configuration."""
-        with experiment_config_path.open("r") as file:
+        with self.experiment_config_path.open("r") as file:
             config = yaml.safe_load(file)
         config.update({
             "model": self.model,

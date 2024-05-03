@@ -1,0 +1,29 @@
+# === Actions ===
+action_groups:
+  # === Navigation actions ===
+  movement_actions: True
+  rotation_actions: True
+  head_movement_actions: True
+  crouch_actions: False
+  # === Object manipulation actions ===
+  pickup_put_actions: True
+  drop_actions: False
+  throw_actions: False
+  push_pull_actions: True
+  hand_control_actions: False
+  # === Object interaction actions ===
+  open_close_actions: True
+  toggle_actions: True
+  slice_actions: True
+  use_up_actions: False
+  liquid_manipulation_actions: False
+  break_actions: False
+
+action_modifiers:
+  discrete_actions: True
+  target_closest_object: True
+  simple_movement_actions: True
+
+# === Simulator ===
+scene_randomization:
+  random_agent_spawn: False

@@ -21,37 +21,6 @@ if TYPE_CHECKING:
     from wandb.sdk.wandb_run import Run
 
 
-model_config = {
-    "policy_type": "CnnPolicy",
-    "verbose": 1,
-    "progress_bar": True,
-}
-
-action_categories = {
-    # === Navigation actions ===
-    "crouch_actions": False,
-    # === Object manipulation actions ===
-    "drop_actions": False,
-    "throw_actions": False,
-    "push_pull_actions": False,
-    # === Object interaction actions ===
-    "open_close_actions": True,
-    "toggle_actions": True,
-    "slice_actions": True,
-    "use_up_actions": False,
-    "liquid_manipulation_actions": False,
-}
-override_config = {
-    "discrete_actions": True,
-    "target_closest_object": True,
-    "action_categories": action_categories,
-    "simple_movement_actions": True,
-    "max_episode_steps": 1000,
-    "random_agent_spawn": True,
-    # "tasks" is added dynamically
-}
-
-
 class ModelType(StrEnum):
     """SB3 compatible models."""
 
@@ -67,6 +36,14 @@ class AvailableTask(StrEnum):
     PREPARE_WATCHING_TV = TaskType.PREPARE_WATCHING_TV
     PREPARE_GOING_TO_BED = TaskType.PREPARE_GOING_TO_BED
     PREPARE_FOR_SHOWER = TaskType.PREPARE_FOR_SHOWER
+    MULTI_TASK = "MultiTask"
+
+
+model_config = {
+    "policy_type": "CnnPolicy",
+    "verbose": 1,
+    "progress_bar": True,
+}
 
 
 def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
@@ -80,17 +57,43 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
             return DQN
 
 
-def get_scenes(task: AvailableTask) -> list[str]:
+task_blueprints_configs = {
+    TaskType.PREPARE_MEAL: {
+        "task_type": TaskType.PREPARE_MEAL,
+        "task_args": {},
+        "scenes": ["FloorPlan1"],
+    },
+    TaskType.PREPARE_WATCHING_TV: {
+        "task_type": TaskType.PREPARE_WATCHING_TV,
+        "task_args": {},
+        "scenes": ["FloorPlan201"],
+    },
+    TaskType.PREPARE_GOING_TO_BED: {
+        "task_type": TaskType.PREPARE_GOING_TO_BED,
+        "task_args": {},
+        "scenes": ["FloorPlan301"],
+    },
+    TaskType.PREPARE_FOR_SHOWER: {
+        "task_type": TaskType.PREPARE_FOR_SHOWER,
+        "task_args": {},
+        "scenes": ["FloorPlan401"],
+    },
+}
+
+
+def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
     """Return the scenes for the task."""
     match task:
         case AvailableTask.PREPARE_MEAL:
-            return ["FloorPlan1"]
+            return [task_blueprints_configs[TaskType.PREPARE_MEAL]]
         case AvailableTask.PREPARE_WATCHING_TV:
-            return ["FloorPlan201"]
+            return [task_blueprints_configs[TaskType.PREPARE_WATCHING_TV]]
         case AvailableTask.PREPARE_GOING_TO_BED:
-            return ["FloorPlan301"]
+            return [task_blueprints_configs[TaskType.PREPARE_GOING_TO_BED]]
         case AvailableTask.PREPARE_FOR_SHOWER:
-            return ["FloorPlan401"]
+            return [task_blueprints_configs[TaskType.PREPARE_FOR_SHOWER]]
+        case AvailableTask.MULTI_TASK:
+            return [task_blueprints_configs[task] for task in task_blueprints_configs]
 
 
 def make_env(override_config: dict[str, Any], experiment: Exp) -> gym.Env:
@@ -110,19 +113,18 @@ def main(
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
+    seed: int = 0,
 ) -> None:
     """
     Train the agent.
 
     TODO: Improve docstring.
     """
-    scenes = get_scenes(task)
-    task_config = {
-        "type": task,
-        "args": {},
-        "scenes": scenes,
-    }
-    override_config["tasks"] = [task_config]
+    task_blueprint_config = get_task_blueprint_config(task)
+
+    override_config = {"tasks": {"task_blueprint": task_blueprint_config}}
+    scenes = {scene for task_config in task_blueprint_config for scenes in task_config["scenes"] for scene in scenes}
+
     # === Load the experiment configuration ===
     experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
     wandb_config = experiment.config["wandb"]
@@ -158,7 +160,7 @@ def main(
         env=env,
         verbose=model_config["verbose"],
         tensorboard_log=str(experiment.log_dir),  # TODO: Check if we need the str() conversion
-        seed=experiment.config["seed"],
+        seed=seed,
     )
     wandb_callback_config = wandb_config["sb3_callback"]
     eval_callback_config = experiment.config["evaluation"]
