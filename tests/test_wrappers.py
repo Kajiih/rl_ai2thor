@@ -39,7 +39,7 @@ single_task_override_config: dict = {
 
 @pytest.fixture()
 def single_task_ithor_env():
-    env = ITHOREnv(override_dict=single_task_override_config)
+    env = ITHOREnv(config_override=single_task_override_config)
     yield env
     env.close()
 
@@ -66,7 +66,7 @@ def test_single_task_wrapper_more_than_one_task_blueprint_error():
             ]
         }
     }
-    env = ITHOREnv(override_dict=multi_task_config)
+    env = ITHOREnv(config_override=multi_task_config)
     with pytest.raises(MoreThanOneTaskBlueprintError) as exc_info:
         SingleTaskWrapper(env)
     assert exc_info.value.config == env.config
@@ -84,7 +84,7 @@ def test_single_task_wrapper_step():
     override_config = single_task_override_config.copy()
     override_config["action_modifiers"] = {"discrete_actions": False}
 
-    single_task_ithor_env = ITHOREnv(override_dict=override_config)
+    single_task_ithor_env = ITHOREnv(config_override=override_config)
     wrapped_env = SingleTaskWrapper(single_task_ithor_env)
     action = {"action_index": 0, "action_parameter": 1, "target_object_coordinates": [0.5, 0.5]}
     wrapped_env.reset()
@@ -108,7 +108,7 @@ base_config = {
 
 @pytest.fixture()
 def channel_last_ithor_env():
-    env = ITHOREnv(override_dict=override_config)
+    env = ITHOREnv(config_override=override_config)
     yield env
     env.close()
 
@@ -130,7 +130,7 @@ def test_channel_first_observation_wrapper_reset(channel_last_ithor_env):
 def test_channel_first_observation_wrapper_step():
     override_config = base_config.copy()
     override_config["action_modifiers"] = {"discrete_actions": False}
-    channel_last_ithor_env = ITHOREnv(override_dict=override_config)
+    channel_last_ithor_env = ITHOREnv(config_override=override_config)
     wrapped_env = ChannelFirstObservationWrapper(channel_last_ithor_env)
     action = {"action_index": 0, "action_parameter": 1, "target_object_coordinates": [0.5, 0.5]}
     wrapped_env.reset()
@@ -168,7 +168,7 @@ def simple_action_space_ithor_env():
             "target_closest_object": True,
         }
     }
-    env = ITHOREnv(override_dict=override_config)
+    env = ITHOREnv(config_override=override_config)
     yield env
     env.close()
 
@@ -180,7 +180,7 @@ def test_simple_action_space_wrapper_not_simple_action_space_error():
             "target_closest_object": True,
         }
     }
-    env = ITHOREnv(override_dict=override_config)
+    env = ITHOREnv(config_override=override_config)
     with pytest.raises(NotSimpleActionEnvironmentMode) as exc_info:
         SimpleActionSpaceWrapper(env)
     assert exc_info.value.config == env.config

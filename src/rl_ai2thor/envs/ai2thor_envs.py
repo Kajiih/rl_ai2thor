@@ -97,7 +97,7 @@ class ITHOREnv(
     def __init__(
         self,
         config_path: str | Path = Path("config/environment_config.yaml"),
-        override_dict: dict | None = None,
+        config_override: dict | None = None,
     ) -> None:
         """
         Initialize the environment.
@@ -105,9 +105,9 @@ class ITHOREnv(
         Args:
             config_path (str | Path): Relative path to the environment config file. Default is
                 "config/environment_config.yaml".
-            override_dict (dict, Optional): Dictionary whose keys will override the given config.
+            config_override (dict, Optional): Dictionary whose keys will override the given config.
         """
-        self.config = self._load_config(config_path, override_dict)
+        self.config = self._load_config(config_path, config_override)
         # Initialize gymnasium seed
         super().reset(seed=self.config.seed)
         # TODO: Add the possibility to add task blueprints directly instead of going through the config
@@ -146,13 +146,13 @@ class ITHOREnv(
         return self.last_frame
 
     @staticmethod
-    def _load_config(config_path: str | Path, override_dict: dict | None = None) -> EnvConfig:
+    def _load_config(config_path: str | Path, config_override: dict | None = None) -> EnvConfig:
         """
         Load the environment config from a yaml file.
 
         Args:
             config_path (str | Path): Relative path to the environment config file.
-            override_dict (dict, Optional): Dictionary whose keys will override the given config.
+            config_override (dict, Optional): Dictionary whose keys will override the given config.
 
         Returns:
             dict: Environment config.
@@ -160,8 +160,8 @@ class ITHOREnv(
         config_path = Path(ROOT_DIR) / config_path
         with config_path.open("r") as file:
             config = yaml.safe_load(file)
-        if override_dict is not None:
-            update_nested_dict(config, override_dict)
+        if config_override is not None:
+            update_nested_dict(config, config_override)
         return EnvConfig.init_from_dict(config)
 
     @staticmethod

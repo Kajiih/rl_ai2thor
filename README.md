@@ -16,19 +16,19 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 
 ## Contents <!-- omit from toc -->
 
-- [🤖 AI2-THOR RL](#-ai2-thor-rl)
-  - [💻 Installation](#-installation)
-  - [🏃 Getting Started](#-getting-started)
-  - [☁️ Running Headless](#️-running-headless)
-    - [Cloud rendering](#cloud-rendering)
-    - [Starting X-Server](#starting-x-server)
-  - [✏️ Configuring the environment](#️-configuring-the-environment)
-  - [➕ Creating new tasks](#-creating-new-tasks)
-  - [🧮 The Benchmark](#-the-benchmark)
-    - [Reproducing baselines results](#reproducing-baselines-results)
-  - [📔 Citation](#-citation)
-  - [🧾 License](#-license)
-  - [🤝 Contributing](#-contributing)
+- [💻 Installation](#-installation)
+- [🏃 Getting Started](#-getting-started)
+- [☁️ Running Headless](#️-running-headless)
+  - [Cloud rendering](#cloud-rendering)
+  - [Starting X-Server](#starting-x-server)
+- [✏️ Environment Configuration](#️-environment-configuration)
+  - [🕹️ Task Configuration](#️-task-configuration)
+- [➕ Creating new tasks](#-creating-new-tasks)
+- [🧮 The Benchmark](#-the-benchmark)
+  - [Reproducing baselines results](#reproducing-baselines-results)
+- [📔 Citation](#-citation)
+- [🧾 License](#-license)
+- [🤝 Contributing](#-contributing)
 
 **[Add features section?]**
 **[Clearer separation between environemnt and benchmark?]**
@@ -115,38 +115,109 @@ If you prefer using docker, we have a [Dockerfile](.) **[link to Dockerfile]** t
 
 **[Add more details about the X-Server setup and the Dockerfile]** -
 
-## ✏️ Configuring the environment
+## ✏️ Environment Configuration
 
-The general environment configuration, like the maximum number of steps by episode or the parameters of the AI2-THOR controller can be found and edited in `config/general.yaml`.
+The environment can be configured through a `yaml` file or by dictionary when instantiating the environment.
 
-To change which actions can the agent use or the set of tasks and scenes it is trained on, you can create a new environment mode config file in `config/environment_modes/` or use one of the preset and change the `environment_mode` value in the general config.
+For a complete enumeration of the configuration options, see [Configuration](https://github.com/Kajiih/rl_ai2thor).
 
-**Example:**
-After creating your custom environment mode config file in `config/environment_modes/custom_env_mode.yaml`, you will need to write:
+If unspecified, the environment configuration is equivalent to the file `configurations/environment_config.yaml` of this repository.
 
 ```yaml
-environment_mode: custom_env_mode
+# === General ===
+seed: 1
+max_episode_steps: 500
+
+# === Simulator ===
+controller_parameters:
+  platform: null # set to "CloudRendering" for headless cloud rendering
+  visibility_distance: 1.5
+  # Camera properties
+  frame_width: 300
+  frame_height: 300
+  field_of_view: 90
+
+scene_randomization:
+  random_agent_spawn: False # If True, the agent will spawn at a random location and rotation at the beginning of each episode
+  random_object_spawn: False # If True, pickupable objects will spawn at random locations at the beginning of each episode
+  random_object_materials: False # If True, the materials of the objects will be randomized at the beginning of each episode
+  random_object_colors: False # If True, the colors of the objects will be randomized at the beginning of each episode  # Note: Not realistic
+  random_lighting: False # If True, the lighting conditions will be randomized at the beginning of each episode
+
+# === Actions ===
+action_groups:
+  # === Navigation actions ===
+  movement_actions: True
+  rotation_actions: True
+  head_movement_actions: True
+  crouch_actions: False
+  # === Object manipulation actions ===
+  pickup_put_actions: True
+  drop_actions: False
+  throw_actions: False
+  push_pull_actions: False
+  hand_control_actions: False
+  # === Object interaction actions ===
+  open_close_actions: True
+  toggle_actions: True
+  slice_actions: False
+  use_up_actions: False
+  liquid_manipulation_actions: False
+  break_actions: False
+
+action_modifiers:
+  discrete_actions: True # If True, all actions requiring a parameter will be discretized and use their discrete value
+  target_closest_object: True # If True, the closest operable object to the agent will be used as target for object interaction actions (e.g. pickup, open, etc.)
+  simple_movement_actions: False # Only keep MoveAhead action (no MoveBack, MoveRight and MoveLeft Actions), should at least be used with body_rotation_actions
+  static_pickup: False # Picked up objects don't teleport to hand
+  stationary_placement: True # If False, a placed object will use the physics engine to resolve the final position (no deterministic placement)
+  partial_openness: False # If True, objects can be opened partially with a parameter (only if open_close_actions is already enabled and environment is continuous) -> Adds partial_open_object_action from the "special" action category and removes open_object_action and close_object_action
+
+action_discrete_param_values: # If run in discrete mode
+  movement_magnitude: 0.25
+  rotation_degrees: 45
+  head_movement_degrees: 30
+  throw_strength: 50
+  push_pull_strength: 100
+
+# === Tasks ===
+tasks:
+  globally_excluded_scenes: [] # List of scene names to exclude for all tasks(only full names like "FloorPlan1", "FloorPlan201", ...)
+  task_blueprints: []
 ```
 
-You can also set your own config folder containing `general.yaml` and `environment_modes` when instantiating the environment with the `config_folder_path` argument. It is especially useful when you use the PyPI package.
-Additionally, you can override only certain values of the general or environment mode config with the `override_config` argument.
+When instantiating the environment, you can set the relative path to the configuration:
+
+```python
+env = gym.make("rl_ai2thor/ITHOREnv-v0.1", config_path="path/to/config.yaml")
+```
+
+By default, this path is set to `config/environment_config.yaml`.
+
+For convenience, you can also override specific values of the configuration with the `config_override` parameter.
 
 **Example:**
-If you only want to change the maximum number of steps per episode to 500 and exclude all `Kitchen` scenes from all task, you can write:
+If you only want to change the maximum number of steps per episode to 1000 and
+the randomization of the Agent's spawn location and object materials, you can do it like this:
 
 ```python
 override_config = {
-    "max_episode_steps": 500,
-    "globally_excluded_scenes": ["Kitchen"],
+    "max_episode_steps": 1000,
+    "scene_randomization": {
+        "random_agent_spawn": True,
+        "random_object_materials": True,
+    },
 }
 env = gym.make(
     "rl_ai2thor/ITHOREnv-v0.1",
-    config_folder_path="config",  # Default value
+    config_folder_path="config/environment_config.yaml",  # Default value
     override_config=override_config,
 )
 ```
 
-For more details about the configuration, see the [dedicated part of the documentation](https://github.com/Kajiih/rl_ai2thor) **[create actual documentation]**.
+### 🕹️ Task Configuration
+
+**[Add more details about the task configuration]**
 
 ## ➕ Creating new tasks
 

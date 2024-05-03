@@ -126,7 +126,7 @@ def test_compute_action_availabilities_unknown_action_category():
 
 
 def test__action_space():
-    ithor_env = ITHOREnv(override_dict=partial_config_dict)
+    ithor_env = ITHOREnv(config_override=partial_config_dict)
 
     ithor_env._initialize_action_space()
 
@@ -141,7 +141,7 @@ def test__action_space():
 
 def test__create_observation_space():
     ithor_env = ITHOREnv(
-        override_dict={
+        config_override={
             "controller_parameters": {
                 "frame_height": 84,
                 "frame_width": 44,
@@ -414,7 +414,7 @@ def test__randomize_scene_random_agent_spawn():  # noqa: PLR0914
             "random_object_colors": False,
         }
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -458,7 +458,7 @@ def test__randomize_scene_random_object_spawn():
             "random_object_colors": False,
         }
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -496,7 +496,7 @@ def test__randomize_scene_random_object_materials():
             "random_object_colors": False,
         }
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -534,7 +534,7 @@ def test__randomize_scene_random_lighting():
             "random_object_colors": False,
         }
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -572,7 +572,7 @@ def test__randomize_scene_random_object_colors():
             "random_object_colors": True,
         }
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     controller = ithor_env.controller
     ithor_env.last_event = controller.reset()  # type: ignore
 
@@ -619,7 +619,7 @@ def test_reset_scene_randomization_materials():
             ],
         },
     }
-    ithor_env = ITHOREnv(override_dict=config_dict)
+    ithor_env = ITHOREnv(config_override=config_dict)
     obs1, _info1 = ithor_env.reset()
     frame_1 = obs1["env_obs"]
     Image.fromarray(ithor_env.last_frame).save(image_path / "frame_0.png")
