@@ -40,7 +40,6 @@ class AvailableTask(StrEnum):
 
 
 model_config = {
-    "policy_type": "CnnPolicy",
     "verbose": 1,
     "progress_bar": True,
 }
@@ -60,22 +59,22 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
 task_blueprints_configs = {
     TaskType.PREPARE_MEAL: {
         "task_type": TaskType.PREPARE_MEAL,
-        "task_args": {},
+        "args": {},
         "scenes": ["FloorPlan1"],
     },
     TaskType.PREPARE_WATCHING_TV: {
         "task_type": TaskType.PREPARE_WATCHING_TV,
-        "task_args": {},
+        "args": {},
         "scenes": ["FloorPlan201"],
     },
     TaskType.PREPARE_GOING_TO_BED: {
         "task_type": TaskType.PREPARE_GOING_TO_BED,
-        "task_args": {},
+        "args": {},
         "scenes": ["FloorPlan301"],
     },
     TaskType.PREPARE_FOR_SHOWER: {
         "task_type": TaskType.PREPARE_FOR_SHOWER,
-        "task_args": {},
+        "args": {},
         "scenes": ["FloorPlan401"],
     },
 }
@@ -96,10 +95,12 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
             return [task_blueprints_configs[task] for task in task_blueprints_configs]
 
 
-def make_env(override_dict: dict[str, Any], experiment: Exp) -> gym.Env:
+def make_env(override_dict: dict[str, Any], experiment: Exp, is_single_task: bool) -> gym.Env:
     """Create the environment for single task and simple action space training with stable-baselines3."""
     env = gym.make("rl_ai2thor/ITHOREnv-v0.1_sb3_ready", override_dict=override_dict)  # type: ignore
-    env = SingleTaskWrapper(SimpleActionSpaceWrapper(env))
+    env = SimpleActionSpaceWrapper(env)
+    if is_single_task:
+        env = SingleTaskWrapper(env)
     env = Monitor(
         env,
         filename=str(experiment.log_dir / "monitor.csv"),  # TODO: Check if we need the str() conversion
@@ -120,9 +121,15 @@ def main(
 
     TODO: Improve docstring.
     """
+    is_single_task = task != AvailableTask.MULTI_TASK
+    if is_single_task:
+        model_config["policy_type"] = "CnnPolicy"
+    else:
+        model_config["policy_type"] = "MultiInputPolicy"
+
     task_blueprint_config = get_task_blueprint_config(task)
 
-    override_dict = {"tasks": {"task_blueprint": task_blueprint_config}}
+    override_dict = {"tasks": {"task_blueprints": task_blueprint_config}}
     scenes = {scene for task_config in task_blueprint_config for scenes in task_config["scenes"] for scene in scenes}
 
     # === Load the experiment configuration ===
@@ -142,7 +149,7 @@ def main(
     )
 
     # === Instantiate the environment ===
-    env = DummyVecEnv([lambda: make_env(override_dict, experiment)])
+    env = DummyVecEnv([lambda: make_env(override_dict, experiment, is_single_task=is_single_task)])
     if record:
         record_config = experiment.config["video_recorder"]
         env = VecVideoRecorder(
