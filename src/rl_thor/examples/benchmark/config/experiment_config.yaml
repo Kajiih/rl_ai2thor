@@ -1,0 +1,20 @@
+wandb:
+  project: rl_thor
+  sync_tensorboard: true
+  monitor_gym: true
+  save_code: true
+  sb3_callback:
+    verbose: 2
+    model_save_freq: 100_000
+    gradient_save_freq: 10_000
+
+evaluation:
+  nb_episodes: 10
+  frequency: 10_000
+  deterministic: true
+  verbose: 1
+
+video_recorder:
+  frequency: 50_000
+  length: 2000
+  prefix: "rl-video"

@@ -1,0 +1,1732 @@
+{
+    "AlarmClock": {
+        "scenes": "Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "SideTable",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": ""
+    },
+    "AluminumFoil": {
+        "scenes": "Kitchens (1/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Apple": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop",
+            "GarbageCan",
+            "Dresser"
+        ],
+        "contextual_interactions": ""
+    },
+    "AppleSliced": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Apple)"
+        ],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop",
+            "GarbageCan",
+            "Dresser"
+        ],
+        "contextual_interactions": ""
+    },
+    "ArmChair": {
+        "scenes": "Living Rooms (27/30)Bedrooms (6/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "BaseballBat": {
+        "scenes": "Bedrooms (13/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [
+            "Bed",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop"
+        ],
+        "contextual_interactions": ""
+    },
+    "BasketBall": {
+        "scenes": "Bedrooms (11/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Dresser",
+            "Desk",
+            "Bed",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop"
+        ],
+        "contextual_interactions": ""
+    },
+    "Bathtub": {
+        "scenes": "Bathrooms (21/30)",
+        "actionable_properties": ["receptacle (Some)"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "BathtubBasin": {
+        "scenes": "Bathrooms (19/30)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature", "inherited: Bathtub"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Bed": {
+        "scenes": "Bedrooms (All)",
+        "actionable_properties": ["receptacle", "dirtyable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Blinds": {
+        "scenes": "Kitchens (5/30)Living Rooms (1/30)Bedrooms (27/30)",
+        "actionable_properties": ["openable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Book": {
+        "scenes": "Kitchens (2/30)Living Rooms (7/30)Bedrooms (All)",
+        "actionable_properties": ["openable", "pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "Bed",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Boots": {
+        "scenes": "Living Rooms (5/30)Bedrooms (3/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Bottle": {
+        "scenes": "Kitchens (7/30)",
+        "actionable_properties": ["pickupable", "fillable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Fridge",
+            "Box",
+            "Dresser",
+            "Desk",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Will break if subjected to enough force. Will fill up with water if moved underneath a running water source."
+    },
+    "Bowl": {
+        "scenes": "Kitchens (All)Living Rooms (5/30)Bedrooms (13/30)",
+        "actionable_properties": [
+            "pickupable",
+            "receptacle",
+            "fillable",
+            "breakable (Some)",
+            "dirtyable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Microwave",
+            "Fridge",
+            "Dresser",
+            "Desk",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. Not all bowls are breakable (Plastic-Unbreakable vs Glass-Breakable vs Ceramic-Breakable). If empty, will fill up with water if moved underneath a running water source. If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "Box": {
+        "scenes": "Living Rooms (All)Bedrooms (12/30)",
+        "actionable_properties": ["openable", "pickupable", "receptacle"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Dresser",
+            "Desk",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Ottoman"
+        ],
+        "contextual_interactions": ""
+    },
+    "Bread": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Microwave",
+            "Fridge",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop",
+            "GarbageCan",
+            "Plate"
+        ],
+        "contextual_interactions": ""
+    },
+    "BreadSliced": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "cookable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Bread)"
+        ],
+        "compatible_receptacles": [
+            "Microwave",
+            "Fridge",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop",
+            "GarbageCan",
+            "Toaster",
+            "Plate"
+        ],
+        "contextual_interactions": "Use PutObject action to place BreadSliced into Toaster objects. If the Toaster is on, the BreadSliced will automatically cook. BreadSliced will also automatically cook if moved over an active StoveBurner object."
+    },
+    "ButterKnife": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Mug",
+            "Plate",
+            "Cup",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Desk",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Cabinet": {
+        "scenes": "Kitchens (All)Living Rooms (6/30)Bedrooms (5/30)Bathrooms (15/30)",
+        "actionable_properties": ["openable", "receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Candle": {
+        "scenes": "Living Rooms (3/30)Bathrooms (All)",
+        "actionable_properties": ["pickupable", "toggleable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "Toilet",
+            "Cart",
+            "Bathtub",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer"
+        ],
+        "contextual_interactions": "Can be lit using the ToggleObjectOn action. If another source of flame (another Candle or a Stove Burner) touches the wick, the Candle will automatically be lit and turn on. If the wick of the Candle touches a source of water, then the Candle will automatically be put out and turned off."
+    },
+    "CD": {
+        "scenes": "Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan",
+            "Safe",
+            "Sofa",
+            "ArmChair"
+        ],
+        "contextual_interactions": ""
+    },
+    "CellPhone": {
+        "scenes": "Kitchens (4/30)Living Rooms (7/30)Bedrooms (All)",
+        "actionable_properties": ["pickupable", "toggleable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "Bed",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "Safe"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. When broken, the CellPhone\u2019s screen will appear cracked and the On/Off state will be switched to Off. Broken CellPhones will no longer be able to turn on with ToggleObjectOn."
+    },
+    "Chair": {
+        "scenes": "Kitchens (12/30)Living Rooms (20/30)Bedrooms (22/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Cloth": {
+        "scenes": "Bedrooms (5/30)Bathrooms (All)",
+        "actionable_properties": ["pickupable", "dirtyable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "LaundryHamper",
+            "Desk",
+            "Toilet",
+            "Cart",
+            "BathtubBasin",
+            "Bathtub",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "CoffeeMachine": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["toggleable", "receptacle", "moveable"],
+        "materials_properties": ["temperature", "changeTemp"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Coffee Machines are receptacles but only allow objects of type Mug to be placed in them. If a Coffee Machine is On and an empty Mug is placed in it, the Mug will automatically fill with Coffee and have its Temperature changed to Hot"
+    },
+    "CoffeeTable": {
+        "scenes": "Living Rooms (24/30)Bedrooms (1/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "CounterTop": {
+        "scenes": "Kitchens (All)Bedrooms (1/30)Bathrooms (25/30)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "CreditCard": {
+        "scenes": "Kitchens (3/30)Living Rooms (All)Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "Shelf"
+        ],
+        "contextual_interactions": ""
+    },
+    "Cup": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": [
+            "pickupable",
+            "receptacle",
+            "fillable",
+            "breakable (Some)",
+            "dirtyable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Microwave",
+            "Fridge",
+            "Dresser",
+            "Desk",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. Not all Cups are breakable (Plastic-Unbreakable vs Glass-Breakable vs Ceramic-Breakable). If empty, will fill up with water if moved underneath a running water source. If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "Curtains": {
+        "scenes": "Kitchens (2/30)Living Rooms (10/30)Bedrooms (2/30)",
+        "actionable_properties": [""],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Desk": {
+        "scenes": "Living Rooms (2/30)Bedrooms (24/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "DeskLamp": {
+        "scenes": "Living Rooms (13/30)Bedrooms (All)",
+        "actionable_properties": ["toggleable", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Desktop": {
+        "scenes": "Bedrooms (2/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "DiningTable": {
+        "scenes": "Kitchens (16/30)Living Rooms (14/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "DishSponge": {
+        "scenes": "Kitchens (All)Bathrooms (6/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Plate",
+            "Box",
+            "Toilet",
+            "Cart",
+            "Cart",
+            "BathtubBasin",
+            "Bathtub",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "DogBed": {
+        "scenes": "Living Rooms (2/30)Bedrooms (1/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Drawer": {
+        "scenes": "Kitchens (28/30)Living Rooms (23/30)Bedrooms (29/30)Bathrooms (15/30)",
+        "actionable_properties": ["openable", "receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Dresser": {
+        "scenes": "Living Rooms (10/30)Bedrooms (11/30)Bathrooms (2/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Dumbbell": {
+        "scenes": "Bedrooms (4/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Egg": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Using the Slice action or the Break action will change the Egg to an EggCracked object. Dropping or Throwing the Egg with enough force will also automatically Break the egg into an EggCracked."
+    },
+    "EggCracked": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "cookable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Egg)",
+            "inherited: Break (Egg)"
+        ],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Placing an EggCracked object onto an active StoveBurner will automatically cook it. Placing an EggCracked object into a Microwave, and then turning on the Microwave will automatically cook it."
+    },
+    "Faucet": {
+        "scenes": "Kitchens (All)Bathrooms (All)",
+        "actionable_properties": ["toggleable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Can be turned on with ToggleObjectOn action. When on, a stream of running water will pour out from the faucet spout. If the Faucet is over a Sink or a Bathtub, the interior of the Sink/Bathtub will fill with standing water. For objects that can be automatically cleaned, the stream of water is a Running Water Source"
+    },
+    "Floor": {
+        "scenes": "Kitchens (All)Living Rooms (All)Bedrooms (All)Bathrooms (All)",
+        "actionable_properties": [""],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "FloorLamp": {
+        "scenes": "Living Rooms (All)",
+        "actionable_properties": ["toggleable", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Footstool": {
+        "scenes": "Bedrooms (1/30)Bathrooms (1/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Fork": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Mug",
+            "Plate",
+            "Cup",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Fridge": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["openable", "receptacle"],
+        "materials_properties": ["temperature", "changeTemp"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Objects placed in a Fridge will have their temperature automatically changed to Cold"
+    },
+    "GarbageBag": {
+        "scenes": "Kitchens (3/30)Bedrooms (3/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "GarbageCan": {
+        "scenes": "Kitchens (All)Living Rooms (All)Bedrooms (All)Bathrooms (All)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "HandTowel": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": ["HandTowelHolder"],
+        "contextual_interactions": ""
+    },
+    "HandTowelHolder": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "HandTowelHolders are recptacle objects, but only allow HandTowel type objects to be placed on them."
+    },
+    "HousePlant": {
+        "scenes": "Kitchens (10/30)Living Rooms (All)Bedrooms (7/30)Bathrooms (1/30)",
+        "actionable_properties": ["fillable", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Will fill up with water if moved underneath a running water source."
+    },
+    "Kettle": {
+        "scenes": "Kitchens (15/30)",
+        "actionable_properties": ["openable", "pickupable", "fillable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "StoveBurner",
+            "Shelf"
+        ],
+        "contextual_interactions": "Will fill up with water if moved underneath a running water source."
+    },
+    "KeyChain": {
+        "scenes": "Living Rooms (All)Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "Safe"
+        ],
+        "contextual_interactions": ""
+    },
+    "Knife": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Mug",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Ladle": {
+        "scenes": "Kitchens (10/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Laptop": {
+        "scenes": "Living Rooms (All)Bedrooms (All)",
+        "actionable_properties": [
+            "openable",
+            "pickupable",
+            "toggleable",
+            "breakable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "Bed",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. When broken, the Laptop\u2019s screen will appear cracked and the On/Off state will be switched to Off. Broken Laptops will no longer be able to turn on with ToggleObjectOn, but they can still be opened or closed with OpenObject or CloseObject."
+    },
+    "LaundryHamper": {
+        "scenes": "Bedrooms (8/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Lettuce": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "LettuceSliced": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Lettuce)"
+        ],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "LightSwitch": {
+        "scenes": "Kitchens (All)Living Rooms (All)Bedrooms (All)Bathrooms (All)",
+        "actionable_properties": ["toggleable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Microwave": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": [
+            "openable",
+            "toggleable",
+            "receptacle",
+            "moveable"
+        ],
+        "materials_properties": ["temperature", "changeTemp"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Any objects inside a Microwave while it is turned On will have their temperature changed to Hot. Some object will also automatically cook (Potato, Egg). Microwaves cannot be turned on if they are open, and cannot be opened if they are currently on."
+    },
+    "Mirror": {
+        "scenes": "Kitchens (2/30)Living Rooms (3/30)Bedrooms (All)Bathrooms (All)",
+        "actionable_properties": ["breakable", "dirtyable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Automatically breaks if subjected to enough force. For example, if an object thrown at it has enough force, the object may break."
+    },
+    "Mug": {
+        "scenes": "Kitchens (All)Bedrooms (16/30)",
+        "actionable_properties": [
+            "pickupable",
+            "receptacle",
+            "fillable",
+            "breakable",
+            "dirtyable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. Not all Mugs are breakable (Plastic-Unbreakable vs Glass-Breakable vs Ceramic-Breakable). If empty, will fill up with water if moved underneath a running water source. If in the Dirty state, will automatically become Clean if moved under running water. If empty and placed in a CoffeeMachine that is on, will automatically fill with Coffee and have temperature changed to Hot"
+    },
+    "Newspaper": {
+        "scenes": "Living Rooms (18/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "Bed",
+            "Toilet",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "Ottoman": {
+        "scenes": "Living Rooms (4/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Painting": {
+        "scenes": "Living Rooms (All)Bedrooms (13/30)Bathrooms (1/30)",
+        "actionable_properties": [""],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Pan": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "receptacle", "dirtyable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "DiningTable",
+            "CounterTop",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "StoveBurner",
+            "Fridge"
+        ],
+        "contextual_interactions": "If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "PaperTowelRoll": {
+        "scenes": "Kitchens (10/30)Bathrooms (4/30)",
+        "actionable_properties": ["pickupable", "usedUp"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Pen": {
+        "scenes": "Kitchens (2/30)Living Rooms (5/30)Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Mug",
+            "Box",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "Pencil": {
+        "scenes": "Kitchens (2/30)Living Rooms (4/30)Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Mug",
+            "Box",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "PepperShaker": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer",
+            "Cabinet",
+            "Shelf"
+        ],
+        "contextual_interactions": ""
+    },
+    "Pillow": {
+        "scenes": "Living Rooms (All)Bedrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": ["Sofa", "ArmChair", "Ottoman", "Bed"],
+        "contextual_interactions": ""
+    },
+    "Plate": {
+        "scenes": "Kitchens (All)Living Rooms (10/30)",
+        "actionable_properties": [
+            "pickupable",
+            "receptacle",
+            "breakable (Some)",
+            "dirtyable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Microwave",
+            "Fridge",
+            "Dresser",
+            "Desk",
+            "Sink",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. Not all Plates are breakable (Plastic-Unbreakable vs Glass-Breakable vs Ceramic-Breakable). If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "Plunger": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": ["Cart", "Cabinet"],
+        "contextual_interactions": ""
+    },
+    "Poster": {
+        "scenes": "Bedrooms (6/30)",
+        "actionable_properties": [""],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Pot": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": [
+            "pickupable",
+            "receptacle",
+            "fillable",
+            "dirtyable"
+        ],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "StoveBurner",
+            "Fridge",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf"
+        ],
+        "contextual_interactions": "If empty, will fill up with water if moved underneath a running water source. If in the Dirty state, will automatically become Clean if moved under running water."
+    },
+    "Potato": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable", "cookable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Will automatically be Cooked if placed over an active Stove Burner or in a turned on Microwave. When Sliced, will create multiple PotatoSliced objects. Cooking the Potato first and then Slicing it will result in Cooked PotatoSliced objects."
+    },
+    "PotatoSliced": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "cookable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Potato)"
+        ],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Microwave",
+            "Fridge",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Will automatically be Cooked if placed over an active Stove Burner or in a turned on Microwave."
+    },
+    "RemoteControl": {
+        "scenes": "Living Rooms (All)Bedrooms (3/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Sofa",
+            "ArmChair",
+            "Box",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "RoomDecor": {
+        "scenes": "Living Rooms (2/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Safe": {
+        "scenes": "Kitchens (1/30)Living Rooms (2/30)Bedrooms (5/30)",
+        "actionable_properties": ["openable", "receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "SaltShaker": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer",
+            "Cabinet",
+            "Shelf"
+        ],
+        "contextual_interactions": ""
+    },
+    "ScrubBrush": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Shelf": {
+        "scenes": "Kitchens (9/30)Living Rooms (16/30)Bedrooms (23/30)Bathrooms (7/30)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "ShelvingUnit": {
+        "scenes": "Kitchens (5/30)Living Rooms (5/30)Bedrooms (7/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "ShowerCurtain": {
+        "scenes": "Bathrooms (13/30)",
+        "actionable_properties": ["openable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "ShowerDoor": {
+        "scenes": "Bathrooms (17/30)",
+        "actionable_properties": ["openable", "breakable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Automatically breaks if subjected to enough force. For example, if an object thrown at it has enough force, the object may break."
+    },
+    "ShowerGlass": {
+        "scenes": "Bathrooms (13/30)",
+        "actionable_properties": ["breakable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Automatically breaks if subjected to enough force. For example, if an object thrown at it has enough force, the object may break."
+    },
+    "ShowerHead": {
+        "scenes": "Bathrooms (24/30)",
+        "actionable_properties": ["toggleable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Can be turned on with ToggleObjectOn action. When on, a stream of running water will pour out from the ShowerHead. For objects that can be automatically cleaned, the stream of water is a Running Water Source."
+    },
+    "SideTable": {
+        "scenes": "Kitchens (3/30)Living Rooms (27/30)Bedrooms (23/30)Bathrooms (5/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Sink": {
+        "scenes": "Kitchens (All)Bathrooms (All)",
+        "actionable_properties": ["receptacle (Some)"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "SinkBasin": {
+        "scenes": "Kitchens (All)Bathrooms (All)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature", "inherited: Sink"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "SoapBar": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Toilet",
+            "Cart",
+            "Bathtub",
+            "BathtubBasin",
+            "Sink",
+            "SinkBasin",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "SoapBottle": {
+        "scenes": "Kitchens (All)Bathrooms (All)",
+        "actionable_properties": ["pickupable", "usedUp (Some)"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Dresser",
+            "Desk",
+            "Toilet",
+            "Cart",
+            "Bathtub",
+            "Sink",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "Sofa": {
+        "scenes": "Living Rooms (All)Bedrooms (1/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Spatula": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Plate",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "Spoon": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Pot",
+            "Pan",
+            "Bowl",
+            "Mug",
+            "Plate",
+            "Cup",
+            "Sink",
+            "SinkBasin",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Drawer"
+        ],
+        "contextual_interactions": ""
+    },
+    "SprayBottle": {
+        "scenes": "Kitchens (2/30)Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Dresser",
+            "Desk",
+            "Toilet",
+            "Cart",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "Statue": {
+        "scenes": "Kitchens (4/30)Living Rooms (29/30)Bedrooms (4/30)",
+        "actionable_properties": ["pickupable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "Cart",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Safe"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force, for example if dropped from a high enough distance"
+    },
+    "Stool": {
+        "scenes": "Kitchens (14/30)Living Rooms (2/30)Bedrooms (1/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "StoveBurner": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["toggleable", "receptacle"],
+        "materials_properties": ["temperature", "changeTemp"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "While this object type can be turned on/off, the ToggleObjectOn and ToggleObjectOff actions will not work on it directly. All StoveBurners are controlled by the on/off state of a StoveKnob object. Turning on/off the StoveKnob will automatically turn on/off the StoveBurner that it is linked to. Objects placed over an active StoveBurner will have their temperature changed to Hot. Some objects can be automatically cooked over an active StoveBurner (Potato, BreadSliced). StoveBurners are receptacles but only allow objects of type Pot, Pan, and Kettle to be placed on them directly. StoveBurners are also sources of fire and can light Candles if the wick of the candle is moved over the burner"
+    },
+    "StoveKnob": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["toggleable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "All StoveKnobs control the on/off state of themselves and a linked StoveBurner."
+    },
+    "TableTopDecor": {
+        "scenes": "Bedrooms (1/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "TargetCircle": {
+        "scenes": "",
+        "actionable_properties": [""],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Can only be spawned in via the `SpawnTargetCircles` action (See the Miscellaneous Actions section). `TargetCircles` are a special type of sim object that have no collision, but do return what objects are contained by the circle in the circle's object metadata. This can be used to create target areas to maneuver other sim objects to, allowing for a success or failure flag to see if an object was succesfully moved to a specific target circle's position. There are three sizes of target circles: small, medium, and large. This allows for easier or harder target areas."
+    },
+    "TeddyBear": {
+        "scenes": "Bedrooms (10/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Bed",
+            "Sofa",
+            "ArmChair",
+            "Ottoman",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Safe"
+        ],
+        "contextual_interactions": ""
+    },
+    "Television": {
+        "scenes": "Living Rooms (All)Bedrooms (3/30)",
+        "actionable_properties": ["toggleable", "breakable", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Will automatically break if subjected to enough force. When broken, the Television\u2019s screen will appear cracked and the On/Off state will be switched to Off. Broken Televisions will no longer be able to turn on with ToggleObjectOn."
+    },
+    "TennisRacket": {
+        "scenes": "Bedrooms (10/30)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Dresser",
+            "Desk",
+            "Bed",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop"
+        ],
+        "contextual_interactions": ""
+    },
+    "TissueBox": {
+        "scenes": "Living Rooms (9/30)Bedrooms (4/30)Bathrooms (9/30)",
+        "actionable_properties": ["pickupable", "usedUp (Some)"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "Toilet",
+            "Cart",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "Toaster": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["toggleable", "receptacle", "moveable"],
+        "materials_properties": ["temperature", "changeTemp"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Toasters are receptacles but only allow BreadSliced objects to be placed in them. Any BreadSliced object in a Toaster that is turned on will automatically be Cooked."
+    },
+    "Toilet": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["openable", "receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "ToiletPaper": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable", "usedUp"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Dresser",
+            "Desk",
+            "Toilet",
+            "ToiletPaperHanger",
+            "Cart",
+            "Bathtub",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "GarbageCan"
+        ],
+        "contextual_interactions": ""
+    },
+    "ToiletPaperHanger": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "ToiletPaperHangers are receptacles but only allow ToiletPaper objects to be placed in them"
+    },
+    "Tomato": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable", "sliceable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Sink",
+            "SinkBasin",
+            "Pot",
+            "Bowl",
+            "Fridge",
+            "GarbageCan",
+            "Plate"
+        ],
+        "contextual_interactions": "When Sliced, will create multiple TomatoSliced objects."
+    },
+    "TomatoSliced": {
+        "scenes": "Kitchens (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": [
+            "temperature",
+            "mass",
+            "salientMaterials",
+            "inherited: Slice (Tomato)"
+        ],
+        "compatible_receptacles": [
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Sink",
+            "SinkBasin",
+            "Pot",
+            "Bowl",
+            "Fridge",
+            "GarbageCan",
+            "Plate"
+        ],
+        "contextual_interactions": ""
+    },
+    "Towel": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": ["TowelHolder"],
+        "contextual_interactions": ""
+    },
+    "TowelHolder": {
+        "scenes": "Bathrooms (All)",
+        "actionable_properties": ["receptacle"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "TowelHolders are receptacles but only allow Towel objects to be placed in them."
+    },
+    "TVStand": {
+        "scenes": "Living Rooms (12/30)",
+        "actionable_properties": ["receptacle", "moveable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "VacuumCleaner": {
+        "scenes": "Bedrooms (1/30)",
+        "actionable_properties": ["moveable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": ""
+    },
+    "Vase": {
+        "scenes": "Kitchens (6/30)Living Rooms (18/30)Bedrooms (3/30)",
+        "actionable_properties": ["pickupable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "Cart",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Safe"
+        ],
+        "contextual_interactions": "Will automaticaly break if subjected to enough force."
+    },
+    "Watch": {
+        "scenes": "Living Rooms (Some)",
+        "actionable_properties": ["pickupable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Box",
+            "Dresser",
+            "Desk",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer",
+            "Safe"
+        ],
+        "contextual_interactions": ""
+    },
+    "WateringCan": {
+        "scenes": "Living Rooms (13/30)",
+        "actionable_properties": ["pickupable", "fillable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Dresser",
+            "Desk",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "Drawer"
+        ],
+        "contextual_interactions": "If empty, will automatically fill with water if placed under a running water source."
+    },
+    "Window": {
+        "scenes": "Kitchens (26/30)Living Rooms (28/30)Bedrooms (All)Bathrooms (19/30)",
+        "actionable_properties": ["breakable"],
+        "materials_properties": ["temperature"],
+        "compatible_receptacles": [""],
+        "contextual_interactions": "Will automatically break if subjected to enough force."
+    },
+    "WineBottle": {
+        "scenes": "Kitchens (10/30)",
+        "actionable_properties": ["pickupable", "fillable", "breakable"],
+        "materials_properties": ["temperature", "mass", "salientMaterials"],
+        "compatible_receptacles": [
+            "Fridge",
+            "Dresser",
+            "Desk",
+            "Cabinet",
+            "DiningTable",
+            "TVStand",
+            "CoffeeTable",
+            "SideTable",
+            "CounterTop",
+            "Shelf",
+            "GarbageCan"
+        ],
+        "contextual_interactions": "Will automatically break if subjected to enough force. If empty, will automatically fill with water if placed under a running water source."
+    }
+}
