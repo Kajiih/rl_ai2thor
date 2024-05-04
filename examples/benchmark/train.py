@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 import gymnasium as gym
 import typer
 import wandb
+from experiment_utils import Exp
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
@@ -15,7 +16,6 @@ from wandb.integration.sb3 import WandbCallback
 
 from rl_thor.envs.tasks.tasks import TaskType
 from rl_thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
-from rl_thor.examples.benchmark.experiment_utils import Exp
 
 if TYPE_CHECKING:
     from wandb.sdk.wandb_run import Run

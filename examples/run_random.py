@@ -11,7 +11,7 @@ from rl_thor.utils.general_utils import ROOT_DIR
 SEED = 0
 
 NB_EPISODES = 5
-NB_STEPS = 200
+NB_STEPS = 1000
 
 OUTPUT_DIR = ROOT_DIR / "outputs" / "random_runs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,3 +41,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# %%

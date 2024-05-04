@@ -80,7 +80,7 @@ env.close()
 
 Note that the first time that you instantiate the environment, AI2-THOR will download locally the 3D simulator resources to `~/.ai2thor` (~500MB).
 
-Follow Jupyter Notebooks in `examples` for more complex examples and use cases, like using AI2-THOR RL with Stable Baselines3 or recording videos of the agent's view.
+More examples and training scripts can be found in the `examples` folder of this repository.
 
 To go further, we recommend you to get familiar with the [concepts of the ITHOR simulation environment](https://ai2thor.allenai.org/ithor/documentation/concepts) and [our documentation](https://github.com/Kajiih/rl_thor) **[create actual documentation]** to understand how tasks are defined.
 
