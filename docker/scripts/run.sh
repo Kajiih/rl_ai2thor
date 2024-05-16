@@ -21,7 +21,7 @@ docker run --privileged $X11_PARAMS -it \
 --mount type=bind,source="$(pwd)"/ai2thor_simulator_resources/,target=/root/.ai2thor/ \
 --mount type=bind,source="$(pwd)"/../runs/,target=/app/runs/ \
 --mount type=bind,source="$(pwd)"/../checkpoints/,target=/app/checkpoints/ \
---mount type=bind,source="$(pwd)"/../wandb/,target=/root/wandb/ \
+--mount type=bind,source="$(pwd)"/../wandb/,target=/app/wandb/ \
 rlthor-docker:latest
 
 if [[ -e /tmp/.X11-unix && ! -z ${DISPLAY+x} ]]; then
