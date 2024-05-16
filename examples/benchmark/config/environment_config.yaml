@@ -10,7 +10,7 @@ action_groups:
   pickup_put_actions: True
   drop_actions: False
   throw_actions: False
-  push_pull_actions: True
+  push_pull_actions: False
   hand_control_actions: False
   # === Object interaction actions ===
   open_close_actions: True

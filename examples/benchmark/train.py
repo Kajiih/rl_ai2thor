@@ -74,22 +74,22 @@ task_blueprints_configs = {
     AvailableTask.PREPARE_MEAL: {
         "task_type": TaskType.PREPARE_MEAL,
         "args": {},
-        "scenes": ["FloorPlan1"],
+        "scenes": ["FloorPlan1", "FloorPlan2"],
     },
     AvailableTask.PREPARE_WATCHING_TV: {
         "task_type": TaskType.PREPARE_WATCHING_TV,
         "args": {},
-        "scenes": ["FloorPlan201"],
+        "scenes": ["FloorPlan201", "FloorPlan203"],
     },
     AvailableTask.PREPARE_GOING_TO_BED: {
         "task_type": TaskType.PREPARE_GOING_TO_BED,
         "args": {},
-        "scenes": ["FloorPlan301"],
+        "scenes": ["FloorPlan301", "FloorPlan302"],
     },
     AvailableTask.PREPARE_FOR_SHOWER: {
         "task_type": TaskType.PREPARE_FOR_SHOWER,
         "args": {},
-        "scenes": ["FloorPlan401"],
+        "scenes": ["FloorPlan401", "FloorPlan402"],
     },
     AvailableTask.PICKUP_KNIFE: {
         "task_type": TaskType.PICKUP,
