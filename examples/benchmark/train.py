@@ -127,6 +127,7 @@ def main(
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
     log_speed_performance: Annotated[bool, typer.Option("--log-speed", "-l")] = False,
+    no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
     seed: int = 0,
 ) -> None:
     """
@@ -149,9 +150,10 @@ def main(
     task_blueprint_config = get_task_blueprint_config(task)
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
 
-    # === Load the experiment configuration ===
+    # === Load the environment and experiment configurations ===
     experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
-    config_override = {"tasks": {"task_blueprints": task_blueprint_config}}
+    config_override: dict[str, Any] = {"tasks": {"task_blueprints": task_blueprint_config}}
+    config_override["no_task_advancement_reward"] = no_task_advancement_reward
     wandb_config = experiment.config["wandb"]
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
     tags.append("single_task" if is_single_task else "multi_task")

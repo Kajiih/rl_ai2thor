@@ -70,15 +70,18 @@ class GraphTaskRewardHandler(BaseRewardHandler):
     TODO: Finish docstring
     """
 
-    def __init__(self, task: GraphTask) -> None:
+    def __init__(self, task: GraphTask, no_task_advancement_rewards: bool) -> None:
         """
         Initialize the reward handler.
 
         Args:
             task (GraphTask): Task to calculate rewards for.
+            no_task_advancement_rewards (bool): Whether to give rewards for task advancement when
+                the task is not completed.
         """
         self.task = task
         self.last_step_advancement: float | int = 0
+        self.no_task_advancement_rewards = no_task_advancement_rewards
 
     def get_reward(
         self,
@@ -99,7 +102,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
             info (dict[str, Any]): Additional information about the state of the task.
         """
         if not event.metadata["lastActionSuccess"]:
-            return 0.0, False, {}
+            return -0.0, False, {}
         task_advancement, task_completion, info = self.task.compute_task_advancement(event, controller_action)
         reward = task_advancement - self.last_step_advancement
         self.last_step_advancement = task_advancement
@@ -107,6 +110,8 @@ class GraphTaskRewardHandler(BaseRewardHandler):
         if task_completion:
             print("Task completed!!")
             reward += 10
+        elif self.no_task_advancement_rewards:
+            reward = 0
 
         return reward, task_completion, info
 
@@ -136,7 +141,7 @@ class GraphTaskRewardHandler(BaseRewardHandler):
 class BaseTask(ABC):
     """Base class for tasks."""
 
-    _reward_handler_type: type[BaseRewardHandler]
+    _reward_handler_type: type[GraphTaskRewardHandler]
 
     @abstractmethod
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
@@ -211,9 +216,11 @@ class BaseTask(ABC):
             info (dict[str, Any]): Additional information about the task advancement.
         """
 
-    def get_reward_handler(self) -> BaseRewardHandler:
+    def get_reward_handler(self, no_task_advancement_reward: bool) -> GraphTaskRewardHandler:
         """Return the reward handler for the task."""
-        return self._reward_handler_type(self)
+        return self._reward_handler_type(
+            self, no_task_advancement_reward
+        )  # TODO: Create a base TaskRewardHandler class
 
     @abstractmethod
     def text_description(self) -> str:

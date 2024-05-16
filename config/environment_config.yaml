@@ -1,6 +1,7 @@
 # === General ===
 seed: 1
 max_episode_steps: 1000
+no_task_advancement_reward: False # If True, the reward will be 0 until the task is completed
 
 # === Simulator ===
 controller_parameters:

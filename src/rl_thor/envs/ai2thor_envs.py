@@ -482,7 +482,7 @@ class ITHOREnv(
 
         self.task = task_blueprint.task_type(**task_blueprint.task_args)
         # TODO: Support more than one reward handler
-        self.reward_handler = self.task.get_reward_handler()
+        self.reward_handler = self.task.get_reward_handler(self.config.no_task_advancement_reward)
 
         # Reset the controller, task and reward handler
         task_completion, task_info, scene_initialization_time = self._reset_controller_task_reward(task_blueprint)
@@ -545,7 +545,7 @@ class ITHOREnv(
             # Instantiate the scene
             start_time = time.perf_counter()
 
-            initial_event: Event = self.controller.reset(scene=sampled_scene)  # type: ignore
+            self.controller.reset(scene=sampled_scene)  # type: ignore
             self._randomize_scene(self.controller)
 
             end_time = time.perf_counter()

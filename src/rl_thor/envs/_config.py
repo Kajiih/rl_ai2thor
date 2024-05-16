@@ -317,6 +317,7 @@ class EnvConfig:
     # === General environment configuration ===
     seed: int = 0
     max_episode_steps: int = 1000
+    no_task_advancement_reward: bool = False
 
     # === Simulator configuration ===
     controller_parameters: ControllerParametersConfig = field(default_factory=ControllerParametersConfig)
