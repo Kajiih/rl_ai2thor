@@ -2,11 +2,13 @@
 # TODO: Make compatible with multi-task training
 
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import gymnasium as gym
 import typer
 import wandb
+import yaml
 from experiment_utils import Exp
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
@@ -19,6 +21,10 @@ from rl_thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
 
 if TYPE_CHECKING:
     from wandb.sdk.wandb_run import Run
+
+config_path = Path("examples/benchmark/config/environment_config.yaml")
+with config_path.open("r") as file:
+    env_config = yaml.safe_load(file)
 
 
 class ModelType(StrEnum):
@@ -95,9 +101,15 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
             return [task_blueprints_configs[task] for task in task_blueprints_configs]
 
 
-def make_env(config_override: dict[str, Any], experiment: Exp, is_single_task: bool) -> gym.Env:
+def make_env(
+    config_path: str | Path, config_override: dict[str, Any], experiment: Exp, is_single_task: bool
+) -> gym.Env:
     """Create the environment for single task and simple action space training with stable-baselines3."""
-    env = gym.make("rl_thor/ITHOREnv-v0.1_sb3_ready", config_override=config_override)  # type: ignore
+    env = gym.make(
+        "rl_thor/ITHOREnv-v0.1_sb3_ready",
+        config_path=config_path,
+        config_override=config_override,
+    )  # type: ignore
     env = SimpleActionSpaceWrapper(env)
     if is_single_task:
         env = SingleTaskWrapper(env)
@@ -133,17 +145,16 @@ def main(
         model_config["policy_type"] = "MultiInputPolicy"
 
     task_blueprint_config = get_task_blueprint_config(task)
-
-    config_override = {"tasks": {"task_blueprints": task_blueprint_config}}
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
 
     # === Load the experiment configuration ===
     experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
+    config_override = {"tasks": {"task_blueprints": task_blueprint_config}}
     wandb_config = experiment.config["wandb"]
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
     tags.append("single_task" if is_single_task else "multi_task")
     run: Run = wandb.init(  # type: ignore
-        config=experiment.config,
+        config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         project=wandb_config["project"],
         sync_tensorboard=wandb_config["sync_tensorboard"],
         monitor_gym=wandb_config["monitor_gym"],
@@ -156,7 +167,7 @@ def main(
     )
 
     # === Instantiate the environment ===
-    env = DummyVecEnv([lambda: make_env(config_override, experiment, is_single_task=is_single_task)])
+    env = DummyVecEnv([lambda: make_env(config_path, config_override, experiment, is_single_task=is_single_task)])
     if record:
         record_config = experiment.config["video_recorder"]
         env = VecVideoRecorder(

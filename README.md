@@ -126,7 +126,7 @@ If unspecified, the environment configuration is equivalent to the file `configu
 ```yaml
 # === General ===
 seed: 1
-max_episode_steps: 500
+max_episode_steps: 1000
 
 # === Simulator ===
 controller_parameters:
