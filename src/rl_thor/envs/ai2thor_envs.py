@@ -7,6 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 import operator
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -130,6 +131,7 @@ class ITHOREnv(
         self.reward_handler: BaseRewardHandler
         self.np_random: np.random.Generator
         self.task_blueprints: list[TaskBlueprint]
+        self.last_info: dict[str, Any]
 
     @property
     def last_event(self) -> Event:
@@ -350,12 +352,18 @@ class ITHOREnv(
         )
 
         # === Perform the action ===
+        action_execution_time = None
         if failed_action_event is None:
+            start_time = time.perf_counter()
+
             new_event = env_action.perform(
                 env=self,
                 action_parameter=action_parameter,
                 target_object_id=target_object_id,  # TODO: Create NoObject object
             )
+
+            end_time = time.perf_counter()
+            action_execution_time = end_time - start_time
         else:
             new_event = failed_action_event
         new_event.metadata["target_object_id"] = target_object_id
@@ -365,7 +373,13 @@ class ITHOREnv(
 
         environment_obs: NDArray = new_event.frame  # type: ignore # TODO: Check how to fix this type issue
         observation = self._get_full_observation(environment_obs)
+
+        # Start the timer before the computation
+        start_time = time.perf_counter()
         reward, terminated, task_info = self.reward_handler.get_reward(new_event, self.controller.last_action)
+        # End the timer after the computation
+        end_time = time.perf_counter()
+        reward_computation_time = end_time - start_time
 
         truncated = self.step_count >= self.config.max_episode_steps
         info = {
@@ -373,7 +387,13 @@ class ITHOREnv(
             "task_info": task_info,
             "is_success": terminated,
             "task_advancement": task_info.get("task_advancement", None),
+            # Performance logging
+            "speed_performance": {
+                "reward_computation_time": reward_computation_time,
+                "action_execution_time": action_execution_time,
+            },
         }
+        self.last_info = info
 
         return observation, reward, terminated, truncated, info
 
@@ -465,7 +485,7 @@ class ITHOREnv(
         self.reward_handler = self.task.get_reward_handler()
 
         # Reset the controller, task and reward handler
-        task_completion, task_info = self._reset_controller_task_reward(task_blueprint)
+        task_completion, task_info, scene_initialization_time = self._reset_controller_task_reward(task_blueprint)
 
         self.step_count = 0
         info = {
@@ -473,12 +493,14 @@ class ITHOREnv(
             "task_info": task_info,
             "is_success": task_completion,
             "task_advancement": task_info.get("task_advancement", None),
+            "speed_performance": {"scene_initialization_time": scene_initialization_time},
         }
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
         observation = self._get_full_observation(obs_env)
         print(f"Starting new episode in {self.current_scene} with task {self.current_task_type}.")
 
+        self.last_info = info
         return observation, info
 
     def _get_full_observation(self, environment_obs: NDArray[np.uint8]) -> dict[str, Any]:
@@ -499,7 +521,7 @@ class ITHOREnv(
             "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
         }
 
-    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[bool, dict[str, Any]]:
+    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[bool, dict[str, Any], float]:
         """
         Sample a task from the task blueprint compatible with the given event.
 
@@ -509,6 +531,7 @@ class ITHOREnv(
         Returns:
             task_completion (bool): Whether the task is completed.
             task_info (dict[str, Any]): Additional information about the task.
+            scene_initialization_time (float): Time taken to initialize the scene.
 
         """
         successful_reset = False
@@ -520,8 +543,14 @@ class ITHOREnv(
             print(f"Sampled scene: {sampled_scene}.")
 
             # Instantiate the scene
+            start_time = time.perf_counter()
+
             initial_event: Event = self.controller.reset(scene=sampled_scene)  # type: ignore
             self._randomize_scene(self.controller)
+
+            end_time = time.perf_counter()
+            scene_initialization_time = end_time - start_time
+            print(f"Scene {sampled_scene} initialized in {scene_initialization_time:.4f} seconds.")
 
             successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
             if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
@@ -539,7 +568,7 @@ class ITHOREnv(
 
         self.current_scene = sampled_scene
 
-        return task_completion, task_info
+        return task_completion, task_info, scene_initialization_time
 
     # TODO: Check why this is used nowhere
     def _randomize_scene(

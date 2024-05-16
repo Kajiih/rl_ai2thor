@@ -1,11 +1,12 @@
 """Utilities for running experiments."""
 
+import csv
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -82,3 +83,69 @@ class Exp:
             "job_type": self.job_type,
         })
         return config
+
+
+# %% SB3 callbacks
+from stable_baselines3.common.callbacks import BaseCallback
+
+if TYPE_CHECKING:
+    from collections import deque
+
+
+class LogSpeedPerformanceCallback(BaseCallback):
+    """
+    Callback for logging performance (graph tasks computation time, rendering time and scene initialization time).
+
+    Those data are found in the `info` dictionary of the environment after each step (self.model.ep_info_buffer).
+
+    Attributes:
+        exp (Exp): Experiment configuration.
+        verbose (int): Verbosity level.
+
+    """
+
+    def __init__(
+        self,
+        log_dir: Path | str,
+        verbose: int = 0,
+    ) -> None:
+        """
+        Initialize the callback.
+
+        Args:
+            log_dir (Path): Log directory.
+            verbose (int): Verbosity level.
+
+        """
+        super().__init__(verbose)
+        self.log_dir = Path(log_dir)
+        self.log_file_path = self.log_dir / "performance_log.csv"
+
+        # Create log directory if it doesn't exist
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize CSV file with headers
+        with self.log_file_path.open("w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["num_timesteps", "reward_computation_time", "action_execution_time"])
+
+    def _on_step(self) -> bool:
+        """
+        Log the performance after each step.
+
+        Returns:
+            bool: Whether or not the callback should continue.
+
+        """
+        # Log the performance
+        speed_performance_info = self.locals["infos"][0]["speed_performance"]
+
+        reward_computation_time = speed_performance_info.get("reward_computation_time", None)
+        action_execution_time = speed_performance_info.get("action_execution_time", None)
+
+        # Write the performance metrics to CSV
+        with self.log_file_path.open("a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([self.num_timesteps, reward_computation_time, action_execution_time])
+
+        return True

@@ -9,7 +9,7 @@ import gymnasium as gym
 import typer
 import wandb
 import yaml
-from experiment_utils import Exp
+from experiment_utils import Exp, LogSpeedPerformanceCallback
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
@@ -126,6 +126,7 @@ def main(
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
+    log_speed_performance: Annotated[bool, typer.Option("--log-speed", "-l")] = False,
     seed: int = 0,
 ) -> None:
     """
@@ -136,6 +137,7 @@ def main(
         model_name (ModelType): Model to use for training.
         total_timesteps (int): Total number of timesteps to train the agent.
         record (bool): Record the training.
+        log_speed_performance (bool): Log the speed performance of the agent.
         seed (int): Seed for reproducibility.
     """
     is_single_task = task != AvailableTask.MULTI_TASK
@@ -190,10 +192,11 @@ def main(
     wandb_callback_config = wandb_config["sb3_callback"]
     eval_callback_config = experiment.config["evaluation"]
     # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
+    eval_env = DummyVecEnv([lambda: make_env(config_path, config_override, experiment, is_single_task=is_single_task)])
     callbacks = [
         # TODO: Check EvalCallback really works with different tasks
         EvalCallback(
-            eval_env=env,  # TODO? Make a different environment for evaluation?
+            eval_env=eval_env,
             n_eval_episodes=eval_callback_config["nb_episodes"],
             eval_freq=eval_callback_config["frequency"],
             log_path=str(experiment.log_dir),
@@ -208,6 +211,9 @@ def main(
             gradient_save_freq=wandb_callback_config["gradient_save_freq"],
         ),
     ]
+    if log_speed_performance:
+        callbacks.append(LogSpeedPerformanceCallback(experiment.log_dir, verbose=1))
+
     train_model.learn(
         total_timesteps=total_timesteps,
         progress_bar=model_config["progress_bar"],
