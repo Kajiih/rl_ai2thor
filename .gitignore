@@ -124,10 +124,11 @@ dmypy.json
 .DS_Store
 
 ## Directly added
-outputs/
 wandb/
 checkpoints/
 runs/
+docker/ai2thor_simulator_resources/
+
 
 ## Dev files
 old/

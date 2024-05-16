@@ -526,7 +526,7 @@ class ITHOREnv(
             successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
             if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
                 print(
-                    f"Scene {sampled_scene} is not compatible with the task blueprint {task_blueprint}. Removing it from the task blueprint."
+                    f"Scene {sampled_scene} is not compatible with the task blueprint {task_blueprint.task_type} ({task_blueprint.task_args}). Removing it from the task blueprint."
                 )
                 task_blueprint.scenes.remove(sampled_scene)
             elif task_completion:
