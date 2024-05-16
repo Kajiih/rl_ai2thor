@@ -34,6 +34,7 @@ class ModelType(StrEnum):
     PPO = "PPO"
     A2C = "A2C"
     DQN = "DQN"
+    RANDOM = "Random"
 
 
 class AvailableTask(StrEnum):
@@ -67,6 +68,8 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
         case ModelType.A2C:
             return A2C
         case ModelType.DQN:
+            return DQN
+        case ModelType.RANDOM:
             return DQN
 
 
@@ -218,13 +221,18 @@ def main(
 
     # === Instantiate the model ===
     sb3_model = get_model(model_name)
-    train_model = sb3_model(
-        policy=model_config["policy_type"],
-        env=env,
-        verbose=model_config["verbose"],
-        tensorboard_log=str(experiment.log_dir),
-        seed=seed,
-    )
+    model_args = {
+        "policy": model_config["policy_type"],
+        "env": env,
+        "verbose": model_config["verbose"],
+        "tensorboard_log": str(experiment.log_dir),
+        "seed": seed,
+    }
+    if model_name == ModelType.RANDOM:
+        model_args["learning_starts"] = total_timesteps
+        model_args["learning_rate"] = 0.0
+    train_model = sb3_model(**model_args)
+
     wandb_callback_config = wandb_config["sb3_callback"]
     eval_callback_config = experiment.config["evaluation"]
     # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
