@@ -1,7 +1,6 @@
-ARG CUDA_VERSION
+ARG CUDA_VERSION=12.2.2
 
-# FROM nvidia/cuda:$CUDA_VERSION-devel-ubuntu18.04
-FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
+FROM nvidia/cuda:$CUDA_VERSION-devel-ubuntu22.04
 FROM python:3.12
 ARG NVIDIA_VERSION
 

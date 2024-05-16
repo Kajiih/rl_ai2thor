@@ -1,8 +1,7 @@
 #!/bin/bash
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-cd $DIR/../
+cd "$DIR"/../ || exit
 
-export ROBOTHOR_BASE_DIR=`pwd`
 
 # Inference on train split
 X11_PARAMS=""

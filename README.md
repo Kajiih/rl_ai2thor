@@ -39,7 +39,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
     We recommend you use a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) virtual environment:
 
     ```bash
-      #  We require python>=3.12 
+      #  We require python>=3.12
       conda create -n rl_thor python=3.12
       conda activate rl_thor
     ```
@@ -109,11 +109,27 @@ If you are using NVIDIA GPUs, an alternative solution is to start an X-Server on
 ai2thor-xorg start
 ```
 
-You should now be able to instantiate AI2-THOR controllers.
+You should now be able to instantiate the AI2-THOR controllers.
 
-If you prefer using docker, we have a [Dockerfile](.) **[link to Dockerfile]** that you can use to build an image with the necessary dependencies.
+If you prefer using docker, we have a [Dockerfile](docker/Dockerfile) based on [ai2thor-docker](https://github.com/allenai/ai2thor-docker) repository.
 
-**[Add more details about the X-Server setup and the Dockerfile]** -
+Build the image:
+
+```bash
+./docker/scripts/build.sh
+```
+
+Run the image:
+
+```bash
+./docker/scripts/run.sh
+```
+
+In the container, you can instantiate the controller, for example, run the test script:
+
+```bash
+python example_agent.py
+```
 
 ## ✏️ Environment Configuration
 
