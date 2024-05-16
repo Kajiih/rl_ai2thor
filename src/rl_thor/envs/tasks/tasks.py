@@ -68,6 +68,8 @@ class TaskType(StrEnum):
     PREPARE_WATCHING_TV = "PrepareWatchingTV"
     PREPARE_GOING_TO_BED = "PrepareGoingToBed"
     PREPARE_FOR_SHOWER = "PrepareForShower"
+    PLACE_IN_FILLED_SINK = "PlaceInFilledSink"
+    PLACE_3_IN_FILLED_SINK = "Place3InFilledSink"
 
 
 # === Custom Graph asks ===
@@ -1368,6 +1370,125 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
 
 
+# %% === Other Benchmark Tasks ===
+class PlaceInFilledSink(GraphTask):
+    """Task for placing a given object in a filled sink."""
+
+    def __init__(self, placed_object_type: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type (SimObjectType): The type of object to place.
+        """
+        self.placed_object_type = placed_object_type
+
+        task_description_dict = self._create_task_description_dict(placed_object_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_type: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            placed_object_type (SimObjectType): The type of object to place.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("sink"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SINK)},
+            ),
+            ItemId("faucet"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.FAUCET),
+                    IsToggledProp(True),
+                },
+            ),
+            ItemId("placed_object"): TaskItemData(
+                properties={ObjectTypeProp(placed_object_type)},
+                relations={
+                    ItemId("sink"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place {self.placed_object_type} in a sink filled with water"
+
+
+class Place3InFilledSink(GraphTask):
+    """Task for placing a 3 given objects in a filled sink."""
+
+    def __init__(
+        self,
+        placed_object_type_1: SimObjectType,
+        placed_object_type_2: SimObjectType,
+        placed_object_type_3: SimObjectType,
+    ) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            placed_object_type_1 (SimObjectType): The type of object to place.
+            placed_object_type_2 (SimObjectType): The type of object to place.
+            placed_object_type_3 (SimObjectType): The type of object to place.
+        """
+        self.placed_object_types = [placed_object_type_1, placed_object_type_2, placed_object_type_3]
+
+        task_description_dict = self._create_task_description_dict(self.placed_object_types)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, placed_object_types: list[SimObjectType]) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            placed_object_types (list[SimObjectType]): The types of objects to place.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        task_description_dict = {
+            ItemId("sink"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SINK)},
+            ),
+            ItemId("faucet"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.FAUCET),
+                    IsToggledProp(True),
+                },
+            ),
+        }
+        for i, placed_object_type in enumerate(placed_object_types):
+            task_description_dict[ItemId(f"placed_object_{i}")] = TaskItemData(
+                properties={ObjectTypeProp(placed_object_type)},
+                relations={
+                    ItemId("sink"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            )
+
+        return task_description_dict
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place {self.placed_object_types[0]}, {self.placed_object_types[1]} and {self.placed_object_types[2]} in a sink filled with water"
+
+
 # %% === Constants ===
 ALL_TASKS: dict[TaskType, type[GraphTask]]
 ALL_TASKS = {
@@ -1388,6 +1509,8 @@ ALL_TASKS = {
     TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,
     TaskType.PREPARE_GOING_TO_BED: PrepareGoingToBedTask,
     TaskType.PREPARE_FOR_SHOWER: PrepareForShowerTask,
+    TaskType.PLACE_IN_FILLED_SINK: PlaceInFilledSink,
+    TaskType.PLACE_3_IN_FILLED_SINK: Place3InFilledSink,
 }
 
 

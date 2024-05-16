@@ -9,6 +9,7 @@ import gymnasium as gym
 import typer
 import wandb
 import yaml
+from envs.sim_objects import SimObjectType
 from experiment_utils import Exp, LogSpeedPerformanceCallback
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
@@ -38,11 +39,18 @@ class ModelType(StrEnum):
 class AvailableTask(StrEnum):
     """Available tasks for training."""
 
+    # Complex tasks
     PREPARE_MEAL = TaskType.PREPARE_MEAL
     PREPARE_WATCHING_TV = TaskType.PREPARE_WATCHING_TV
     PREPARE_GOING_TO_BED = TaskType.PREPARE_GOING_TO_BED
     PREPARE_FOR_SHOWER = TaskType.PREPARE_FOR_SHOWER
     MULTI_TASK = "MultiTask"
+
+    # Gradual tasks
+    PICKUP_KNIFE = "PickupKnife"
+    PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
+    PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
+    PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
 
 
 model_config = {
@@ -63,25 +71,49 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
 
 
 task_blueprints_configs = {
-    TaskType.PREPARE_MEAL: {
+    AvailableTask.PREPARE_MEAL: {
         "task_type": TaskType.PREPARE_MEAL,
         "args": {},
         "scenes": ["FloorPlan1"],
     },
-    TaskType.PREPARE_WATCHING_TV: {
+    AvailableTask.PREPARE_WATCHING_TV: {
         "task_type": TaskType.PREPARE_WATCHING_TV,
         "args": {},
         "scenes": ["FloorPlan201"],
     },
-    TaskType.PREPARE_GOING_TO_BED: {
+    AvailableTask.PREPARE_GOING_TO_BED: {
         "task_type": TaskType.PREPARE_GOING_TO_BED,
         "args": {},
         "scenes": ["FloorPlan301"],
     },
-    TaskType.PREPARE_FOR_SHOWER: {
+    AvailableTask.PREPARE_FOR_SHOWER: {
         "task_type": TaskType.PREPARE_FOR_SHOWER,
         "args": {},
         "scenes": ["FloorPlan401"],
+    },
+    AvailableTask.PICKUP_KNIFE: {
+        "task_type": TaskType.PICKUP,
+        "args": {"picked_up_object_type": SimObjectType.KNIFE},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_KNIFE_IN_SINK: {
+        "task_type": TaskType.PLACE_IN,
+        "args": {"placed_object_type": SimObjectType.KNIFE, "receptacle_type": SimObjectType.SINK},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_KNIFE_IN_FILLED_SINK: {
+        "task_type": TaskType.PLACE_IN_FILLED_SINK,
+        "args": {"placed_object_type": SimObjectType.KNIFE},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK: {
+        "task_type": TaskType.PLACE_IN_FILLED_SINK,
+        "args": {
+            "placed_object_type_1": SimObjectType.KNIFE,
+            "placed_object_type_2": SimObjectType.BOWL,
+            "placed_object_type_3": SimObjectType.MUG,
+        },
+        "scenes": ["FloorPlan1"],
     },
 }
 
@@ -89,16 +121,18 @@ task_blueprints_configs = {
 def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
     """Return the scenes for the task."""
     match task:
-        case AvailableTask.PREPARE_MEAL:
-            return [task_blueprints_configs[TaskType.PREPARE_MEAL]]
-        case AvailableTask.PREPARE_WATCHING_TV:
-            return [task_blueprints_configs[TaskType.PREPARE_WATCHING_TV]]
-        case AvailableTask.PREPARE_GOING_TO_BED:
-            return [task_blueprints_configs[TaskType.PREPARE_GOING_TO_BED]]
-        case AvailableTask.PREPARE_FOR_SHOWER:
-            return [task_blueprints_configs[TaskType.PREPARE_FOR_SHOWER]]
         case AvailableTask.MULTI_TASK:
-            return [task_blueprints_configs[task] for task in task_blueprints_configs]
+            return [
+                task_blueprints_configs[task]
+                for task in (
+                    AvailableTask.PREPARE_MEAL,
+                    AvailableTask.PREPARE_WATCHING_TV,
+                    AvailableTask.PREPARE_GOING_TO_BED,
+                    AvailableTask.PREPARE_FOR_SHOWER,
+                )
+            ]
+        case _:
+            return [task_blueprints_configs[task]]
 
 
 def make_env(
