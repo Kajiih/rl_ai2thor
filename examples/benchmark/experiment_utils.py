@@ -88,10 +88,8 @@ class Exp:
 # %% SB3 callbacks
 from stable_baselines3.common.callbacks import BaseCallback
 
-if TYPE_CHECKING:
-    from collections import deque
 
-
+#!! No more used
 class LogSpeedPerformanceCallback(BaseCallback):
     """
     Callback for logging performance (graph tasks computation time, rendering time and scene initialization time).
@@ -99,7 +97,7 @@ class LogSpeedPerformanceCallback(BaseCallback):
     Those data are found in the `info` dictionary of the environment after each step (self.model.ep_info_buffer).
 
     Attributes:
-        exp (Exp): Experiment configuration.
+        log_dir (Path): Log directory.
         verbose (int): Verbosity level.
 
     """
@@ -149,3 +147,193 @@ class LogSpeedPerformanceCallback(BaseCallback):
             writer.writerow([self.num_timesteps, reward_computation_time, action_execution_time])
 
         return True
+
+
+#!! Untested
+class LogStepsRewardCallback(BaseCallback):
+    """
+    Callback for logging the reward after each step.
+
+    Attributes:
+        log_dir (Path): Log directory.
+        verbose (int): Verbosity level.
+    """
+
+    def __init__(
+        self,
+        log_dir: Path | str,
+        verbose: int = 0,
+    ) -> None:
+        """
+        Initialize the callback.
+
+        Args:
+            log_dir (Path): Log directory.
+            verbose (int): Verbosity level.
+        """
+        super().__init__(verbose)
+        self.log_dir = Path(log_dir)
+        self.log_file_path = self.log_dir / "steps_reward_log.csv"
+
+        # Create log directory if it doesn't exist
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize CSV file with headers
+        with self.log_file_path.open("w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["num_timesteps", "reward"])
+
+    def _on_step(self) -> bool:
+        """
+        Log the performance after each step.
+
+        Returns:
+            bool: Whether or not the callback should continue.
+
+        """
+        # Log the performance
+        reward = self.locals["reward"]
+
+        # Write the performance metrics to CSV
+        with self.log_file_path.open("a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([self.num_timesteps, reward])
+
+        return True
+
+
+# %% Environment wrappers
+import gymnasium as gym
+
+
+class FullMetricsLogWrapper(gym.Wrapper):
+    """
+    Wrapper for logging several metrics after each step.
+
+    Attributes:
+        log_dir (Path): Log directory.
+    """
+
+    def __init__(
+        self,
+        env: gym.Env,
+        log_dir: Path | str,
+    ) -> None:
+        """
+        Initialize the wrapper.
+
+        Args:
+            env (gym.Env): Environment to wrap.
+            log_dir (Path): Log directory.
+        """
+        super().__init__(env)
+        self.log_dir = Path(log_dir)
+        self.log_file_path = self.log_dir / "full_metrics_log.csv"
+
+        # Create log directory if it doesn't exist
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize CSV file with headers
+        with self.log_file_path.open("w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                "episode_step",
+                "reward",
+                "task_advancement",
+                "terminated",
+                "truncated",
+                "task_type",
+                "task_args",
+                "task_description",
+                "scene_initialization_time",
+                "reward_computation_time",
+                "action_execution_time",
+            ])
+
+    def step(self, action: Any) -> tuple[Any, float, bool, bool, dict]:
+        """
+        Step the environment.
+
+        Args:
+            action (Any): Action to take.
+
+        Returns:
+            tuple[Any, float, bool, bool, dict]: Observation, reward, termination status, truncated status, and info.
+
+        """
+        # Step the environment
+        observation, reward, terminated, truncated, info = self.env.step(action)
+
+        self._log_full_step_metrics(
+            info=info,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+        )
+
+        return observation, reward, terminated, truncated, info
+
+    def reset(self, **kwargs: Any) -> tuple[Any, dict]:
+        """
+        Reset the environment.
+
+        Args:
+            **kwargs (Any): Additional arguments for the reset.
+
+        Returns:
+            observation (Any): Initial observation.
+            info (dict): Reset information.
+
+        """
+        observation, info = self.env.reset(**kwargs)
+        self._log_full_step_metrics(
+            info=info,
+            reward=0,
+            terminated=False,
+            truncated=False,
+        )
+
+        return observation, info
+
+    def _log_full_step_metrics(
+        self,
+        info: dict[str, Any],
+        reward: float,
+        terminated: bool,
+        truncated: bool,
+    ) -> None:
+        """
+        Log the full step metrics.
+
+        Args:
+            info (dict): Information about the step.
+            reward (float): Reward obtained.
+            terminated (bool): Whether the episode has terminated.
+            truncated (bool): Whether the episode has been truncated.
+        """
+        # Log the metrics
+        episode_step = info.get("episode_step")
+        task_advancement = info.get("task_advancement")
+        task_type = info.get("task_type")
+        task_args = info.get("task_args")
+        task_description = info.get("task_description")
+        scene_initialization_time = info["speed_performance"].get("scene_initialization_time", None)
+        reward_computation_time = info["speed_performance"].get("reward_computation_time", None)
+        action_execution_time = info["speed_performance"].get("action_execution_time", None)
+
+        # Write the full step metrics to CSV
+        with self.log_file_path.open("a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                episode_step,
+                reward,
+                task_advancement,
+                terminated,
+                truncated,
+                task_type,
+                task_args,
+                task_description,
+                scene_initialization_time,
+                reward_computation_time,
+                action_execution_time,
+            ])

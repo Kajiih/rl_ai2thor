@@ -17,6 +17,7 @@ RUN pip3 install -r requirements/dev.txt
 
 RUN NVIDIA_VERSION=$NVIDIA_VERSION /app/install_nvidia.sh
 
+# ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
 COPY docker/ai2thor_docker /app/ai2thor_docker
 COPY src /app/src
 COPY config /app/config

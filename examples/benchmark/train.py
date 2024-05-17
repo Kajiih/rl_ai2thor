@@ -9,14 +9,14 @@ import gymnasium as gym
 import typer
 import wandb
 import yaml
-from envs.sim_objects import SimObjectType
-from experiment_utils import Exp, LogSpeedPerformanceCallback
+from experiment_utils import Exp, FullMetricsLogWrapper
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from wandb.integration.sb3 import WandbCallback
 
+from rl_thor.envs.sim_objects import SimObjectType
 from rl_thor.envs.tasks.tasks import TaskType
 from rl_thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
 
@@ -139,7 +139,12 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
 
 
 def make_env(
-    config_path: str | Path, config_override: dict[str, Any], experiment: Exp, is_single_task: bool
+    config_path: str | Path,
+    config_override: dict[str, Any],
+    experiment: Exp,
+    is_single_task: bool,
+    log_full_metrics: bool,
+    eval_env: bool = False,
 ) -> gym.Env:
     """Create the environment for single task and simple action space training with stable-baselines3."""
     env = gym.make(
@@ -147,6 +152,11 @@ def make_env(
         config_path=config_path,
         config_override=config_override,
     )  # type: ignore
+
+    log_dir = experiment.log_dir / "eval" if eval_env else experiment.log_dir / "train"
+    if log_full_metrics:
+        env = FullMetricsLogWrapper(env, log_dir)
+
     env = SimpleActionSpaceWrapper(env)
     if is_single_task:
         env = SingleTaskWrapper(env)
@@ -163,7 +173,7 @@ def main(
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
-    log_speed_performance: Annotated[bool, typer.Option("--log-speed", "-l")] = False,
+    log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
     no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
     seed: int = 0,
 ) -> None:
@@ -175,7 +185,8 @@ def main(
         model_name (ModelType): Model to use for training.
         total_timesteps (int): Total number of timesteps to train the agent.
         record (bool): Record the training.
-        log_speed_performance (bool): Log the speed performance of the agent.
+        log_full_env_metrics (bool): Log full environment metrics.
+        no_task_advancement_reward (bool): Do not use the task advancement reward.
         seed (int): Seed for reproducibility.
     """
     is_single_task = task != AvailableTask.MULTI_TASK
@@ -208,7 +219,16 @@ def main(
     )
 
     # === Instantiate the environment ===
-    env = DummyVecEnv([lambda: make_env(config_path, config_override, experiment, is_single_task=is_single_task)])
+    env = DummyVecEnv([
+        lambda: make_env(
+            config_path,
+            config_override,
+            experiment,
+            is_single_task=is_single_task,
+            log_full_metrics=log_full_env_metrics,
+            eval_env=False,
+        )
+    ])
     if record:
         record_config = experiment.config["video_recorder"]
         env = VecVideoRecorder(
@@ -236,7 +256,16 @@ def main(
     wandb_callback_config = wandb_config["sb3_callback"]
     eval_callback_config = experiment.config["evaluation"]
     # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
-    eval_env = DummyVecEnv([lambda: make_env(config_path, config_override, experiment, is_single_task=is_single_task)])
+    eval_env = DummyVecEnv([
+        lambda: make_env(
+            config_path,
+            config_override,
+            experiment,
+            is_single_task=is_single_task,
+            log_full_metrics=False,
+            eval_env=True,
+        )
+    ])
     callbacks = [
         # TODO: Check EvalCallback really works with different tasks
         EvalCallback(
@@ -255,8 +284,6 @@ def main(
             gradient_save_freq=wandb_callback_config["gradient_save_freq"],
         ),
     ]
-    if log_speed_performance:
-        callbacks.append(LogSpeedPerformanceCallback(experiment.log_dir, verbose=1))
 
     train_model.learn(
         total_timesteps=total_timesteps,

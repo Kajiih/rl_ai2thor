@@ -383,6 +383,7 @@ class ITHOREnv(
 
         truncated = self.step_count >= self.config.max_episode_steps
         info = {
+            "episode_step": self.step_count,
             "metadata": new_event.metadata,
             "task_info": task_info,
             "is_success": terminated,
@@ -392,6 +393,9 @@ class ITHOREnv(
                 "reward_computation_time": reward_computation_time,
                 "action_execution_time": action_execution_time,
             },
+            "task_type": self.task.__name__,
+            "task_args": self.task_blueprints[self.task_idx].task_args,
+            "task_description": self.task.text_description(),
         }
         self.last_info = info
 
@@ -489,11 +493,15 @@ class ITHOREnv(
 
         self.step_count = 0
         info = {
+            "episode_step": self.step_count,
             "metadata": self.last_event.metadata,
             "task_info": task_info,
             "is_success": task_completion,
             "task_advancement": task_info.get("task_advancement", None),
             "speed_performance": {"scene_initialization_time": scene_initialization_time},
+            "task_type": self.task.__name__,
+            "task_args": task_blueprint.task_args,
+            "task_description": self.task.text_description(),
         }
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
