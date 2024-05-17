@@ -49,8 +49,11 @@ class AvailableTask(StrEnum):
 
     # Gradual tasks
     PICKUP_KNIFE = "PickupKnife"
+    PICKUP_MUG = "PickupMug"
     PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
+    PLACE_MUG_IN_SINK = "PlaceMugInSink"
     PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
+    PLACE_MUG_IN_FILLED_SINK = "PlaceMugInFilledSink"
     PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
 
 
@@ -99,14 +102,24 @@ task_blueprints_configs = {
         "args": {"picked_up_object_type": SimObjectType.BUTTER_KNIFE},
         "scenes": ["FloorPlan1"],
     },
+    AvailableTask.PICKUP_MUG: {
+        "task_type": TaskType.PICKUP,
+        "args": {"picked_up_object_type": SimObjectType.MUG},
+        "scenes": ["FloorPlan1"],
+    },
     AvailableTask.PLACE_KNIFE_IN_SINK: {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE, "receptacle_type": SimObjectType.SINK_BASIN},
         "scenes": ["FloorPlan1"],
     },
-    AvailableTask.PLACE_KNIFE_IN_FILLED_SINK: {
+    AvailableTask.PLACE_MUG_IN_SINK: {
+        "task_type": TaskType.PLACE_IN,
+        "args": {"placed_object_type": SimObjectType.MUG, "receptacle_type": SimObjectType.SINK_BASIN},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_MUG_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
-        "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE},
+        "args": {"placed_object_type": SimObjectType.MUG},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK: {
@@ -171,6 +184,7 @@ def make_env(
 def main(
     task: AvailableTask,
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
+    rollout_length: Annotated[Optional[int], typer.Option("--rollout", "-r")] = None,
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
     log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
@@ -203,6 +217,8 @@ def main(
     experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
     config_override: dict[str, Any] = {"tasks": {"task_blueprints": task_blueprint_config}}
     config_override["no_task_advancement_reward"] = no_task_advancement_reward
+    if rollout_length is not None:
+        config_override["max_episode_steps"] = rollout_length
     wandb_config = experiment.config["wandb"]
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
     tags.extend((
