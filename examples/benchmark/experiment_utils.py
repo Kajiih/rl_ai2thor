@@ -241,6 +241,7 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
             writer.writerow([
                 "episode_step",
                 "reward",
+                "max_task_advancement",
                 "task_advancement",
                 "terminated",
                 "truncated",
@@ -315,6 +316,7 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
         """
         # Log the metrics
         episode_step = info.get("episode_step")
+        max_task_advancement = info.get("max_task_advancement")
         task_advancement = info.get("task_advancement")
         task_type = info.get("task_type")
         task_args = info.get("task_args")
@@ -329,6 +331,7 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
             writer.writerow([
                 episode_step,
                 reward,
+                max_task_advancement,
                 task_advancement,
                 terminated,
                 truncated,

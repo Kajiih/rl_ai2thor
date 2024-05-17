@@ -387,6 +387,7 @@ class ITHOREnv(
             "metadata": new_event.metadata,
             "task_info": task_info,
             "is_success": terminated,
+            "max_task_advancement": self.task.maximum_advancement,
             "task_advancement": task_info.get("task_advancement", None),
             # Performance logging
             "speed_performance": {
@@ -394,8 +395,8 @@ class ITHOREnv(
                 "action_execution_time": action_execution_time,
             },
             "task_type": self.task.__class__.__name__,
-            "task_args": self.task_blueprints[self.task_idx].task_args,
-            "task_description": self.task.text_description(),
+            # "task_args": self.task_blueprints[self.task_idx].task_args,
+            # "task_description": self.task.text_description(),
         }
         self.last_info = info
 
@@ -497,6 +498,7 @@ class ITHOREnv(
             "metadata": self.last_event.metadata,
             "task_info": task_info,
             "is_success": task_completion,
+            "max_task_advancement": self.task.maximum_advancement,
             "task_advancement": task_info.get("task_advancement", None),
             "speed_performance": {"scene_initialization_time": scene_initialization_time},
             "task_type": self.task.__class__.__name__,

@@ -144,6 +144,12 @@ class BaseTask(ABC):
     _reward_handler_type: type[GraphTaskRewardHandler]
 
     @abstractmethod
+    def __init__(self) -> None:
+        """Initialize the task."""
+        # Type annotations
+        self.maximum_advancement: int
+
+    @abstractmethod
     def reset(self, controller: Controller) -> tuple[bool, float, bool, dict[str, Any]]:
         """
         Reset and initialize the task and the controller.
