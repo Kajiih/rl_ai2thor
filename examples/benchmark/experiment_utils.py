@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from envs.ai2thor_envs import BaseAI2THOREnv
+
+from rl_thor.envs.ai2thor_envs import BaseAI2THOREnv
 
 # TODO: Handle config path better
 experiment_config_path = Path(__file__).parent / "config/experiment_config.yaml"

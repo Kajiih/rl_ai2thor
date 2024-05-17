@@ -1247,11 +1247,11 @@ class PrepareForShowerTask(GraphTask):
         """
         last_event: Event = controller.last_event  # type: ignore
 
-        # === Find sink ===
-        sink_id = None
+        # === Find sink basin ===
+        sink_basin_id = None
         for obj_metadata in last_event.metadata["objects"]:
-            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == SimObjectType.SINK:
-                sink_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == SimObjectType.SINK_BASIN:
+                sink_basin_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
                 break
         else:
             return False
@@ -1281,7 +1281,7 @@ class PrepareForShowerTask(GraphTask):
                 )
                 controller.step(
                     action=Ai2thorAction.PUT_OBJECT,
-                    objectId=sink_id,
+                    objectId=sink_basin_id,
                     forceAction=True,
                 )
 
@@ -1398,8 +1398,8 @@ class PlaceInFilledSink(GraphTask):
             task_description_dict (TaskDict): Task description dictionary.
         """
         return {
-            ItemId("sink"): TaskItemData(
-                properties={ObjectTypeProp(SimObjectType.SINK)},
+            ItemId("sink_basin"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SINK_BASIN)},
             ),
             ItemId("faucet"): TaskItemData(
                 properties={
@@ -1410,7 +1410,7 @@ class PlaceInFilledSink(GraphTask):
             ItemId("placed_object"): TaskItemData(
                 properties={ObjectTypeProp(placed_object_type)},
                 relations={
-                    ItemId("sink"): {RelationTypeId.CONTAINED_IN: {}},
+                    ItemId("sink_basin"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             ),
         }
@@ -1422,7 +1422,7 @@ class PlaceInFilledSink(GraphTask):
         Returns:
             description (str): Text description of the task.
         """
-        return f"Place {self.placed_object_type} in a sink filled with water"
+        return f"Place {self.placed_object_type} in a sink basin filled with water"
 
 
 class Place3InFilledSink(GraphTask):
@@ -1459,8 +1459,8 @@ class Place3InFilledSink(GraphTask):
             task_description_dict (TaskDict): Task description dictionary.
         """
         task_description_dict = {
-            ItemId("sink"): TaskItemData(
-                properties={ObjectTypeProp(SimObjectType.SINK)},
+            ItemId("sink_basin"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SINK_BASIN)},
             ),
             ItemId("faucet"): TaskItemData(
                 properties={
@@ -1473,7 +1473,7 @@ class Place3InFilledSink(GraphTask):
             task_description_dict[ItemId(f"placed_object_{i}")] = TaskItemData(
                 properties={ObjectTypeProp(placed_object_type)},
                 relations={
-                    ItemId("sink"): {RelationTypeId.CONTAINED_IN: {}},
+                    ItemId("sink_basin"): {RelationTypeId.CONTAINED_IN: {}},
                 },
             )
 

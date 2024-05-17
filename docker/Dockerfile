@@ -30,4 +30,4 @@ ENV PYTHONPATH="${PYTHONPATH}:/app/src"
 COPY docker/example_agent.py ./
 
 
-CMD export DISPLAY=:0.0 && /bin/bash
+CMD export DISPLAY=:0.0 && ai2thor-xorg start && /bin/bash

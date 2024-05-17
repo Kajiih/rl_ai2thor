@@ -96,23 +96,23 @@ task_blueprints_configs = {
     },
     AvailableTask.PICKUP_KNIFE: {
         "task_type": TaskType.PICKUP,
-        "args": {"picked_up_object_type": SimObjectType.KNIFE},
+        "args": {"picked_up_object_type": SimObjectType.BUTTER_KNIFE},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_KNIFE_IN_SINK: {
         "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.KNIFE, "receptacle_type": SimObjectType.SINK},
+        "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE, "receptacle_type": SimObjectType.SINK_BASIN},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_KNIFE_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
-        "args": {"placed_object_type": SimObjectType.KNIFE},
+        "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
         "args": {
-            "placed_object_type_1": SimObjectType.KNIFE,
+            "placed_object_type_1": SimObjectType.BUTTER_KNIFE,
             "placed_object_type_2": SimObjectType.BOWL,
             "placed_object_type_3": SimObjectType.MUG,
         },
