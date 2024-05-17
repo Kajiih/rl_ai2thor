@@ -393,7 +393,7 @@ class ITHOREnv(
                 "reward_computation_time": reward_computation_time,
                 "action_execution_time": action_execution_time,
             },
-            "task_type": self.task.__name__,
+            "task_type": self.task.__class__.__name__,
             "task_args": self.task_blueprints[self.task_idx].task_args,
             "task_description": self.task.text_description(),
         }
@@ -499,7 +499,7 @@ class ITHOREnv(
             "is_success": task_completion,
             "task_advancement": task_info.get("task_advancement", None),
             "speed_performance": {"scene_initialization_time": scene_initialization_time},
-            "task_type": self.task.__name__,
+            "task_type": self.task.__class__.__name__,
             "task_args": task_blueprint.task_args,
             "task_description": self.task.text_description(),
         }

@@ -3,7 +3,7 @@
 
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Optional
 
 import gymnasium as gym
 import typer
@@ -176,6 +176,7 @@ def main(
     log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
     no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
     seed: int = 0,
+    group_name: Annotated[Optional[str], typer.Option("--group", "-g")] = None,  # noqa: UP007
 ) -> None:
     """
     Train the agent.
@@ -205,6 +206,7 @@ def main(
     wandb_config = experiment.config["wandb"]
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
     tags.append("single_task" if is_single_task else "multi_task")
+    tags.append(group_name) if group_name else "no_group"
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         project=wandb_config["project"],
@@ -212,7 +214,7 @@ def main(
         monitor_gym=wandb_config["monitor_gym"],
         save_code=wandb_config["save_code"],
         name=experiment.name,
-        # group=experiment.group,
+        group=group_name,
         job_type=experiment.job_type,
         tags=tags,
         notes=f"Simple {model_name} agent for RL THOR benchmarking on {task} task.",

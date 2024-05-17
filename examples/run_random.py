@@ -4,6 +4,8 @@
 import os
 from pathlib import Path
 
+from examples.benchmark.experiment_utils import FullMetricsLogWrapper
+
 from rl_thor.agents.agents import RandomAgent
 from rl_thor.agents.callbacks import RecordVideoCallback
 from rl_thor.envs.ai2thor_envs import ITHOREnv
@@ -25,6 +27,7 @@ def main() -> None:
     """Run the environment with a random agent."""
     # Create the environment
     env = ITHOREnv()
+    env = FullMetricsLogWrapper(env, log_dir=current_output_dir)
     env.reset(seed=SEED)
     callback = RecordVideoCallback(current_output_dir / "video.mp4")
     random_agent = RandomAgent(env, callback, seed=SEED)

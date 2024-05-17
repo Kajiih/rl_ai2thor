@@ -6,9 +6,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import yaml
+from envs.ai2thor_envs import BaseAI2THOREnv
 
 # TODO: Handle config path better
 experiment_config_path = Path(__file__).parent / "config/experiment_config.yaml"
@@ -206,7 +207,7 @@ class LogStepsRewardCallback(BaseCallback):
 import gymnasium as gym
 
 
-class FullMetricsLogWrapper(gym.Wrapper):
+class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
     """
     Wrapper for logging several metrics after each step.
 
@@ -266,12 +267,12 @@ class FullMetricsLogWrapper(gym.Wrapper):
 
         self._log_full_step_metrics(
             info=info,
-            reward=reward,
+            reward=float(reward),
             terminated=terminated,
             truncated=truncated,
         )
 
-        return observation, reward, terminated, truncated, info
+        return observation, float(reward), terminated, truncated, info
 
     def reset(self, **kwargs: Any) -> tuple[Any, dict]:
         """
