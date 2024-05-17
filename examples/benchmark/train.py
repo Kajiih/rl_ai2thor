@@ -264,7 +264,7 @@ def main(
             config_override,
             experiment,
             is_single_task=is_single_task,
-            log_full_metrics=False,
+            log_full_metrics=log_full_env_metrics,
             eval_env=True,
         )
     ])

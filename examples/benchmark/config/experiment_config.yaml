@@ -1,5 +1,5 @@
 wandb:
-  project: rl_thor
+  project: rl_thor_benchmark
   sync_tensorboard: true
   monitor_gym: true
   save_code: true
@@ -10,7 +10,7 @@ wandb:
 
 evaluation:
   nb_episodes: 10
-  frequency: 10_000
+  frequency: 4_000
   deterministic: true
   verbose: 1
 
