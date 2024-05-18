@@ -137,7 +137,7 @@ class ActionModifiersConfig:
 
     discrete_actions: bool = True  # TODO: Add checks for not compatible action groups
     target_closest_object: bool = True
-    simple_movement_actions: bool = True  # TODO: Add checks for rotation_actions and movement_actions to be True
+    simple_movement_actions: bool = False  # TODO: Add checks for rotation_actions and movement_actions to be True
     static_pickup: bool = False  # TODO: Add checks for pickup_put_actions to be True
     stationary_placement: bool = False  # TODO: Add checks for pickup_put_actions to be True
     partial_openness: bool = (

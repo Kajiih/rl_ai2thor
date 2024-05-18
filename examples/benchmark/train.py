@@ -151,6 +151,28 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
             return [task_blueprints_configs[task]]
 
 
+def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
+    """Return the action groups for the task."""
+    match task:
+        case (
+            AvailableTask.PICKUP_KNIFE
+            | AvailableTask.PICKUP_MUG
+            | AvailableTask.PLACE_KNIFE_IN_SINK
+            | AvailableTask.PLACE_MUG_IN_SINK
+            | AvailableTask.PLACE_KNIFE_IN_FILLED_SINK
+            | AvailableTask.PLACE_MUG_IN_FILLED_SINK
+            | AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK
+        ):
+            action_groups = {
+                "open_close_actions": False,
+                "toggle_actions": False,
+                "slice_actions": False,
+            }
+        case _:
+            action_groups = {}
+    return {"action_groups": action_groups}
+
+
 def make_env(
     config_path: str | Path,
     config_override: dict[str, Any],
@@ -184,7 +206,7 @@ def make_env(
 def main(
     task: AvailableTask,
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
-    rollout_length: Annotated[Optional[int], typer.Option("--rollout", "-r")] = None,
+    rollout_length: Annotated[Optional[int], typer.Option("--rollout", "-r")] = None,  # noqa: UP007
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
     record: bool = False,
     log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
@@ -219,6 +241,8 @@ def main(
     config_override["no_task_advancement_reward"] = no_task_advancement_reward
     if rollout_length is not None:
         config_override["max_episode_steps"] = rollout_length
+    # Add action groups override config
+    config_override.update(get_action_groups_override_config(task))
     wandb_config = experiment.config["wandb"]
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
     tags.extend((
@@ -259,7 +283,6 @@ def main(
             video_length=record_config["length"],
             name_prefix=record_config["prefix"],
         )
-
     # === Instantiate the model ===
     sb3_model = get_model(model_name)
     model_args = {

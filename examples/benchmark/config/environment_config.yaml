@@ -23,7 +23,7 @@ action_groups:
 action_modifiers:
   discrete_actions: True
   target_closest_object: True
-  simple_movement_actions: True
+  simple_movement_actions: False
 
 # === Simulator ===
 scene_randomization:
