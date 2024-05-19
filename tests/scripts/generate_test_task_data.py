@@ -23,9 +23,9 @@ def main():
 
     # generate_pickup_mug_data(controller)
     # generate_open_fridge_data(controller)
-    # generate_place_cooled_in_apple_counter_top_data(controller)
+    generate_place_cooled_in_apple_counter_top_data(controller)
     # generate_look_in_light_book_data(controller)
-    # generate_prepare_meal_data(controller)
+    generate_prepare_meal_data(controller)
     # generate_prepare_going_to_bed_data(controller)
 
     controller.stop()
@@ -188,7 +188,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "CounterTop|+00.69|+00.95|-02.48",
             "forceAction": True,
         },
-        advancement=7,  # potato(isSliced) 2 + knife/counterTop(containedIn) 3 + potato(isCooked) 2
+        advancement=8,  # potato(isSliced) 2 + knife/counterTop(containedIn) 4 + potato(isCooked) 2
     )
 
     # === Event 8: Toggle the stove on ===
@@ -198,7 +198,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "StoveKnob|-00.48|+00.88|-02.19",
             "forceAction": True,
         },
-        advancement=10,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3
+        advancement=12,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4
     )
 
     # === Event 9: Toggle the stove off ===
@@ -208,7 +208,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "StoveKnob|-00.48|+00.88|-02.19",
             "forceAction": True,
         },
-        advancement=10,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3
+        advancement=12,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4
     )
 
     # === Event 10: Pick up the potato slice ===
@@ -218,7 +218,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "Potato|-01.66|+00.93|-02.15|PotatoSliced_0",
             "forceAction": True,
         },
-        advancement=11,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + potato/plate(containedIn) 1
+        advancement=13,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + potato/plate(containedIn) 1
     )
 
     # === Event 11: Put the potato slice on a plate ===
@@ -228,7 +228,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "Plate|+00.96|+01.65|-02.61",
             "forceAction": True,
         },
-        advancement=13,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + potato/plate(containedIn) 3
+        advancement=16,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + potato/plate(containedIn) 4
     )
 
     # === Event 12: Pickup the plate ===
@@ -238,7 +238,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "Plate|+00.96|+01.65|-02.61",
             "forceAction": True,
         },
-        advancement=11,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + plate/countertop(containedIn) 1 # TODO: Check why the potato slice is not in the plate at this moment -> Probably ai2thor bug
+        advancement=13,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + plate/countertop(containedIn) 1 # TODO: Check why the potato slice is not in the plate at this moment -> Probably ai2thor bug
     )
 
     # === Event 13: Put the plate on the counter ===
@@ -248,7 +248,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "CounterTop|+00.69|+00.95|-02.48",
             "forceAction": True,
         },
-        advancement=16,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + potato/plate(containedIn) 3 + plate/countertop(containedIn) 3
+        advancement=20,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + potato/plate(containedIn) 4 + plate/countertop(containedIn) 4
     )
 
     # === Event 14: Pick up the fork ===
@@ -258,7 +258,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "Fork|+00.95|+00.77|-02.37",
             "forceAction": True,
         },
-        advancement=17,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + potato/plate(containedIn) 3 + plate/countertop(containedIn) 3 + fork/counterTop(containedIn) 1
+        advancement=21,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + potato/plate(containedIn) 4 + plate/countertop(containedIn) 4 + fork/counterTop(containedIn) 1
     )
 
     # === Event 15: Put the fork on the counter top ===
@@ -268,7 +268,7 @@ def generate_prepare_meal_data(controller: Controller) -> None:
             "objectId": "CounterTop|+00.69|+00.95|-02.48",
             "forceAction": True,
         },
-        advancement=19,  # potato(isSliced) 2 + potato(isCooked) 5 (containedIn 3 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 3 + potato/plate(containedIn) 3 + plate/countertop(containedIn) 3 + fork/counterTop(containedIn) 3
+        advancement=24,  # potato(isSliced) 2 + potato(isCooked) 6 (containedIn 4 + cooking_source turned on 1 + isCooked 1) + knife/counterTop(containedIn) 4 + potato/plate(containedIn) 4 + plate/countertop(containedIn) 4 + fork/counterTop(containedIn) 4
         terminated=True,
     )
 
@@ -517,7 +517,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
         controller=controller,
         scene_name="FloorPlan1",
         test_task_data_dir=test_task_data_dir,
-        init_advancement=3,
+        init_advancement=4,  # apple/plate(containedIn) 4
     )
 
     # === Event 1: Open the fridge ===
@@ -527,7 +527,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "Fridge|-02.10|+00.00|+01.07",
             "forceAction": True,
         },
-        advancement=3,  # apple/plate(containedIn) 3
+        advancement=4,  # apple/plate(containedIn) 4
     )
     # === Event 2: Pick up the apple ===
     data_recorder.record_step(
@@ -545,7 +545,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "Fridge|-02.10|+00.00|+01.07",
             "forceAction": True,
         },
-        advancement=4,  # apple(Temperature=Cold) 4 (1 + 3)
+        advancement=5,  # apple(Temperature=Cold) 5 (1 + 4)
     )
     # === Event 4: Pick up the apple ===
     data_recorder.record_step(
@@ -554,7 +554,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "Apple|-00.47|+01.15|+00.48",
             "forceAction": True,
         },
-        advancement=5,  # apple(Temperature=Cold) 4 + apple/plate(containedIn) 1
+        advancement=6,  # apple(Temperature=Cold) 5 + apple/plate(containedIn) 1
     )
     # === Event 5: Put the apple on the counter top ===
     data_recorder.record_step(
@@ -563,7 +563,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "CounterTop|+00.69|+00.95|-02.48",
             "forceAction": True,
         },
-        advancement=7,  # apple(Temperature=Cold) 4 + apple/plate(containedIn) 3
+        advancement=9,  # apple(Temperature=Cold) 5 + apple/plate(containedIn) 4
         terminated=True,
     )
     # === Event 6: Close the fridge ===
@@ -573,7 +573,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "Fridge|-02.10|+00.00|+01.07",
             "forceAction": True,
         },
-        advancement=7,  # apple(Temperature=Cold) 4 + apple/plate(containedIn) 3
+        advancement=9,  # apple(Temperature=Cold) 5 + apple/plate(containedIn) 4
         terminated=True,
     )
     # === Event 7: Pick up the apple ===
@@ -583,7 +583,7 @@ def generate_place_cooled_in_apple_counter_top_data(controller: Controller) -> N
             "objectId": "Apple|-00.47|+01.15|+00.48",
             "forceAction": True,
         },
-        advancement=5,  # apple(Temperature=Cold) 4 + apple/plate(containedIn) 1
+        advancement=6,  # apple(Temperature=Cold) 5 + apple/plate(containedIn) 1
     )
     data_recorder.write_data()
 
