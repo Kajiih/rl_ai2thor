@@ -318,8 +318,8 @@ HEAT_SOURCES = {
 
 # TODO: Support contextual cooking sources
 COOKING_SOURCES = {
-    # SimObjectType.MICROWAVE,  # Only Potato, PotatoSliced, EggCracked # TODO: Check for BreadSlice
-    SimObjectType.STOVE_BURNER,  # Cooks every cookable; Turned on by StoveKnob but it doesn't change anything for us
+    SimObjectType.MICROWAVE,  # Only Potato, PotatoSliced, EggCracked # TODO: Check for BreadSlice
+    # SimObjectType.STOVE_BURNER,  # Cooks every cookable; Turned on by StoveKnob but it doesn't change anything for us
     # SimObjectType.TOASTER,  # Only BreadSlice
 }
 

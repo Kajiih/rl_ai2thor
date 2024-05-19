@@ -63,6 +63,7 @@ class TaskType(StrEnum):
     PICKUP = "Pickup"
     OPEN = "Open"
     OPEN_ANY = "OpenAny"
+    COOK = "Cook"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
     PREPARE_WATCHING_TV = "PrepareWatchingTV"
@@ -670,6 +671,51 @@ class Open(GraphTask):
             description (str): Text description of the task.
         """
         return f"Open {self.opened_object_type}"
+
+
+class Cook(GraphTask):
+    """Task for cooking a given object."""
+
+    def __init__(self, cooked_object_type: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            cooked_object_type (SimObjectType): The type of object to open.
+        """
+        self.cooked_object_type = cooked_object_type
+
+        task_description_dict = self._create_task_description_dict(cooked_object_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, cooked_object_type: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            cooked_object_type (SimObjectType): The type of object to open.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("cooked_object"): TaskItemData(
+                properties={
+                    ObjectTypeProp(cooked_object_type),
+                    IsCookedProp(True),
+                },
+            )
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Cook {self.cooked_object_type}"
 
 
 # === Complex Tasks ===
@@ -1504,6 +1550,7 @@ ALL_TASKS = {
     TaskType.PICKUP: Pickup,
     TaskType.OPEN: Open,
     TaskType.OPEN_ANY: OpenAny,
+    TaskType.COOK: Cook,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
     TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,
