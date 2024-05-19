@@ -75,6 +75,18 @@ class IsOpenProp(ItemVariableProp[bool, bool]):
     candidate_required_prop = OpenableProp(True)
 
 
+# TODO: Test this property
+class IsOpenIfPossibleProp(ItemVariableProp[bool, bool]):
+    """
+    Same as IsOpenProp, but doesn't require the item to be openable.
+
+    Used in particular as auxiliary property for ReceptacleOfRelation because some receptacles have
+    to be opened before placing objects inside them.
+    """
+
+    target_ai2thor_property = SimObjVariableProp.IS_OPEN
+
+
 class OpennessProp(ItemVariableProp[float, bool]):
     """Openness item property."""
 

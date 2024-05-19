@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from rl_thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_thor.envs.tasks._item_prop_fixed import PickupableProp, ReceptacleProp
-from rl_thor.envs.tasks._item_prop_variable import IsPickedUpProp
+from rl_thor.envs.tasks._item_prop_variable import IsOpenIfPossibleProp, IsPickedUpProp
 from rl_thor.envs.tasks.item_prop_interface import RelationAuxProp
 from rl_thor.envs.tasks.items import ItemId
 from rl_thor.utils.ai2thor_utils import compute_objects_2d_distance
@@ -266,6 +266,7 @@ class ReceptacleOfRelation(Relation):
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
     candidate_required_prop = ReceptacleProp(True)
+    auxiliary_properties = frozenset({RelationAuxProp(IsOpenIfPossibleProp, True)})
 
     def __init__(
         self,
