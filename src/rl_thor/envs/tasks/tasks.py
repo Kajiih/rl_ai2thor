@@ -64,6 +64,7 @@ class TaskType(StrEnum):
     OPEN = "Open"
     OPEN_ANY = "OpenAny"
     COOK = "Cook"
+    SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
     PREPARE_WATCHING_TV = "PrepareWatchingTV"
@@ -716,6 +717,43 @@ class Cook(GraphTask):
             description (str): Text description of the task.
         """
         return f"Cook {self.cooked_object_type}"
+
+
+class SliceAndCookPotato(GraphTask):
+    """Task for slicing and cooking a potato."""
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("cooked_potato_sliced"): TaskItemData(
+                properties={
+                    ObjectTypeProp(MultiValuePSF({SimObjectType.POTATO, SimObjectType.POTATO_SLICED})),
+                    IsSlicedProp(True),
+                    IsCookedProp(True),
+                },
+            )
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Cook a slice of potato"
 
 
 # === Complex Tasks ===
@@ -1551,6 +1589,7 @@ ALL_TASKS = {
     TaskType.OPEN: Open,
     TaskType.OPEN_ANY: OpenAny,
     TaskType.COOK: Cook,
+    TaskType.SLICE_AND_COOK_POTATO: SliceAndCookPotato,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
     TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,

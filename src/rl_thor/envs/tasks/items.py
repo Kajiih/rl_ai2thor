@@ -157,7 +157,12 @@ class CandidateData:
             scene_objects_dict (dict[SimObjId, SimObjMetadata]): Dictionary mapping the id of the
                 objects in the scene to their metadata.
         """
-        self.metadata = scene_objects_dict[self.id]
+        try:
+            self.metadata = scene_objects_dict[self.id]
+        except KeyError:
+            import ipdb
+
+            ipdb.set_trace()
 
         # === Properties ===
         self.base_properties_results = self._compute_base_properties_results()

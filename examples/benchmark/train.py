@@ -11,7 +11,7 @@ import wandb
 import yaml
 from experiment_utils import Exp, FullMetricsLogWrapper
 from stable_baselines3 import A2C, DQN, PPO
-from stable_baselines3.common.callbacks import CallbackList, EvalCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from wandb.integration.sb3 import WandbCallback
@@ -50,13 +50,13 @@ class AvailableTask(StrEnum):
     # Gradual tasks
     PICKUP_KNIFE = "PickupKnife"
     PICKUP_MUG = "PickupMug"
-    PICKUP_POTATO = "PickupPotato"
     PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
     PLACE_MUG_IN_SINK = "PlaceMugInSink"
-    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
     PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
     PLACE_MUG_IN_FILLED_SINK = "PlaceMugInFilledSink"
     PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
+    PICKUP_POTATO = "PickupPotato"
+    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
     COOK_POTATO = "CookPotato"
     SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
 
@@ -129,6 +129,7 @@ task_blueprints_configs = {
     AvailableTask.PLACE_POTATO_IN_MICROWAVE: {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.MICROWAVE},
+        "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_MUG_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
@@ -150,8 +151,8 @@ task_blueprints_configs = {
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.SLICE_AND_COOK_POTATO: {
-        "task_type": TaskType.COOK,
-        "args": {"cooked_object_type": SimObjectType.POTATO_SLICED},
+        "task_type": TaskType.SLICE_AND_COOK_POTATO,
+        "args": {},
         "scenes": ["FloorPlan1"],
     },
 }
@@ -252,6 +253,7 @@ def main(
     no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
     seed: int = 0,
     group_name: Annotated[Optional[str], typer.Option("--group", "-g")] = None,  # noqa: UP007
+    do_eval: Annotated[bool, typer.Option("--eval", "-e")] = False,
 ) -> None:
     """
     Train the agent.
@@ -265,6 +267,8 @@ def main(
         no_task_advancement_reward (bool): Do not use the task advancement reward.
         seed (int): Seed for reproducibility.
         group_name (Optional[str]): Group name for the run in WandB.
+        do_eval (bool): Evaluate the agent.
+            !! Don't eval with a different environment in a Docker container, both rendering windows might be mixed up.
     """
     is_single_task = task != AvailableTask.MULTI_TASK
     if is_single_task:
@@ -339,29 +343,8 @@ def main(
     train_model = sb3_model(**model_args)
 
     wandb_callback_config = wandb_config["sb3_callback"]
-    eval_callback_config = experiment.config["evaluation"]
     # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
-    eval_env = DummyVecEnv([
-        lambda: make_env(
-            config_path,
-            config_override,
-            experiment,
-            is_single_task=is_single_task,
-            log_full_metrics=log_full_env_metrics,
-            eval_env=True,
-        )
-    ])
-    callbacks = [
-        # TODO: Check EvalCallback really works with different tasks
-        EvalCallback(
-            eval_env=eval_env,
-            n_eval_episodes=eval_callback_config["nb_episodes"],
-            eval_freq=eval_callback_config["frequency"],
-            log_path=str(experiment.log_dir),
-            best_model_save_path=str(experiment.checkpoint_dir),
-            deterministic=eval_callback_config["deterministic"],
-            verbose=eval_callback_config["verbose"],
-        ),
+    callbacks: list[BaseCallback] = [
         WandbCallback(
             verbose=wandb_callback_config["verbose"],
             model_save_path=str(experiment.checkpoint_dir),
@@ -369,6 +352,30 @@ def main(
             gradient_save_freq=wandb_callback_config["gradient_save_freq"],
         ),
     ]
+    if do_eval:
+        eval_callback_config = experiment.config["evaluation"]
+        eval_env = DummyVecEnv([
+            lambda: make_env(
+                config_path,
+                config_override,
+                experiment,
+                is_single_task=is_single_task,
+                log_full_metrics=log_full_env_metrics,
+                eval_env=True,
+            )
+        ])
+        callbacks.append(
+            # TODO: Check EvalCallback really works with different tasks
+            EvalCallback(
+                eval_env=eval_env,
+                n_eval_episodes=eval_callback_config["nb_episodes"],
+                eval_freq=eval_callback_config["frequency"],
+                log_path=str(experiment.log_dir),
+                best_model_save_path=str(experiment.checkpoint_dir),
+                deterministic=eval_callback_config["deterministic"],
+                verbose=eval_callback_config["verbose"],
+            )
+        )
 
     train_model.learn(
         total_timesteps=total_timesteps,
