@@ -50,11 +50,15 @@ class AvailableTask(StrEnum):
     # Gradual tasks
     PICKUP_KNIFE = "PickupKnife"
     PICKUP_MUG = "PickupMug"
+    PICKUP_POTATO = "PickupPotato"
     PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
     PLACE_MUG_IN_SINK = "PlaceMugInSink"
+    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
     PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
     PLACE_MUG_IN_FILLED_SINK = "PlaceMugInFilledSink"
     PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
+    COOK_POTATO = "CookPotato"
+    SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
 
 
 model_config = {
@@ -107,6 +111,11 @@ task_blueprints_configs = {
         "args": {"picked_up_object_type": SimObjectType.MUG},
         "scenes": ["FloorPlan1"],
     },
+    AvailableTask.PICKUP_POTATO: {
+        "task_type": TaskType.PICKUP,
+        "args": {"picked_up_object_type": SimObjectType.POTATO},
+        "scenes": ["FloorPlan1"],
+    },
     AvailableTask.PLACE_KNIFE_IN_SINK: {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE, "receptacle_type": SimObjectType.SINK_BASIN},
@@ -116,6 +125,10 @@ task_blueprints_configs = {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.MUG, "receptacle_type": SimObjectType.SINK_BASIN},
         "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_POTATO_IN_MICROWAVE: {
+        "task_type": TaskType.PLACE_IN,
+        "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.MICROWAVE},
     },
     AvailableTask.PLACE_MUG_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
@@ -129,6 +142,16 @@ task_blueprints_configs = {
             "placed_object_type_2": SimObjectType.BOWL,
             "placed_object_type_3": SimObjectType.MUG,
         },
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.COOK_POTATO: {
+        "task_type": TaskType.COOK,
+        "args": {"cooked_object_type": SimObjectType.POTATO},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.SLICE_AND_COOK_POTATO: {
+        "task_type": TaskType.COOK,
+        "args": {"cooked_object_type": SimObjectType.POTATO_SLICED},
         "scenes": ["FloorPlan1"],
     },
 }
@@ -157,16 +180,32 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         case (
             AvailableTask.PICKUP_KNIFE
             | AvailableTask.PICKUP_MUG
+            | AvailableTask.PICKUP_POTATO
             | AvailableTask.PLACE_KNIFE_IN_SINK
             | AvailableTask.PLACE_MUG_IN_SINK
+            | AvailableTask.PLACE_POTATO_IN_MICROWAVE
+        ):
+            action_groups = {
+                "open_close_actions": False,
+                "toggle_actions": False,
+                "slice_actions": False,
+            }
+        case (
+            AvailableTask.COOK_POTATO
             | AvailableTask.PLACE_KNIFE_IN_FILLED_SINK
             | AvailableTask.PLACE_MUG_IN_FILLED_SINK
             | AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK
         ):
             action_groups = {
                 "open_close_actions": False,
-                "toggle_actions": False,
+                "toggle_actions": True,
                 "slice_actions": False,
+            }
+        case AvailableTask.SLICE_AND_COOK_POTATO:
+            action_groups = {
+                "open_close_actions": False,
+                "toggle_actions": True,
+                "slice_actions": True,
             }
         case _:
             action_groups = {}
@@ -225,6 +264,7 @@ def main(
         log_full_env_metrics (bool): Log full environment metrics.
         no_task_advancement_reward (bool): Do not use the task advancement reward.
         seed (int): Seed for reproducibility.
+        group_name (Optional[str]): Group name for the run in WandB.
     """
     is_single_task = task != AvailableTask.MULTI_TASK
     if is_single_task:
@@ -283,6 +323,7 @@ def main(
             video_length=record_config["length"],
             name_prefix=record_config["prefix"],
         )
+
     # === Instantiate the model ===
     sb3_model = get_model(model_name)
     model_args = {
