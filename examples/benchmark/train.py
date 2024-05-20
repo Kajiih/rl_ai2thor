@@ -1,6 +1,7 @@
 """Run a stable-baselines3 agent in the AI2THOR RL environment."""
 # TODO: Make compatible with multi-task training
 
+import json
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Optional
@@ -272,6 +273,7 @@ def main(
     Args:
         task (AvailableTask): Task to train the agent on.
         model_name (ModelType): Model to use for training.
+        rollout_length (Optional[int]): Maximum number of steps per episode.
         total_timesteps (int): Total number of timesteps to train the agent.
         record (bool): Record the training.
         log_full_env_metrics (bool): Log full environment metrics.
@@ -317,6 +319,11 @@ def main(
         tags=tags,
         notes=f"Simple {model_name} agent for RL THOR benchmarking on {task} task.",
     )
+    # Save infos about the run
+    run_info_path = experiment.log_dir / "run_info.json"
+    run_info = {"tags": tags, "env_config": env_config, "experiment_config": experiment.config}
+    with run_info_path.open("w") as f:
+        json.dump(run_info, f)
 
     # === Instantiate the environment ===
     env = DummyVecEnv([
