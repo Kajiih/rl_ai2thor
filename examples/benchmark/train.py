@@ -177,39 +177,47 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
 
 def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
     """Return the action groups for the task."""
-    match task:
-        case (
-            AvailableTask.PICKUP_KNIFE
-            | AvailableTask.PICKUP_MUG
-            | AvailableTask.PICKUP_POTATO
-            | AvailableTask.PLACE_KNIFE_IN_SINK
-            | AvailableTask.PLACE_MUG_IN_SINK
-            | AvailableTask.PLACE_POTATO_IN_MICROWAVE
-        ):
-            action_groups = {
-                "open_close_actions": False,
-                "toggle_actions": False,
-                "slice_actions": False,
-            }
-        case (
-            AvailableTask.COOK_POTATO
-            | AvailableTask.PLACE_KNIFE_IN_FILLED_SINK
-            | AvailableTask.PLACE_MUG_IN_FILLED_SINK
-            | AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK
-        ):
-            action_groups = {
-                "open_close_actions": False,
-                "toggle_actions": True,
-                "slice_actions": False,
-            }
-        case AvailableTask.SLICE_AND_COOK_POTATO:
-            action_groups = {
-                "open_close_actions": False,
-                "toggle_actions": True,
-                "slice_actions": True,
-            }
-        case _:
-            action_groups = {}
+    action_groups = {
+        "open_close_actions": False,
+        "toggle_actions": False,
+        "slice_actions": False,
+    }
+    # === Enable opening and closing ===
+    if task in {
+        AvailableTask.PLACE_POTATO_IN_MICROWAVE,
+        AvailableTask.COOK_POTATO,
+        AvailableTask.SLICE_AND_COOK_POTATO,
+        AvailableTask.PREPARE_MEAL,
+        AvailableTask.PREPARE_WATCHING_TV,
+        AvailableTask.PREPARE_GOING_TO_BED,
+        AvailableTask.PREPARE_FOR_SHOWER,
+    }:
+        action_groups["open_close_actions"] = True
+
+    # === Enable toggling ===
+    if task in {
+        AvailableTask.PLACE_KNIFE_IN_FILLED_SINK,
+        AvailableTask.PLACE_MUG_IN_FILLED_SINK,
+        AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK,
+        AvailableTask.COOK_POTATO,
+        AvailableTask.SLICE_AND_COOK_POTATO,
+        AvailableTask.PREPARE_MEAL,
+        AvailableTask.PREPARE_WATCHING_TV,
+        AvailableTask.PREPARE_GOING_TO_BED,
+        AvailableTask.PREPARE_FOR_SHOWER,
+    }:
+        action_groups["toggle_actions"] = True
+
+    # === Enable slicing ===
+    if task in {
+        AvailableTask.SLICE_AND_COOK_POTATO,
+        AvailableTask.PREPARE_MEAL,
+        AvailableTask.PREPARE_WATCHING_TV,
+        AvailableTask.PREPARE_GOING_TO_BED,
+        AvailableTask.PREPARE_FOR_SHOWER,
+    }:
+        action_groups["slice_actions"] = True
+
     return {"action_groups": action_groups}
 
 
