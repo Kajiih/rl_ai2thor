@@ -306,7 +306,7 @@ def main(
         "single_task" if is_single_task else "multi_task",
         group_name if group_name is not None else "no_group",
         "no_task_advancement_reward" if no_task_advancement_reward else "with_task_advancement_reward",
-
+    ))
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         project=wandb_config["project"],

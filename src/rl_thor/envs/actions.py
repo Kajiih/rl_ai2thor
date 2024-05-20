@@ -584,7 +584,6 @@ class PickupPutEnvAction(EnvironmentAction):
 
     action_group: ActionGroup = ActionGroup.PICKUP_PUT_ACTIONS
     has_target_object: bool = True
-    _object_required_property: SimObjFixedProp = SimObjFixedProp.PICKUPABLE
 
 
 @dataclass(frozen=True)
@@ -859,11 +858,13 @@ stand_action = CrouchStandEnvAction(
 pickup_object_action = PickupPutEnvAction(
     name=EnvActionName.PICKUP_OBJECT,
     ai2thor_action=Ai2thorAction.PICKUP_OBJECT,
+    _object_required_property=SimObjFixedProp.PICKUPABLE,
     _config_dependent_parameters=frozenset({"forceAction", "manualInteract"}),
 )
 put_object_action = PickupPutEnvAction(
     name=EnvActionName.PUT_OBJECT,
     ai2thor_action=Ai2thorAction.PUT_OBJECT,
+    _object_required_property=SimObjFixedProp.RECEPTACLE,
     _config_dependent_parameters=frozenset({"forceAction", "placeStationary"}),
 )
 drop_hand_object_action = DropHandObjectEnvAction()
