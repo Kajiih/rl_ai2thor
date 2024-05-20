@@ -16,12 +16,15 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from wandb.integration.sb3 import WandbCallback
 
+from rl_thor.agents.agents import RandomAgent
 from rl_thor.envs.sim_objects import SimObjectType
 from rl_thor.envs.tasks.tasks import TaskType
 from rl_thor.envs.wrappers import SimpleActionSpaceWrapper, SingleTaskWrapper
 
 if TYPE_CHECKING:
     from wandb.sdk.wandb_run import Run
+
+    from rl_thor.envs.ai2thor_envs import ITHOREnv
 
 config_path = Path("examples/benchmark/config/environment_config.yaml")
 with config_path.open("r") as file:
@@ -77,7 +80,7 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
         case ModelType.DQN:
             return DQN
         case ModelType.RANDOM:
-            return DQN
+            raise ValueError("Random agent doesn't need a model.")
 
 
 task_blueprints_configs = {
@@ -336,60 +339,67 @@ def main(
             name_prefix=record_config["prefix"],
         )
 
-    # === Instantiate the model ===
-    sb3_model = get_model(model_name)
-    model_args = {
-        "policy": model_config["policy_type"],
-        "env": env,
-        "verbose": model_config["verbose"],
-        "tensorboard_log": str(experiment.log_dir),
-        "seed": seed,
-    }
+    # === Run a random agent if the model is random ===
     if model_name == ModelType.RANDOM:
-        model_args["learning_starts"] = total_timesteps
-        model_args["learning_rate"] = 0.0
-    train_model = sb3_model(**model_args)
+        single_env: ITHOREnv = env.envs[0]
+        single_env.reset(seed=seed)
+        random_agent = RandomAgent(single_env, seed=seed)
+        random_agent.run_episode(
+            nb_episodes=total_timesteps // single_env.config.max_episode_steps, total_max_steps=total_timesteps
+        )
+    else:
+        # === Instantiate the model ===
+        sb3_model = get_model(model_name)
+        model_args = {
+            "policy": model_config["policy_type"],
+            "env": env,
+            "verbose": model_config["verbose"],
+            "tensorboard_log": str(experiment.log_dir),
+            "seed": seed,
+        }
+        train_model = sb3_model(**model_args)
 
-    wandb_callback_config = wandb_config["sb3_callback"]
-    # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
-    callbacks: list[BaseCallback] = [
-        WandbCallback(
-            verbose=wandb_callback_config["verbose"],
-            model_save_path=str(experiment.checkpoint_dir),
-            model_save_freq=wandb_callback_config["gradient_save_freq"],
-            gradient_save_freq=wandb_callback_config["gradient_save_freq"],
-        ),
-    ]
-    if do_eval:
-        eval_callback_config = experiment.config["evaluation"]
-        eval_env = DummyVecEnv([
-            lambda: make_env(
-                config_path,
-                config_override,
-                experiment,
-                is_single_task=is_single_task,
-                log_full_metrics=log_full_env_metrics,
-                eval_env=True,
+        wandb_callback_config = wandb_config["sb3_callback"]
+        # TODO? Add a callback for saving the model instead of using the parameter in WandbCallback?
+        callbacks: list[BaseCallback] = [
+            WandbCallback(
+                verbose=wandb_callback_config["verbose"],
+                model_save_path=str(experiment.checkpoint_dir),
+                model_save_freq=wandb_callback_config["gradient_save_freq"],
+                gradient_save_freq=wandb_callback_config["gradient_save_freq"],
+            ),
+        ]
+        if do_eval:
+            eval_callback_config = experiment.config["evaluation"]
+            eval_env = DummyVecEnv([
+                lambda: make_env(
+                    config_path,
+                    config_override,
+                    experiment,
+                    is_single_task=is_single_task,
+                    log_full_metrics=log_full_env_metrics,
+                    eval_env=True,
+                )
+            ])
+            callbacks.append(
+                # TODO: Check EvalCallback really works with different tasks
+                EvalCallback(
+                    eval_env=eval_env,
+                    n_eval_episodes=eval_callback_config["nb_episodes"],
+                    eval_freq=eval_callback_config["frequency"],
+                    log_path=str(experiment.log_dir),
+                    best_model_save_path=str(experiment.checkpoint_dir),
+                    deterministic=eval_callback_config["deterministic"],
+                    verbose=eval_callback_config["verbose"],
+                )
             )
-        ])
-        callbacks.append(
-            # TODO: Check EvalCallback really works with different tasks
-            EvalCallback(
-                eval_env=eval_env,
-                n_eval_episodes=eval_callback_config["nb_episodes"],
-                eval_freq=eval_callback_config["frequency"],
-                log_path=str(experiment.log_dir),
-                best_model_save_path=str(experiment.checkpoint_dir),
-                deterministic=eval_callback_config["deterministic"],
-                verbose=eval_callback_config["verbose"],
-            )
+
+        train_model.learn(
+            total_timesteps=total_timesteps,
+            progress_bar=model_config["progress_bar"],
+            callback=CallbackList(callbacks),
         )
 
-    train_model.learn(
-        total_timesteps=total_timesteps,
-        progress_bar=model_config["progress_bar"],
-        callback=CallbackList(callbacks),
-    )
     env.close()
     run.finish()
 
