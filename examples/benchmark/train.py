@@ -306,7 +306,7 @@ def main(
         "single_task" if is_single_task else "multi_task",
         group_name if group_name is not None else "no_group",
         "no_task_advancement_reward" if no_task_advancement_reward else "with_task_advancement_reward",
-    ))
+
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         project=wandb_config["project"],
@@ -320,10 +320,11 @@ def main(
         notes=f"Simple {model_name} agent for RL THOR benchmarking on {task} task.",
     )
     # Save infos about the run
-    run_info_path = experiment.log_dir / "run_info.json"
+    experiment.log_dir.mkdir(parents=True, exist_ok=True)
+    run_info_path = experiment.log_dir / "run_info.yaml"
     run_info = {"tags": tags, "env_config": env_config, "experiment_config": experiment.config}
     with run_info_path.open("w") as f:
-        json.dump(run_info, f)
+        yaml.dump(run_info, f)
 
     # === Instantiate the environment ===
     env = DummyVecEnv([
