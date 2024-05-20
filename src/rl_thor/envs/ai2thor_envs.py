@@ -397,6 +397,7 @@ class ITHOREnv(
             "task_type": self.task.__class__.__name__,
             # "task_args": self.task_blueprints[self.task_idx].task_args,
             # "task_description": self.task.text_description(),
+            # "scene": self.current_scene,
         }
         self.last_info = info
 
@@ -504,6 +505,7 @@ class ITHOREnv(
             "task_type": self.task.__class__.__name__,
             "task_args": task_blueprint.task_args,
             "task_description": self.task.text_description(),
+            "scene": self.current_scene,
         }
 
         obs_env: NDArray = self.last_event.frame  # type: ignore

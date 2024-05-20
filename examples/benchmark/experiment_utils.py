@@ -251,6 +251,7 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
                 "scene_initialization_time",
                 "reward_computation_time",
                 "action_execution_time",
+                "scene",
             ])
 
     def step(self, action: Any) -> tuple[Any, float, bool, bool, dict]:
@@ -321,9 +322,10 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
         task_type = info.get("task_type")
         task_args = info.get("task_args")
         task_description = info.get("task_description")
-        scene_initialization_time = info["speed_performance"].get("scene_initialization_time", None)
-        reward_computation_time = info["speed_performance"].get("reward_computation_time", None)
-        action_execution_time = info["speed_performance"].get("action_execution_time", None)
+        scene_initialization_time = info["speed_performance"].get("scene_initialization_time")
+        reward_computation_time = info["speed_performance"].get("reward_computation_time")
+        action_execution_time = info["speed_performance"].get("action_execution_time")
+        scene = info.get("scene")
 
         # Write the full step metrics to CSV
         with self.log_file_path.open("a", newline="") as file:
@@ -341,4 +343,5 @@ class FullMetricsLogWrapper(gym.Wrapper, BaseAI2THOREnv):
                 scene_initialization_time,
                 reward_computation_time,
                 action_execution_time,
+                scene,
             ])
