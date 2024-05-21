@@ -1,7 +1,6 @@
 """Run a stable-baselines3 agent in the AI2THOR RL environment."""
 # TODO: Make compatible with multi-task training
 
-import json
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Optional
@@ -162,12 +161,19 @@ task_blueprints_configs = {
 }
 
 
-def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
+def keep_only_n_scenes(task_blueprint_config: dict[str, Any], nb_scenes: int) -> dict[str, Any]:
+    """Return a copy of the task blueprint config with only the first n scenes."""
+    task_blueprint_config = task_blueprint_config.copy()
+    task_blueprint_config["scenes"] = task_blueprint_config["scenes"][:nb_scenes]
+    return task_blueprint_config
+
+
+def get_task_blueprint_config(task: AvailableTask, nb_scenes: int) -> list[dict[str, Any]]:
     """Return the scenes for the task."""
     match task:
         case AvailableTask.MULTI_TASK:
             return [
-                task_blueprints_configs[task]
+                keep_only_n_scenes(task_blueprints_configs[task], nb_scenes)
                 for task in (
                     AvailableTask.PREPARE_MEAL,
                     AvailableTask.PREPARE_WATCHING_TV,
@@ -176,7 +182,7 @@ def get_task_blueprint_config(task: AvailableTask) -> list[dict[str, Any]]:
                 )
             ]
         case _:
-            return [task_blueprints_configs[task]]
+            return [keep_only_n_scenes(task_blueprints_configs[task], nb_scenes)]
 
 
 def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
@@ -257,6 +263,7 @@ def make_env(
 
 def main(
     task: AvailableTask,
+    nb_scenes: int = 1,
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     rollout_length: Annotated[Optional[int], typer.Option("--rollout", "-r")] = None,  # noqa: UP007
     total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
@@ -266,12 +273,14 @@ def main(
     seed: int = 0,
     group_name: Annotated[Optional[str], typer.Option("--group", "-g")] = None,  # noqa: UP007
     do_eval: Annotated[bool, typer.Option("--eval", "-e")] = False,
+    randomize_agent_position: Annotated[bool, typer.Option("--randomize-agent")] = False,
 ) -> None:
     """
     Train the agent.
 
     Args:
         task (AvailableTask): Task to train the agent on.
+        nb_scenes (int): Number of scenes per task to use for training.
         model_name (ModelType): Model to use for training.
         rollout_length (Optional[int]): Maximum number of steps per episode.
         total_timesteps (int): Total number of timesteps to train the agent.
@@ -280,8 +289,8 @@ def main(
         no_task_advancement_reward (bool): Do not use the task advancement reward.
         seed (int): Seed for reproducibility.
         group_name (Optional[str]): Group name for the run in WandB.
-        do_eval (bool): Evaluate the agent.
-            !! Don't eval with a different environment in a Docker container, both rendering windows might be mixed up.
+        do_eval (bool): Evaluate the agent. !! Don't eval with a different environment in a Docker container, both rendering windows might be mixed up.
+        randomize_agent_position (bool): Randomize the agent position in the environment.
     """
     is_single_task = task != AvailableTask.MULTI_TASK
     if is_single_task:
@@ -289,7 +298,7 @@ def main(
     else:
         model_config["policy_type"] = "MultiInputPolicy"
 
-    task_blueprint_config = get_task_blueprint_config(task)
+    task_blueprint_config = get_task_blueprint_config(task, nb_scenes)
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
 
     # === Load the environment and experiment configurations ===
@@ -298,6 +307,8 @@ def main(
     config_override["no_task_advancement_reward"] = no_task_advancement_reward
     if rollout_length is not None:
         config_override["max_episode_steps"] = rollout_length
+    if randomize_agent_position:
+        config_override["scene_randomization"] = {"random_agent_spawn": True}
     # Add action groups override config
     config_override.update(get_action_groups_override_config(task))
     wandb_config = experiment.config["wandb"]
@@ -307,6 +318,7 @@ def main(
         group_name if group_name is not None else "no_group",
         "no_task_advancement_reward" if no_task_advancement_reward else "with_task_advancement_reward",
     ))
+
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         project=wandb_config["project"],
