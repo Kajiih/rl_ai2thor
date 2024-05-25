@@ -367,6 +367,7 @@ def main(
     log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
     no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
     seed: int = 0,
+    project_name: Annotated[Optional[str], typer.Option("--project", "-p")] = None,  # noqa: UP007
     group_name: Annotated[Optional[str], typer.Option("--group", "-g")] = None,  # noqa: UP007
     do_eval: Annotated[bool, typer.Option("--eval", "-e")] = False,
     randomize_agent_position: Annotated[bool, typer.Option("--randomize-agent")] = False,
@@ -384,6 +385,7 @@ def main(
         log_full_env_metrics (bool): Log full environment metrics.
         no_task_advancement_reward (bool): Do not use the task advancement reward.
         seed (int): Seed for reproducibility.
+        project_name (Optional[str]): Project name for the run in WandB.
         group_name (Optional[str]): Group name for the run in WandB.
         do_eval (bool): Evaluate the agent. !! Don't eval with a different environment in a Docker container, both rendering windows might be mixed up.
         randomize_agent_position (bool): Randomize the agent position in the environment.
@@ -408,7 +410,9 @@ def main(
     # Add action groups override config
     config_override.update(get_action_groups_override_config(task))
     wandb_config = experiment.config["wandb"]
-    tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type]
+    if project_name is not None:
+        wandb_config["project"] = project_name
+    tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type, wandb_config["project"]]
     tags.extend((
         "single_task" if is_single_task else "multi_task",
         group_name if group_name is not None else "no_group",
