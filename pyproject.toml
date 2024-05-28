@@ -31,6 +31,7 @@ classifiers = [
     "pytest",
     "beautifsoup4",
     "stable-baselines3",
+    "sb3-contrib",
     "wandb",
     "tensorboard",
     "typer",
@@ -68,7 +69,7 @@ extend-include = ["*.ipynb"]
     "D404", # First line should not start with this
     "I",    # Isort
     "C90",  # Mccabe complexity
-    "UP",   # PyUpgrade 
+    "UP",   # PyUpgrade
     "ANN",  # Type annotations
     "S",    # Bandit
     "A",    # flake8-builtins

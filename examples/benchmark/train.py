@@ -10,6 +10,7 @@ import typer
 import wandb
 import yaml
 from experiment_utils import Exp, FullMetricsLogWrapper
+from sb3_contrib import QRDQN
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
@@ -37,6 +38,7 @@ class ModelType(StrEnum):
     PPO = "PPO"
     A2C = "A2C"
     DQN = "DQN"
+    QRDQN = "QRDQN"
     RANDOM = "Random"
 
 
@@ -70,7 +72,7 @@ model_config = {
 }
 
 
-def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
+def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN] | type[QRDQN]:
     """Return the SB3 model class."""
     match model_name:
         case ModelType.PPO:
@@ -79,6 +81,8 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN]:
             return A2C
         case ModelType.DQN:
             return DQN
+        case ModelType.QRDQN:
+            return QRDQN
         case ModelType.RANDOM:
             raise ValueError("Random agent doesn't need a model.")
 
