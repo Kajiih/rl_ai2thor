@@ -271,7 +271,7 @@ task_blueprints_configs = {
     },
     AvailableTask.LOOK_BOOK_IN_LIGHT: {
         "task_type": TaskType.LOOK_IN_LIGHT,
-        "args": {"looked_object_type": SimObjectType.BOOK},
+        "args": {"looked_at_object_type": SimObjectType.BOOK},
         "scenes": ["FloorPlan301"],
     },
     AvailableTask.PLACE_LAPTOP_ON_SOFA: {
