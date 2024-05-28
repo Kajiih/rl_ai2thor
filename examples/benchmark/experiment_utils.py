@@ -22,15 +22,14 @@ class Exp:
     Class for experiment configuration.
 
     Attributes:
-        dataset (str): Dataset name.
-        model (str): Model name.
-        skills (int): Number of skills.
-        batch_size (int): Batch size.
-        learning_rate (float): Learning rate.
-        temperature (float): Temperature.
-        timestamp (str): Timestamp of the start of the experiment.
-        id (str): Experiment ID.
-
+        model (str): Name of the model to use.
+        tasks (Iterable[str]): Tasks to train on.
+        scenes (set[str]): Scenes to train on.
+        job_type (str): Type of job to run (train or eval).
+        id (str): Unique identifier for the experiment.
+        experiment_config_path (Path): Path to the experiment configuration file.
+        project_name (str): Name of the project.
+        group_name (str): Name of the group.
     """
 
     model: str
@@ -39,6 +38,8 @@ class Exp:
     job_type: str = "train"
     id: str | None = None
     experiment_config_path: Path = experiment_config_path
+    project_name: str | None = None
+    group_name: str | None = None
 
     def __post_init__(self) -> None:
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%Z")
@@ -67,23 +68,34 @@ class Exp:
     @property
     def log_dir(self) -> Path:
         """Return the log directory of the experiment."""
-        return Path(f"runs/{self.day}/{self.name}_({self.id})")
+        return Path(f"runs/{self.project_name}/{self.group_name}/{self.name}_({self.id})")
 
     @property
     def checkpoint_dir(self) -> Path:
         """Return the checkpoint directory of the experiment."""
-        return Path(f"checkpoints/{self.day}/{self.name}_({self.id})")
+        return Path(f"checkpoints/{self.project_name}/{self.group_name}/{self.name}_({self.id})")
 
     def load_config(self) -> dict[str, Any]:
         """Load the experiment configuration."""
         with self.experiment_config_path.open("r") as file:
             config = yaml.safe_load(file)
+        # Update project and group names
+        if self.project_name is not None:
+            config["wandb"]["project"] = self.project_name
+        else:
+            self.project_name = config["project_name"]
+        if self.group_name is not None:
+            config["wandb"]["group"] = self.group_name
+        else:
+            self.group_name = config["group_name"]
+        # Add other attributes
         config.update({
             "model": self.model,
             "tasks": self.tasks,
             "scenes": self.scenes,
             "job_type": self.job_type,
         })
+
         return config
 
 

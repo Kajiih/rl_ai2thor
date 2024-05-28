@@ -404,7 +404,7 @@ def main(
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
 
     # === Load the environment and experiment configurations ===
-    experiment = Exp(model=model_name, tasks=[task], scenes=scenes)
+    experiment = Exp(model=model_name, tasks=[task], scenes=scenes, project_name=project_name, group_name=group_name)
     config_override: dict[str, Any] = {"tasks": {"task_blueprints": task_blueprint_config}}
     config_override["no_task_advancement_reward"] = no_task_advancement_reward
     if rollout_length is not None:
@@ -414,23 +414,22 @@ def main(
     # Add action groups override config
     config_override.update(get_action_groups_override_config(task))
     wandb_config = experiment.config["wandb"]
-    if project_name is not None:
-        wandb_config["project"] = project_name
     tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type, wandb_config["project"]]
     tags.extend((
         "single_task" if is_single_task else "multi_task",
-        group_name if group_name is not None else "no_group",
+        experiment.group_name if experiment.group_name is not None else "no_group",
+        experiment.project_name,
         "no_task_advancement_reward" if no_task_advancement_reward else "with_task_advancement_reward",
     ))
 
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
-        project=wandb_config["project"],
+        project=experiment.project_name,
         sync_tensorboard=wandb_config["sync_tensorboard"],
         monitor_gym=wandb_config["monitor_gym"],
         save_code=wandb_config["save_code"],
         name=experiment.name,
-        group=group_name,
+        group=experiment.group_name,
         job_type=experiment.job_type,
         tags=tags,
         notes=f"Simple {model_name} agent for RL THOR benchmarking on {task} task.",
