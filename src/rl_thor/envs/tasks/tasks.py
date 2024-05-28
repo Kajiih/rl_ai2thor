@@ -21,6 +21,7 @@ from rl_thor.envs.sim_objects import (
     SimObjVariableProp,
 )
 from rl_thor.envs.tasks.item_prop import (
+    IsBrokenProp,
     IsCookedProp,
     IsDirtyProp,
     IsFilledWithLiquidProp,
@@ -65,6 +66,11 @@ class TaskType(StrEnum):
     OPEN_ANY = "OpenAny"
     COOK = "Cook"
     SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
+    BREAK = "Break"
+    TOGGLE = "Toggle"
+    COOL_DOWN = "CoolDown"
+    BRING_CLOSE = "BringClose"
+    PLACE_TWO_IN = "PlaceTwoIn"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
     PREPARE_WATCHING_TV = "PrepareWatchingTV"
@@ -717,6 +723,250 @@ class Cook(GraphTask):
             description (str): Text description of the task.
         """
         return f"Cook {self.cooked_object_type}"
+
+
+class PlaceTwoIn(GraphTask):
+    """Task for placing two objects in a receptacle."""
+
+    def __init__(
+        self, object_type_1: SimObjectType, object_type_2: SimObjectType, receptacle_type: SimObjectType
+    ) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            object_type_1 (SimObjectType): The type of the first object to place.
+            object_type_2 (SimObjectType): The type of the second object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the objects in.
+        """
+        self.object_type_1 = object_type_1
+        self.object_type_2 = object_type_2
+        self.receptacle_type = receptacle_type
+
+        task_description_dict = self._create_task_description_dict(object_type_1, object_type_2, receptacle_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(
+        cls, object_type_1: SimObjectType, object_type_2: SimObjectType, receptacle_type: SimObjectType
+    ) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            object_type_1 (SimObjectType): The type of the first object to place.
+            object_type_2 (SimObjectType): The type of the second object to place.
+            receptacle_type (SimObjectType): The type of receptacle to place the objects in.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("receptacle"): TaskItemData(
+                properties={ObjectTypeProp(receptacle_type)},
+            ),
+            ItemId("object_1"): TaskItemData(
+                properties={ObjectTypeProp(object_type_1)},
+                relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
+            ),
+            ItemId("object_2"): TaskItemData(
+                properties={ObjectTypeProp(object_type_2)},
+                relations={ItemId("receptacle"): {RelationTypeId.CONTAINED_IN: {}}},
+            ),
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Place {self.object_type_1} and {self.object_type_2} in {self.receptacle_type}"
+
+
+class Break(GraphTask):
+    """Task for breaking a given object."""
+
+    def __init__(self, broken_object_type: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            broken_object_type (SimObjectType): The type of object to break.
+        """
+        self.broken_object_type = broken_object_type
+
+        task_description_dict = self._create_task_description_dict(broken_object_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, broken_object_type: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            broken_object_type (SimObjectType): The type of object to break.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("broken_object"): TaskItemData(
+                properties={
+                    ObjectTypeProp(broken_object_type),
+                    IsBrokenProp(True),
+                },
+            )
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Break {self.broken_object_type}"
+
+
+class Toggle(GraphTask):
+    """Task for toggling a given object."""
+
+    def __init__(self, toggled_object_type: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            toggled_object_type (SimObjectType): The type of object to toggle.
+        """
+        self.toggled_object_type = toggled_object_type
+
+        task_description_dict = self._create_task_description_dict(toggled_object_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, toggled_object_type: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            toggled_object_type (SimObjectType): The type of object to toggle.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("toggled_object"): TaskItemData(
+                properties={
+                    ObjectTypeProp(toggled_object_type),
+                    IsToggledProp(True),
+                },
+            )
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Toggle {self.toggled_object_type}"
+
+
+class CoolDown(GraphTask):
+    """Task for cooling down a given object."""
+
+    def __init__(self, cooled_object_type: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            cooled_object_type (SimObjectType): The type of object to cool down.
+        """
+        self.cooled_object_type = cooled_object_type
+
+        task_description_dict = self._create_task_description_dict(cooled_object_type)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, cooled_object_type: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            cooled_object_type (SimObjectType): The type of object to cool down.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("cooled_object"): TaskItemData(
+                properties={
+                    ObjectTypeProp(cooled_object_type),
+                    TemperatureProp(TemperatureValue.COLD),
+                },
+            )
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Cool down {self.cooled_object_type}"
+
+
+class BringClose(GraphTask):
+    """Task for bringing a given object close to another object."""
+
+    def __init__(self, object_type_1: SimObjectType, object_type_2: SimObjectType) -> None:
+        """
+        Initialize the task.
+
+        Args:
+            object_type_1 (SimObjectType): The type of the first object.
+            object_type_2 (SimObjectType): The type of the second object.
+        """
+        self.object_type_1 = object_type_1
+        self.object_type_2 = object_type_2
+
+        task_description_dict = self._create_task_description_dict(object_type_1, object_type_2)
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls, object_type_1: SimObjectType, object_type_2: SimObjectType) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Args:
+            object_type_1 (SimObjectType): The type of the first object.
+            object_type_2 (SimObjectType): The type of the second object.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("object_1"): TaskItemData(
+                properties={ObjectTypeProp(object_type_1)},
+            ),
+            ItemId("object_2"): TaskItemData(
+                properties={ObjectTypeProp(object_type_2)},
+                relations={ItemId("object_1"): {RelationTypeId.CLOSE_TO: {"distance": 0.5}}},
+            ),
+        }
+
+    def text_description(self) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return f"Bring {self.object_type_1} close to {self.object_type_2}"
 
 
 class SliceAndCookPotato(GraphTask):
@@ -1590,6 +1840,11 @@ ALL_TASKS = {
     TaskType.OPEN_ANY: OpenAny,
     TaskType.COOK: Cook,
     TaskType.SLICE_AND_COOK_POTATO: SliceAndCookPotato,
+    TaskType.BREAK: Break,
+    TaskType.TOGGLE: Toggle,
+    TaskType.COOL_DOWN: CoolDown,
+    TaskType.BRING_CLOSE: BringClose,
+    TaskType.PLACE_TWO_IN: PlaceTwoIn,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
     TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,

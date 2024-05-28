@@ -44,6 +44,12 @@ class IsPickedUpProp(ItemVariableProp[bool, bool]):
     candidate_required_prop = PickupableProp(True)
 
 
+class IsPickedUpIfPossibleProp(ItemVariableProp[bool, bool]):
+    """Same as IsPickedUpProp, but doesn't require the item to be pickupable."""
+
+    target_ai2thor_property = SimObjVariableProp.IS_PICKED_UP
+
+
 class IsToggledProp(ItemVariableProp[bool, bool]):
     """Is toggled item property."""
 
@@ -99,4 +105,4 @@ class IsBrokenProp(ItemVariableProp[bool, bool]):
 
     target_ai2thor_property = SimObjVariableProp.IS_BROKEN
     candidate_required_prop = BreakableProp(True)
-    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpProp, True)})
+    auxiliary_properties = frozenset({PropAuxProp(IsPickedUpIfPossibleProp, True)})

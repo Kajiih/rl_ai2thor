@@ -53,16 +53,28 @@ class AvailableTask(StrEnum):
     MULTI_TASK = "MultiTask"
 
     # Gradual tasks
+    # 1 item
+    BREAK_STATUE = "BreakStatue"
     PICKUP_KNIFE = "PickupKnife"
+    TOGGLE_FAUCET = "ToggleFaucet"
+    OPEN_DRAWER = "OpenDrawer"
+    SWITCH_ON_TV = "SwitchOnTV"
     PICKUP_MUG = "PickupMug"
+    PICKUP_POTATO = "PickupPotato"
+    # 2 items
+    COOL_TOMATO = "CoolTomato"
+    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
+    PLACE_LAPTOP_ON_SOFA = "PlaceLaptopOnSofa"
+    BRING_TOWEL_CLOTH_CLOSE = "BringTowelClothesClose"
+    COOK_POTATO = "CookPotato"
+    LOOK_BOOK_IN_LIGHT = "LookBookInLight"
     PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
     PLACE_MUG_IN_SINK = "PlaceMugInSink"
     PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
     PLACE_MUG_IN_FILLED_SINK = "PlaceMugInFilledSink"
+    # 3 items
+    PLACE_TOMATO_POTATO_IN_FRIDGE = "PlaceTomatoPotatoInFridge"
     PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
-    PICKUP_POTATO = "PickupPotato"
-    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
-    COOK_POTATO = "CookPotato"
     SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
 
 
@@ -88,6 +100,7 @@ def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN] | type
 
 
 task_blueprints_configs = {
+    # Complex tasks
     AvailableTask.PREPARE_MEAL: {
         "task_type": TaskType.PREPARE_MEAL,
         "args": {},
@@ -204,10 +217,31 @@ task_blueprints_configs = {
             "FloorPlan427",
         ],
     },
+    # 1 item tasks
+    AvailableTask.BREAK_STATUE: {
+        "task_type": TaskType.BREAK,
+        "args": {"broken_object_type": SimObjectType.STATUE},
+        "scenes": ["FloorPlan1"],
+    },
     AvailableTask.PICKUP_KNIFE: {
         "task_type": TaskType.PICKUP,
         "args": {"picked_up_object_type": SimObjectType.BUTTER_KNIFE},
         "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.SWITCH_ON_TV: {
+        "task_type": TaskType.TOGGLE,
+        "args": {"switched_on_object_type": SimObjectType.TELEVISION},
+        "scenes": ["FloorPlan201"],
+    },
+    AvailableTask.OPEN_DRAWER: {
+        "task_type": TaskType.OPEN,
+        "args": {"opened_object_type": SimObjectType.DRAWER},
+        "scenes": ["FloorPlan301"],
+    },
+    AvailableTask.TOGGLE_FAUCET: {
+        "task_type": TaskType.TOGGLE,
+        "args": {"toggled_object_type": SimObjectType.FAUCET},
+        "scenes": ["FloorPlan401"],
     },
     AvailableTask.PICKUP_MUG: {
         "task_type": TaskType.PICKUP,
@@ -219,6 +253,37 @@ task_blueprints_configs = {
         "args": {"picked_up_object_type": SimObjectType.POTATO},
         "scenes": ["FloorPlan1"],
     },
+    # 2 items tasks
+    AvailableTask.COOK_POTATO: {
+        "task_type": TaskType.COOK,
+        "args": {"cooked_object_type": SimObjectType.POTATO},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.PLACE_POTATO_IN_MICROWAVE: {
+        "task_type": TaskType.PLACE_IN,
+        "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.MICROWAVE},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.COOL_TOMATO: {
+        "task_type": TaskType.COOL_DOWN,
+        "args": {"cooled_object_type": SimObjectType.TOMATO},
+        "scenes": ["FloorPlan1"],
+    },
+    AvailableTask.LOOK_BOOK_IN_LIGHT: {
+        "task_type": TaskType.LOOK_IN_LIGHT,
+        "args": {"looked_object_type": SimObjectType.BOOK},
+        "scenes": ["FloorPlan301"],
+    },
+    AvailableTask.PLACE_LAPTOP_ON_SOFA: {
+        "task_type": TaskType.PLACE_IN,
+        "args": {"placed_object_type": SimObjectType.LAPTOP, "receptacle_type": SimObjectType.SOFA},
+        "scenes": ["FloorPlan201"],
+    },
+    AvailableTask.BRING_TOWEL_CLOTH_CLOSE: {
+        "task_type": TaskType.BRING_CLOSE,
+        "args": {"object_type_1": SimObjectType.TOWEL, "object_type_2": SimObjectType.CLOTH},
+        "scenes": ["FloorPlan401"],
+    },
     AvailableTask.PLACE_KNIFE_IN_SINK: {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE, "receptacle_type": SimObjectType.SINK_BASIN},
@@ -229,14 +294,19 @@ task_blueprints_configs = {
         "args": {"placed_object_type": SimObjectType.MUG, "receptacle_type": SimObjectType.SINK_BASIN},
         "scenes": ["FloorPlan1"],
     },
-    AvailableTask.PLACE_POTATO_IN_MICROWAVE: {
-        "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.MICROWAVE},
-        "scenes": ["FloorPlan1"],
-    },
     AvailableTask.PLACE_MUG_IN_FILLED_SINK: {
         "task_type": TaskType.PLACE_IN_FILLED_SINK,
         "args": {"placed_object_type": SimObjectType.MUG},
+        "scenes": ["FloorPlan1"],
+    },
+    # 3 items tasks
+    AvailableTask.PLACE_TOMATO_POTATO_IN_FRIDGE: {
+        "task_type": TaskType.PLACE_TWO_IN,
+        "args": {
+            "object_type_1": SimObjectType.TOMATO,
+            "object_type_2": SimObjectType.POTATO,
+            "receptacle_type": SimObjectType.FRIDGE,
+        },
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK: {
@@ -246,11 +316,6 @@ task_blueprints_configs = {
             "placed_object_type_2": SimObjectType.BOWL,
             "placed_object_type_3": SimObjectType.MUG,
         },
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.COOK_POTATO: {
-        "task_type": TaskType.COOK,
-        "args": {"cooked_object_type": SimObjectType.POTATO},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.SLICE_AND_COOK_POTATO: {
@@ -301,6 +366,9 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.PREPARE_WATCHING_TV,
         AvailableTask.PREPARE_GOING_TO_BED,
         AvailableTask.PREPARE_FOR_SHOWER,
+        AvailableTask.OPEN_DRAWER,
+        AvailableTask.COOL_TOMATO,
+        AvailableTask.PLACE_TOMATO_POTATO_IN_FRIDGE,
     }:
         action_groups["open_close_actions"] = True
 
@@ -315,6 +383,9 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.PREPARE_WATCHING_TV,
         AvailableTask.PREPARE_GOING_TO_BED,
         AvailableTask.PREPARE_FOR_SHOWER,
+        AvailableTask.TOGGLE_FAUCET,
+        AvailableTask.SWITCH_ON_TV,
+        AvailableTask.LOOK_BOOK_IN_LIGHT,
     }:
         action_groups["toggle_actions"] = True
 
