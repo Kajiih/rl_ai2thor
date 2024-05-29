@@ -8,7 +8,7 @@ from benchmark.experiment_utils import FullMetricsLogWrapper
 
 from rl_thor.agents.agents import RandomAgent
 from rl_thor.agents.callbacks import RecordVideoCallback
-from rl_thor.envs.ai2thor_envs import ITHOREnv
+from rl_thor.envs import ITHOREnv
 
 SEED = 0
 

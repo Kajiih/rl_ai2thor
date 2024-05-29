@@ -555,8 +555,9 @@ class ITHOREnv(
 
         """
         successful_reset = False
+        task_completion = False
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
-        while not successful_reset:
+        while not successful_reset or task_completion:
             print(f"Sampling a scene from the task blueprint {task_blueprint.task_type.__name__}.")
             sorted_scenes = sorted(task_blueprint.scenes)
             sampled_scene = self.np_random.choice(sorted_scenes)

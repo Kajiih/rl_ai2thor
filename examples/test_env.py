@@ -2,7 +2,7 @@
 
 import gymnasium as gym
 
-from rl_thor.envs.ai2thor_envs import ITHOREnv
+from rl_thor.envs import ITHOREnv
 
 
 def main() -> None:

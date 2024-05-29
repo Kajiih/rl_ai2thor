@@ -66,13 +66,13 @@ RL-THOR uses [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API, so
 This short script runs an ITHOR environment with the basic configuration and random actions:
 
 ```python
-import gymnasium as gym
+from rl_thor.envs import ITHOREnv
 
-env = gym.make("rl_thor/ITHOREnv-v0.1")
+env = ITHOREnv()
 obs, info = env.reset()
 
 terminated, truncated = False, False
-while not terminated or truncated:
+while not terminated and not truncated:
     action = env.action_space.sample()
     obs, reward, terminated, truncated, info = env.step(action)
 env.close()
