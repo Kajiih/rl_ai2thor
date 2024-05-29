@@ -4,7 +4,7 @@
 import os
 from pathlib import Path
 
-from examples.benchmark.experiment_utils import FullMetricsLogWrapper
+from benchmark.experiment_utils import FullMetricsLogWrapper
 
 from rl_thor.agents.agents import RandomAgent
 from rl_thor.agents.callbacks import RecordVideoCallback

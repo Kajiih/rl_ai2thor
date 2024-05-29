@@ -159,7 +159,15 @@ class ITHOREnv(
         Returns:
             dict: Environment config.
         """
-        config_path = Path(ROOT_DIR) / config_path
+        config_path = Path(config_path)
+        # Check if the config file exists
+        # if not config_path.exists():
+        #     print(f"Config file {config_path} not found. Using default config.")
+        #     config = {}
+        # else:
+        #     with config_path.open("r") as file:
+        #         config = yaml.safe_load(file)
+
         with config_path.open("r") as file:
             config = yaml.safe_load(file)
         if config_override is not None:
