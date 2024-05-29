@@ -23,9 +23,9 @@ def main():
 
     # generate_pickup_mug_data(controller)
     # generate_open_fridge_data(controller)
-    generate_place_cooled_in_apple_counter_top_data(controller)
+    # generate_place_cooled_in_apple_counter_top_data(controller)
     # generate_look_in_light_book_data(controller)
-    generate_prepare_meal_data(controller)
+    # generate_prepare_meal_data(controller)
     # generate_prepare_going_to_bed_data(controller)
 
     controller.stop()

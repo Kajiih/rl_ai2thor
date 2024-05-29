@@ -591,7 +591,6 @@ class ITHOREnv(
 
         return task_completion, task_info, scene_initialization_time
 
-    # TODO: Check why this is used nowhere
     def _randomize_scene(
         self,
         controller: Controller,
