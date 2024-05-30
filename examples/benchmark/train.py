@@ -9,7 +9,7 @@ import gymnasium as gym
 import typer
 import wandb
 import yaml
-from experiment_utils import Exp, FullMetricsLogWrapper
+from experiment_utils import EvalOnEachTaskAndSceneCallback, Exp, FullMetricsLogWrapper
 from sb3_contrib import QRDQN
 from stable_baselines3 import A2C, DQN, PPO
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, EvalCallback
@@ -54,7 +54,7 @@ class AvailableTask(StrEnum):
 
     # Gradual tasks
     # 1 item
-    BREAK_STATUE = "BreakStatue"
+    BREAK_MUG = "BreakMug"
     PICKUP_KNIFE = "PickupKnife"
     TOGGLE_FAUCET = "ToggleFaucet"
     OPEN_DRAWER = "OpenDrawer"
@@ -63,8 +63,8 @@ class AvailableTask(StrEnum):
     PICKUP_POTATO = "PickupPotato"
     # 2 items
     COOL_TOMATO = "CoolTomato"
-    PLACE_POTATO_IN_MICROWAVE = "PlacePotatoInMicrowave"
-    PLACE_LAPTOP_ON_SOFA = "PlaceLaptopOnSofa"
+    PLACE_POTATO_IN_FRIDGE = "PlacePotatoInFridge"
+    PLACE_NEWSPAPER_ON_SOFA = "PlaceNewspaperOnSofa"
     BRING_TOWEL_CLOTH_CLOSE = "BringTowelClothesClose"
     COOK_POTATO = "CookPotato"
     LOOK_BOOK_IN_LIGHT = "LookBookInLight"
@@ -218,9 +218,9 @@ task_blueprints_configs = {
         ],
     },
     # 1 item tasks
-    AvailableTask.BREAK_STATUE: {
+    AvailableTask.BREAK_MUG: {
         "task_type": TaskType.BREAK,
-        "args": {"broken_object_type": SimObjectType.STATUE},
+        "args": {"broken_object_type": SimObjectType.MUG},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.PICKUP_KNIFE: {
@@ -259,9 +259,9 @@ task_blueprints_configs = {
         "args": {"cooked_object_type": SimObjectType.POTATO},
         "scenes": ["FloorPlan1"],
     },
-    AvailableTask.PLACE_POTATO_IN_MICROWAVE: {
+    AvailableTask.PLACE_POTATO_IN_FRIDGE: {
         "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.MICROWAVE},
+        "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.FRIDGE},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.COOL_TOMATO: {
@@ -274,9 +274,9 @@ task_blueprints_configs = {
         "args": {"looked_at_object_type": SimObjectType.BOOK},
         "scenes": ["FloorPlan301"],
     },
-    AvailableTask.PLACE_LAPTOP_ON_SOFA: {
+    AvailableTask.PLACE_NEWSPAPER_ON_SOFA: {
         "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.LAPTOP, "receptacle_type": SimObjectType.SOFA},
+        "args": {"placed_object_type": SimObjectType.NEWSPAPER, "receptacle_type": SimObjectType.SOFA},
         "scenes": ["FloorPlan201"],
     },
     AvailableTask.BRING_TOWEL_CLOTH_CLOSE: {
@@ -359,7 +359,7 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
     }
     # === Enable opening and closing ===
     if task in {
-        AvailableTask.PLACE_POTATO_IN_MICROWAVE,
+        AvailableTask.PLACE_POTATO_IN_FRIDGE,
         AvailableTask.COOK_POTATO,
         AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
@@ -398,6 +398,10 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.PREPARE_FOR_SHOWER,
     }:
         action_groups["slice_actions"] = True
+
+    # === Enable dropping ===
+    if task == AvailableTask.BREAK_MUG:
+        action_groups["drop_actions"] = True
 
     return {"action_groups": action_groups}
 
@@ -565,26 +569,29 @@ def main(
         ]
         if do_eval:
             eval_callback_config = experiment.config["evaluation"]
-            eval_env = DummyVecEnv([
-                lambda: make_env(
-                    config_path,
-                    config_override,
-                    experiment,
-                    is_single_task=is_single_task,
-                    log_full_metrics=log_full_env_metrics,
-                    eval_env=True,
-                )
-            ])
+            # eval_env = DummyVecEnv([
+            #     lambda: make_env(
+            #         config_path,
+            #         config_override,
+            #         experiment,
+            #         is_single_task=is_single_task,
+            #         log_full_metrics=log_full_env_metrics,
+            #         eval_env=True,
+            #     )
+            # ])
             callbacks.append(
                 # TODO: Check EvalCallback really works with different tasks
                 EvalCallback(
-                    eval_env=eval_env,
+                    eval_env=env,
                     n_eval_episodes=eval_callback_config["nb_episodes"],
                     eval_freq=eval_callback_config["frequency"],
                     log_path=str(experiment.log_dir),
                     best_model_save_path=str(experiment.checkpoint_dir),
                     deterministic=eval_callback_config["deterministic"],
                     verbose=eval_callback_config["verbose"],
+                    callback_after_eval=EvalOnEachTaskAndSceneCallback(
+                        eval_env=env, log_dir=experiment.log_dir, verbose=1
+                    ),
                 )
             )
 

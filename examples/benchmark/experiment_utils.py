@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from stable_baselines3.common.vec_env import DummyVecEnv
 
-from rl_thor.envs.ai2thor_envs import BaseAI2THOREnv
+from rl_thor.envs.ai2thor_envs import BaseAI2THOREnv, ITHOREnv
 
 # TODO: Handle config path better
 experiment_config_path = Path(__file__).parent / "config/experiment_config.yaml"
@@ -103,64 +104,97 @@ class Exp:
 from stable_baselines3.common.callbacks import BaseCallback
 
 
-#!! No more used
-class LogSpeedPerformanceCallback(BaseCallback):
+class EvalOnEachTaskAndSceneCallback(BaseCallback):
     """
-    Callback for logging performance (graph tasks computation time, rendering time and scene initialization time).
+    Evaluate the model on each task and scene after each evaluation interval.
 
-    Those data are found in the `info` dictionary of the environment after each step (self.model.ep_info_buffer).
-
-    Attributes:
-        log_dir (Path): Log directory.
-        verbose (int): Verbosity level.
-
+    To be used with EvalCallback as callback_after_eval.
     """
 
     def __init__(
         self,
-        log_dir: Path | str,
-        verbose: int = 0,
+        eval_env: DummyVecEnv,
+        log_dir: str | Path,
+        verbose=0,
     ) -> None:
         """
         Initialize the callback.
 
         Args:
-            log_dir (Path): Log directory.
+            eval_env (DummyVecEnv): Evaluation environment.
+            log_dir (str | Path): Log directory.
             verbose (int): Verbosity level.
-
         """
         super().__init__(verbose)
-        self.log_dir = Path(log_dir)
-        self.log_file_path = self.log_dir / "performance_log.csv"
+        self.eval_env = eval_env
+        self.log_dir = Path(log_dir) / "eval_data"
 
         # Create log directory if it doesn't exist
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize CSV file with headers
-        with self.log_file_path.open("w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["num_timesteps", "reward_computation_time", "action_execution_time"])
-
     def _on_step(self) -> bool:
-        """
-        Log the performance after each step.
-
-        Returns:
-            bool: Whether or not the callback should continue.
-
-        """
-        # Log the performance
-        speed_performance_info = self.locals["infos"][0]["speed_performance"]
-
-        reward_computation_time = speed_performance_info.get("reward_computation_time", None)
-        action_execution_time = speed_performance_info.get("action_execution_time", None)
-
-        # Write the performance metrics to CSV
-        with self.log_file_path.open("a", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow([self.num_timesteps, reward_computation_time, action_execution_time])
-
+        # Perform evaluation after each training step
+        self._evaluate_all_scenes()
         return True
+
+    def _evaluate_all_scenes(self) -> None:
+        nb_files = len(list(self.log_dir.glob("*.csv")))
+        log_file = self.log_dir / f"eval_data_{nb_files}.csv"
+        eval_env = self.eval_env.envs[0]
+
+        # Initialize CSV file with headers
+        with log_file.open("w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                "scene",
+                "task_idx",
+                "task_type",
+                "episode_max_return",
+                "episode_max_task_advancement",
+                "task_completed",
+                "info",
+            ])
+
+        for task_idx, task_blueprint in enumerate(self.eval_env.get_attr("task_blueprints")[0]):
+            task_type = task_blueprint.task_type
+            for scene in task_blueprint.scenes:
+                # obs, info = self.eval_env.reset(forced_scene=scene, forced_task_idx=task_idx)
+                obs, info = self.eval_env.env_method("reset", forced_scene=scene, forced_task_idx=task_idx)[0]
+                terminated = info["is_success"]
+                truncated = False
+                episode_reward = 0
+                episode_max_reward = 0
+                max_task_advancement = 0
+
+                while not terminated and not truncated:
+                    action, _states = self.model.predict(obs, deterministic=True)
+                    # obs, reward, terminated, truncated, info = self.eval_env.step(action)
+                    obs, reward, terminated, truncated, info = self.eval_env.env_method("step", action)[0]
+                    episode_reward += reward
+                    episode_max_reward = max(episode_max_reward, reward)
+                    max_task_advancement = max(max_task_advancement, info.get("task_advancement", 0))
+
+                result = {
+                    "scene": scene,
+                    "task_idx": task_idx,
+                    "task_type": task_type,
+                    "episode_max_return": episode_max_reward,
+                    "episode_max_task_advancement": max_task_advancement,
+                    "task_completed": terminated,
+                    "info": info,
+                }
+                self._log_result(writer, result)
+
+    def _log_result(self, writer, result: dict[str, Any]) -> None:  # noqa: PLR6301, ANN001
+        writer.writerow([
+            result["scene"],
+            result["task_idx"],
+            result["task_type"],
+            result["episode_max_return"],
+            result["episode_max_task_advancement"],
+            result["task_completed"],
+            result["info"],
+        ])
 
 
 #!! Untested

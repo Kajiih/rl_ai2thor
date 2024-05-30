@@ -479,18 +479,35 @@ class ITHOREnv(
 
     # TODO: Adapt this with general task and reward handling
     def reset(
-        self, seed: int | None = None, options: dict[str, Any] | None = None
+        self,
+        seed: int | None = None,
+        forced_task_idx: int | None = None,
+        forced_scene: SceneId | None = None,
+        options: dict[str, Any] | None = None,
     ) -> tuple[dict[str, NDArray[np.uint8] | str], dict]:
         """
         Reset the environment.
 
         New scene is sampled and new task and reward handlers are initialized.
+
+        Args:
+            seed (int, Optional): Seed for the environment random number generator.
+            forced_task_idx (int, Optional): Index of the task blueprint to force.
+            forced_scene (SceneId, Optional): Scene to force.
+            options (dict[str, Any], Optional): Additional options for the reset.
+
+        Returns:
+            observation (dict[str, NDArray[np.uint8] | str]): Observation of the environment.
+            info (dict): Additional information about the environment.
         """
         print("Resetting environment.")
         super().reset(seed=seed, options=options)
 
         # Sample a task blueprint
-        self.task_idx = self.np_random.integers(len(self.task_blueprints))
+        if forced_task_idx is not None:
+            self.task_idx = forced_task_idx
+        else:
+            self.task_idx = self.np_random.integers(len(self.task_blueprints))
         task_blueprint = self.task_blueprints[self.task_idx]
         self.current_task_type = task_blueprint.task_type
 
@@ -499,7 +516,18 @@ class ITHOREnv(
         self.reward_handler = self.task.get_reward_handler(self.config.no_task_advancement_reward)
 
         # Reset the controller, task and reward handler
-        task_completion, task_info, scene_initialization_time = self._reset_controller_task_reward(task_blueprint)
+        if forced_scene is None:
+            task_completion, task_info, scene_initialization_time = self._sample_scene_and_reset_controller_task_reward(
+                task_blueprint
+            )
+        else:
+            successful_reset, task_completion, task_info, scene_initialization_time = (
+                self._reset_controller_task_reward(scene=self.current_scene)
+            )
+            if not successful_reset:
+                raise ForcedSceneFailedReset(forced_scene, task_blueprint)
+            if task_completion:
+                print(f"Task is already completed in scene {self.current_scene}. Continuing with this scene.")
 
         self.step_count = 0
         info = {
@@ -541,9 +569,38 @@ class ITHOREnv(
             "scene_obs": SCENE_ID_TO_INDEX_MAP[self.current_scene],
         }
 
-    def _reset_controller_task_reward(self, task_blueprint: TaskBlueprint) -> tuple[bool, dict[str, Any], float]:
+    def _reset_controller_task_reward(self, scene: SceneId) -> tuple[bool, bool, dict[str, Any], float]:
         """
-        Sample a task from the task blueprint compatible with the given event.
+        Reset the controller, task and reward handler for a given scene.
+
+        Args:
+            scene (SceneId): Scene to reset the controller to.
+
+        Returns:
+            successful_reset (bool): Whether the reset was successful.
+            task_completion (bool): Whether the task is completed.
+            task_info (dict[str, Any]): Additional information about the task.
+            scene_initialization_time (float): Time taken to initialize the scene.
+        """
+        # Instantiate the scene
+        start_time = time.perf_counter()
+
+        self.controller.reset(scene=scene)  # type: ignore
+        self._randomize_scene(self.controller)
+
+        end_time = time.perf_counter()
+        scene_initialization_time = end_time - start_time
+        # print(f"Scene {scene} initialized in {scene_initialization_time:.4f} seconds.")
+
+        successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
+
+        return successful_reset, task_completion, task_info, scene_initialization_time
+
+    def _sample_scene_and_reset_controller_task_reward(
+        self, task_blueprint: TaskBlueprint
+    ) -> tuple[bool, dict[str, Any], float]:
+        """
+        Sample a scene from the task blueprint and reset the controller, task and reward handler.
 
         Args:
             task_blueprint (TaskBlueprint): Task blueprint to sample from.
@@ -563,17 +620,9 @@ class ITHOREnv(
             sampled_scene = self.np_random.choice(sorted_scenes)
             print(f"Sampled scene: {sampled_scene}.")
 
-            # Instantiate the scene
-            start_time = time.perf_counter()
-
-            self.controller.reset(scene=sampled_scene)  # type: ignore
-            self._randomize_scene(self.controller)
-
-            end_time = time.perf_counter()
-            scene_initialization_time = end_time - start_time
-            print(f"Scene {sampled_scene} initialized in {scene_initialization_time:.4f} seconds.")
-
-            successful_reset, task_completion, task_info = self.reward_handler.reset(self.controller)
+            successful_reset, task_completion, task_info, scene_initialization_time = (
+                self._reset_controller_task_reward(sampled_scene)
+            )
             if not successful_reset:  # TODO: Fix this for tasks with 0 arguments to work
                 print(
                     f"Scene {sampled_scene} is not compatible with the task blueprint {task_blueprint.task_type} ({task_blueprint.task_args}). Removing it from the task blueprint."
@@ -662,3 +711,14 @@ class NoTaskBlueprintError(Exception):
 
     def __str__(self) -> str:
         return f"No task blueprint found in the environment mode config. Task blueprints should be defined in the section 'tasks/task_blueprints' of the config."
+
+
+class ForcedSceneFailedReset(Exception):
+    """Exception raised when the forced scene is not compatible with the task blueprint."""
+
+    def __init__(self, forced_scene: SceneId, task_blueprint: TaskBlueprint) -> None:
+        self.forced_scene = forced_scene
+        self.task_blueprint = task_blueprint
+
+    def __str__(self) -> str:
+        return f"Forced scene {self.forced_scene} is not compatible with the task blueprint {self.task_blueprint}."
