@@ -481,8 +481,6 @@ class ITHOREnv(
     def reset(
         self,
         seed: int | None = None,
-        forced_task_idx: int | None = None,
-        forced_scene: SceneId | None = None,
         options: dict[str, Any] | None = None,
     ) -> tuple[dict[str, NDArray[np.uint8] | str], dict]:
         """
@@ -490,10 +488,12 @@ class ITHOREnv(
 
         New scene is sampled and new task and reward handlers are initialized.
 
-        Args:
-            seed (int, Optional): Seed for the environment random number generator.
+        Option keys:
             forced_task_idx (int, Optional): Index of the task blueprint to force.
             forced_scene (SceneId, Optional): Scene to force.
+
+        Args:
+            seed (int, Optional): Seed for the environment random number generator.
             options (dict[str, Any], Optional): Additional options for the reset.
 
         Returns:
@@ -502,8 +502,11 @@ class ITHOREnv(
         """
         print("Resetting environment.")
         super().reset(seed=seed, options=options)
+        if options is None:
+            options = {}
 
         # Sample a task blueprint
+        forced_task_idx = options.get("forced_task_idx")
         if forced_task_idx is not None:
             self.task_idx = forced_task_idx
         else:
@@ -516,6 +519,7 @@ class ITHOREnv(
         self.reward_handler = self.task.get_reward_handler(self.config.no_task_advancement_reward)
 
         # Reset the controller, task and reward handler
+        forced_scene = options.get("forced_scene")
         if forced_scene is None:
             task_completion, task_info, scene_initialization_time = self._sample_scene_and_reset_controller_task_reward(
                 task_blueprint
@@ -546,7 +550,7 @@ class ITHOREnv(
 
         obs_env: NDArray = self.last_event.frame  # type: ignore
         observation = self._get_full_observation(obs_env)
-        print(f"Starting new episode in {self.current_scene} with task {self.current_task_type}.")
+        print(f"Starting new episode in {self.current_scene} with task {self.current_task_type.__name__}.")
 
         self.last_info = info
         return observation, info

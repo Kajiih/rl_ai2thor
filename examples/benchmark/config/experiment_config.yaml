@@ -10,11 +10,11 @@ wandb:
 
 evaluation:
   nb_episodes: 10
-  frequency: 4_000
+  frequency: 2048
   deterministic: true
   verbose: 1
 
 video_recorder:
-  frequency: 50_000
-  length: 2000
+  frequency: 16_384
+  length: 500
   prefix: "rl-video"

@@ -84,11 +84,11 @@ class Exp:
         if self.project_name is not None:
             config["wandb"]["project"] = self.project_name
         else:
-            self.project_name = config["project_name"]
+            self.project_name = config["wandb"]["project"]
         if self.group_name is not None:
             config["wandb"]["group"] = self.group_name
         else:
-            self.group_name = config["group_name"]
+            self.group_name = config["wandb"]["group"]
         # Add other attributes
         config.update({
             "model": self.model,
@@ -152,38 +152,47 @@ class EvalOnEachTaskAndSceneCallback(BaseCallback):
                 "episode_max_return",
                 "episode_max_task_advancement",
                 "task_completed",
-                "info",
             ])
 
-        for task_idx, task_blueprint in enumerate(self.eval_env.get_attr("task_blueprints")[0]):
-            task_type = task_blueprint.task_type
-            for scene in task_blueprint.scenes:
-                # obs, info = self.eval_env.reset(forced_scene=scene, forced_task_idx=task_idx)
-                obs, info = self.eval_env.env_method("reset", forced_scene=scene, forced_task_idx=task_idx)[0]
-                terminated = info["is_success"]
-                truncated = False
-                episode_reward = 0
-                episode_max_reward = 0
-                max_task_advancement = 0
+            print("Evaluating model on each task and scene...")
+            for task_idx, task_blueprint in enumerate(self.eval_env.get_attr("task_blueprints")[0]):
+                task_type = task_blueprint.task_type
+                for scene in task_blueprint.scenes:
+                    # obs, info = self.eval_env.reset(forced_scene=scene, forced_task_idx=task_idx)
+                    reset_options = {"forced_scene": scene, "forced_task_idx": task_idx}
+                    obs, info = self.eval_env.env_method("reset", options=reset_options)[0]
+                    terminated = info["is_success"]
+                    truncated = False
+                    episode_reward = 0
+                    episode_max_reward = 0
+                    max_task_advancement = 0
 
-                while not terminated and not truncated:
-                    action, _states = self.model.predict(obs, deterministic=True)
-                    # obs, reward, terminated, truncated, info = self.eval_env.step(action)
-                    obs, reward, terminated, truncated, info = self.eval_env.env_method("step", action)[0]
-                    episode_reward += reward
-                    episode_max_reward = max(episode_max_reward, reward)
-                    max_task_advancement = max(max_task_advancement, info.get("task_advancement", 0))
+                    while not terminated and not truncated:
+                        obs_copy = obs.copy()
+                        action, _states = self.model.predict(obs_copy, deterministic=True)
+                        # Make action parameters scalars
+                        action = {k: v.item() for k, v in action.items()} if isinstance(action, dict) else action.item()
 
-                result = {
-                    "scene": scene,
-                    "task_idx": task_idx,
-                    "task_type": task_type,
-                    "episode_max_return": episode_max_reward,
-                    "episode_max_task_advancement": max_task_advancement,
-                    "task_completed": terminated,
-                    "info": info,
-                }
-                self._log_result(writer, result)
+                        # obs, reward, terminated, truncated, info = self.eval_env.step(action)
+                        obs, reward, terminated, truncated, info = self.eval_env.env_method("step", action)[0]
+                        episode_reward += reward
+                        episode_max_reward = max(episode_max_reward, reward)
+                        task_advancement = info.get("task_advancement", 0)
+                        if task_advancement is not None:
+                            max_task_advancement = max(max_task_advancement, task_advancement)
+
+                    result = {
+                        "scene": scene,
+                        "task_idx": task_idx,
+                        "task_type": task_type.__name__,
+                        "episode_max_return": episode_max_reward,
+                        "episode_max_task_advancement": max_task_advancement,
+                        "task_completed": terminated,
+                    }
+                    self._log_result(writer, result)
+
+            # Reset the environment at the end of the evaluation
+            self.eval_env.reset()
 
     def _log_result(self, writer, result: dict[str, Any]) -> None:  # noqa: PLR6301, ANN001
         writer.writerow([
@@ -193,7 +202,6 @@ class EvalOnEachTaskAndSceneCallback(BaseCallback):
             result["episode_max_return"],
             result["episode_max_task_advancement"],
             result["task_completed"],
-            result["info"],
         ])
 
 
