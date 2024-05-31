@@ -1704,6 +1704,73 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
 
 
+class CleanUpBathroomTask(GraphTask):
+    """
+    Task for cleaning up a bathroom.
+
+    The agent has to put a piece of cloth, soap bar, soap bottle, spray bottle and toilet paper in the garbage can.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("garbage_can"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.GARBAGE_CAN)},
+            ),
+            ItemId("cloth"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.CLOTH)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("soap_bar"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SOAP_BAR)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("soap_bottle"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SOAP_BOTTLE)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("spray_bottle"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SPRAY_BOTTLE)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("toilet_paper"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.TOILET_PAPER)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clean up the bathroom by putting a piece of cloth, soap bar, soap bottle, spray bottle and toilet paper in the garbage can"
+
+
 # %% === Other Benchmark Tasks ===
 class PlaceInFilledSink(GraphTask):
     """Task for placing a given object in a filled sink."""
