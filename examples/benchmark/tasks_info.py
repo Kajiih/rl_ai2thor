@@ -406,6 +406,10 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.OPEN_DRAWER,
         AvailableTask.COOL_TOMATO,
         AvailableTask.PLACE_TOMATO_POTATO_IN_FRIDGE,
+        AvailableTask.CLEAN_UP_KITCHEN,
+        AvailableTask.CLEAN_UP_LIVING_ROOM,
+        AvailableTask.CLEAN_UP_BEDROOM,
+        AvailableTask.CLEAN_UP_BATHROOM,
     }:
         action_groups["open_close_actions"] = True
 
