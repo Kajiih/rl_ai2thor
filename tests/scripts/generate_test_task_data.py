@@ -8,7 +8,13 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from ai2thor.controller import Controller
 
-from rl_thor.envs.tasks.tasks import CleanUpBathroomTask, PrepareGoingToBedTask
+from rl_thor.envs.tasks.tasks import (
+    CleanUpBathroomTask,
+    CleanUpBedroomTask,
+    CleanUpKitchenTask,
+    CleanUpLivingRoomTask,
+    PrepareGoingToBedTask,
+)
 from rl_thor.envs.tasks.tasks_interface import BaseTask
 
 if TYPE_CHECKING:
@@ -27,6 +33,9 @@ def main():
     # generate_look_in_light_book_data(controller)
     # generate_prepare_meal_data(controller)
     # generate_prepare_going_to_bed_data(controller)
+    # generate_clean_up_kitchen_data(controller)
+    # generate_clean_up_living_room_data(controller)
+    # generate_clean_up_bedroom_data(controller)
     # generate_clean_up_bathroom_data(controller)
 
     controller.stop()
@@ -420,6 +429,342 @@ def generate_prepare_going_to_bed_data(controller: Controller) -> None:
     )
     # book (IsPickedUp 1 + IsCloseTo 2 + IsOpen 1) 4/4
     # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    data_recorder.write_data()
+
+
+def generate_clean_up_kitchen_data(controller: Controller) -> None:
+    """Generate data for the CleanUpKitchen task."""
+    task = CleanUpKitchenTask()
+    data_recorder = TaskDataRecorder(
+        "clean_up_kitchen",
+        controller,
+        "FloorPlan1",
+        test_task_data_dir,
+        task=task,
+        reset_args={"gridSize": 0.05},
+    )
+
+    # === Event 1: Pick up the apple ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Apple|-00.47|+01.15|+00.48",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # ..
+
+    # === Event 2: Put the apple in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|-01.94|00.00|+02.03",
+            "forceAction": True,
+        },
+        advancement=4,
+    )
+    # ..
+
+    # === Event 3: Pick up the tomato ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Tomato|-00.39|+01.14|-00.81",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # ..
+
+    # === Event 4: Put the tomato in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|-01.94|00.00|+02.03",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # ..
+
+    # === Event 5: Pick up the potato ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Potato|-01.66|+00.93|-02.15",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # ..
+
+    # === Event 6: Put the potato in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|-01.94|00.00|+02.03",
+            "forceAction": True,
+        },
+        advancement=12,
+    )
+    # ..
+
+    # === Event 7: Pick up the egg ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Egg|-02.04|+00.81|+01.24",
+            "forceAction": True,
+        },
+        advancement=13,
+    )
+    # ..
+
+    # === Event 8: Put the egg in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|-01.94|00.00|+02.03",
+            "forceAction": True,
+        },
+        advancement=16,
+        terminated=True,
+    )
+    # ..
+
+    data_recorder.write_data()
+
+
+def generate_clean_up_living_room_data(controller: Controller) -> None:
+    """Generate data for the CleanUpLivingRoom task."""
+    task = CleanUpLivingRoomTask()
+    data_recorder = TaskDataRecorder(
+        "clean_up_living_room",
+        controller,
+        "FloorPlan201",
+        test_task_data_dir,
+        task=task,
+        init_advancement=4,
+        reset_args={"gridSize": 0.05},
+    )
+
+    # === Event 1: Pick up the watch ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Watch|-02.10|+00.73|-00.06",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # ...
+
+    # === Event 2: Put the watch in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|-03.36|+00.19|+06.43",
+            "forceAction": True,
+        },
+        advancement=7,
+    )
+    # ...
+
+    # === Event 3: Pick up the credit card ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "CreditCard|-01.94|+00.68|+01.80",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # ...
+
+    # === Event 4: Put the credit card in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|-03.36|+00.19|+06.43",
+            "forceAction": True,
+        },
+        advancement=10,
+    )
+    # ...
+
+    # === Event 5: Pick up the key chain ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "KeyChain|-00.27|+00.70|+03.13",
+            "forceAction": True,
+        },
+        advancement=11,
+    )
+    # ...
+
+    # === Event 6: Put the key chain in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|-03.36|+00.19|+06.43",
+            "forceAction": True,
+        },
+        advancement=13,
+    )
+    # ...
+
+    # === Event 7: Pick up the remote control ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "RemoteControl|-02.58|+00.74|-00.15",
+            "forceAction": True,
+        },
+        advancement=14,
+    )
+    # ...
+
+    # === Event 8: Put the remote control in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|-03.36|+00.19|+06.43",
+            "forceAction": True,
+        },
+        advancement=16,
+        terminated=True,
+    )
+    # ...
+
+    data_recorder.write_data()
+
+
+def generate_clean_up_bedroom_data(controller: Controller) -> None:
+    """Generate data for the CleanUpBedroom task."""
+    task = CleanUpBedroomTask()
+    data_recorder = TaskDataRecorder(
+        "clean_up_bedroom",
+        controller,
+        "FloorPlan301",
+        test_task_data_dir,
+        task=task,
+        init_advancement=5,
+        reset_args={"gridSize": 0.05},
+    )
+
+    # === Event 1: Pick up the alarm clock ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "KeyChain|+01.74|+00.80|-01.29",
+            "forceAction": True,
+        },
+        advancement=6,
+    )
+    # alarm_clock (IsPickedUp 1) 1/6
+
+    # === Event 2: Put the alarm clock in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|+02.73|+00.20|+00.89",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6
+
+    # === Event 3: Pick up the CD ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "CD|+01.62|+00.80|-01.19",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsPickedUp 1) 3/6
+
+    # === Event 4: Put the CD in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|+02.73|+00.20|+00.89",
+            "forceAction": True,
+        },
+        advancement=11,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6
+
+    # === Event 5: Pick up the cell phone ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "CellPhone|-00.26|+00.56|+00.52",
+            "forceAction": True,
+        },
+        advancement=12,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsPickedUp 1) 5/6
+
+    # === Event 6: Put the cell phone in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|+02.73|+00.20|+00.89",
+            "forceAction": True,
+        },
+        advancement=14,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsContainedIn 1) 6/6
+
+    # === Event 7: Pick up the pencil ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Pencil|+02.01|+00.81|-01.17",
+            "forceAction": True,
+        },
+        advancement=15,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsContainedIn 1) 6/6 + pencil (IsPickedUp 1) 7/6
+
+    # === Event 8: Put the pencil in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|+02.73|+00.20|+00.89",
+            "forceAction": True,
+        },
+        advancement=17,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsContainedIn 1) 6/6 + pencil (IsContainedIn 1) 8/6
+
+    # === Event 9: Pick up the pen ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Pen|+01.93|+00.81|-01.18",
+            "forceAction": True,
+        },
+        advancement=18,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsContainedIn 1) 6/6 + pencil (IsContainedIn 1) 8/6 + pillow (IsPickedUp 1) 9/6
+
+    # === Event 10: Put the pen in the box ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Box|+02.73|+00.20|+00.89",
+            "forceAction": True,
+        },
+        advancement=20,
+        terminated=True,
+    )
+    # alarm_clock (IsContainedIn 1) 2/6 + CD (IsContainedIn 1) 4/6 + cell_phone (IsContainedIn 1) 6/6 + pencil (IsContainedIn 1) 8/6 + pillow (IsContainedIn 1) 10/6
 
     data_recorder.write_data()
 

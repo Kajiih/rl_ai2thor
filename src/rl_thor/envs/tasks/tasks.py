@@ -76,6 +76,10 @@ class TaskType(StrEnum):
     RELAX_ON_SOFA = "RelaxOnSofa"
     READ_BOOK_IN_BED = "ReadBookInBed"
     SETUP_BATH = "SetupBath"
+    CLEAN_UP_KITCHEN = "CleanUpKitchen"
+    CLEAN_UP_LIVING_ROOM = "CleanUpLivingRoom"
+    CLEAN_UP_BEDROOM = "CleanUpBedroom"
+    CLEAN_UP_BATHROOM = "CleanUpBathroom"
     PLACE_IN_FILLED_SINK = "PlaceInFilledSink"
     PLACE_3_IN_FILLED_SINK = "Place3InFilledSink"
 
@@ -1704,6 +1708,196 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
 
 
+class CleanUpKitchenTask(GraphTask):
+    """
+    Task for cleaning up a kitchen.
+
+    The agent has to put an apple, a tomato, a potato and an egg and in the garbage can.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("garbage_can"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.GARBAGE_CAN)},
+            ),
+            ItemId("apple"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.APPLE)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("tomato"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.TOMATO)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("potato"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.POTATO)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("egg"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.EGG)},
+                relations={
+                    ItemId("garbage_can"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clean up the kitchen by putting an apple, a tomato, a potato and an egg in the garbage can"
+
+
+# AlarmClock, CD, CellPhone, Pen, Pencil in Box
+class CleanUpBedroomTask(GraphTask):
+    """
+    Task for cleaning up a bedroom.
+
+    The agent has to put an key chain, a CD, a cell phone, a pen and a pencil in a box.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("box"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.BOX)},
+            ),
+            ItemId("key_chain"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.KEY_CHAIN)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("cd"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.CD)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("cell_phone"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.CELL_PHONE)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("pen"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PEN)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("pencil"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PENCIL)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clean up the bedroom by putting an key chain, a CD, a cell phone, a pen and a pencil in a box"
+
+
+class CleanUpLivingRoomTask(GraphTask):
+    """
+    Task for cleaning up a living room.
+
+    The agent has to put a credit card, a key chain, a remote control and a watch in a box.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("box"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.BOX)},
+            ),
+            ItemId("credit_card"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.CREDIT_CARD)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("key_chain"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.KEY_CHAIN)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("remote_control"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.REMOTE_CONTROL)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("watch"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.WATCH)},
+                relations={
+                    ItemId("box"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clean up the living room by putting a credit card, a key chain, a remote control and a watch in a box"
+
+
 class CleanUpBathroomTask(GraphTask):
     """
     Task for cleaning up a bathroom.
@@ -1917,6 +2111,10 @@ ALL_TASKS = {
     TaskType.RELAX_ON_SOFA: PrepareWatchingTVTask,
     TaskType.READ_BOOK_IN_BED: PrepareGoingToBedTask,
     TaskType.SETUP_BATH: PrepareForShowerTask,
+    TaskType.CLEAN_UP_KITCHEN: CleanUpKitchenTask,
+    TaskType.CLEAN_UP_BEDROOM: CleanUpBedroomTask,
+    TaskType.CLEAN_UP_LIVING_ROOM: CleanUpLivingRoomTask,
+    TaskType.CLEAN_UP_BATHROOM: CleanUpBathroomTask,
     TaskType.PLACE_IN_FILLED_SINK: PlaceInFilledSink,
     TaskType.PLACE_3_IN_FILLED_SINK: Place3InFilledSink,
 }

@@ -13,6 +13,9 @@ from PIL import Image
 from rl_thor.envs.sim_objects import SimObjectType
 from rl_thor.envs.tasks.tasks import (
     CleanUpBathroomTask,
+    CleanUpBedroomTask,
+    CleanUpKitchenTask,
+    CleanUpLivingRoomTask,
     LookInLight,
     Open,
     Pickup,
@@ -175,6 +178,27 @@ def test_prepare_going_to_bed() -> None:
     """Test the PrepareGoingToBed task."""
     task = PrepareGoingToBedTask()
     task_data_dir = test_task_data_dir / "prepare_going_to_bed"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_clean_up_kitchen() -> None:
+    """Test the CleanUpBathroom task."""
+    task = CleanUpKitchenTask()
+    task_data_dir = test_task_data_dir / "clean_up_kitchen"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_clean_up_living_room() -> None:
+    """Test the CleanUpBathroom task."""
+    task = CleanUpLivingRoomTask()
+    task_data_dir = test_task_data_dir / "clean_up_living_room"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_clean_up_bedroom() -> None:
+    """Test the CleanUpBathroom task."""
+    task = CleanUpBedroomTask()
+    task_data_dir = test_task_data_dir / "clean_up_bedroom"
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 
