@@ -47,9 +47,9 @@ class AvailableTask(StrEnum):
 
     # Complex tasks
     PREPARE_MEAL = TaskType.PREPARE_MEAL
-    PREPARE_WATCHING_TV = TaskType.PREPARE_WATCHING_TV
-    PREPARE_GOING_TO_BED = TaskType.PREPARE_GOING_TO_BED
-    PREPARE_FOR_SHOWER = TaskType.PREPARE_FOR_SHOWER
+    RELAX_ON_SOFA = TaskType.RELAX_ON_SOFA
+    READ_BOOK_IN_BED = TaskType.READ_BOOK_IN_BED
+    SETUP_BATH = TaskType.SETUP_BATH
     MULTI_TASK = "MultiTask"
 
     # Gradual tasks
@@ -137,8 +137,8 @@ task_blueprints_configs = {
             "FloorPlan30",
         ],
     },
-    AvailableTask.PREPARE_WATCHING_TV: {
-        "task_type": TaskType.PREPARE_WATCHING_TV,
+    AvailableTask.RELAX_ON_SOFA: {
+        "task_type": TaskType.RELAX_ON_SOFA,
         "args": {},
         "scenes": [
             "FloorPlan201",
@@ -161,8 +161,8 @@ task_blueprints_configs = {
             "FloorPlan230",
         ],
     },
-    AvailableTask.PREPARE_GOING_TO_BED: {
-        "task_type": TaskType.PREPARE_GOING_TO_BED,
+    AvailableTask.READ_BOOK_IN_BED: {
+        "task_type": TaskType.READ_BOOK_IN_BED,
         "args": {},
         "scenes": [
             # "FloorPlan201",
@@ -199,8 +199,8 @@ task_blueprints_configs = {
             "FloorPlan330",
         ],
     },
-    AvailableTask.PREPARE_FOR_SHOWER: {
-        "task_type": TaskType.PREPARE_FOR_SHOWER,
+    AvailableTask.SETUP_BATH: {
+        "task_type": TaskType.SETUP_BATH,
         "args": {},
         "scenes": [
             "FloorPlan401",
@@ -341,9 +341,9 @@ def get_task_blueprint_config(task: AvailableTask, nb_scenes: int) -> list[dict[
                 keep_only_n_scenes(task_blueprints_configs[task], nb_scenes)
                 for task in (
                     AvailableTask.PREPARE_MEAL,
-                    AvailableTask.PREPARE_WATCHING_TV,
-                    AvailableTask.PREPARE_GOING_TO_BED,
-                    AvailableTask.PREPARE_FOR_SHOWER,
+                    AvailableTask.RELAX_ON_SOFA,
+                    AvailableTask.READ_BOOK_IN_BED,
+                    AvailableTask.SETUP_BATH,
                 )
             ]
         case _:
@@ -363,9 +363,9 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.COOK_POTATO,
         AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
-        AvailableTask.PREPARE_WATCHING_TV,
-        AvailableTask.PREPARE_GOING_TO_BED,
-        AvailableTask.PREPARE_FOR_SHOWER,
+        AvailableTask.RELAX_ON_SOFA,
+        AvailableTask.READ_BOOK_IN_BED,
+        AvailableTask.SETUP_BATH,
         AvailableTask.OPEN_DRAWER,
         AvailableTask.COOL_TOMATO,
         AvailableTask.PLACE_TOMATO_POTATO_IN_FRIDGE,
@@ -380,9 +380,9 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.COOK_POTATO,
         AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
-        AvailableTask.PREPARE_WATCHING_TV,
-        AvailableTask.PREPARE_GOING_TO_BED,
-        AvailableTask.PREPARE_FOR_SHOWER,
+        AvailableTask.RELAX_ON_SOFA,
+        AvailableTask.READ_BOOK_IN_BED,
+        AvailableTask.SETUP_BATH,
         AvailableTask.TOGGLE_FAUCET,
         AvailableTask.SWITCH_ON_TV,
         AvailableTask.LOOK_BOOK_IN_LIGHT,
@@ -393,9 +393,9 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
     if task in {
         AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
-        AvailableTask.PREPARE_WATCHING_TV,
-        AvailableTask.PREPARE_GOING_TO_BED,
-        AvailableTask.PREPARE_FOR_SHOWER,
+        AvailableTask.RELAX_ON_SOFA,
+        AvailableTask.READ_BOOK_IN_BED,
+        AvailableTask.SETUP_BATH,
     }:
         action_groups["slice_actions"] = True
 
@@ -495,6 +495,9 @@ def main(
         experiment.group_name if experiment.group_name is not None else "no_group",
         experiment.project_name,
         "no_task_advancement_reward" if no_task_advancement_reward else "with_task_advancement_reward",
+        f"{nb_scenes}_scenes",
+        "do_eval" if do_eval else "no_eval",
+        "randomize_agent_position" if randomize_agent_position else "no_randomize_agent_position",
     ))
 
     run: Run = wandb.init(  # type: ignore

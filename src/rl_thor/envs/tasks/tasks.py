@@ -73,9 +73,9 @@ class TaskType(StrEnum):
     PLACE_TWO_IN = "PlaceTwoIn"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
-    PREPARE_WATCHING_TV = "PrepareWatchingTV"
-    PREPARE_GOING_TO_BED = "PrepareGoingToBed"
-    PREPARE_FOR_SHOWER = "PrepareForShower"
+    RELAX_ON_SOFA = "RelaxOnSofa"
+    READ_BOOK_IN_BED = "ReadBookInBed"
+    SETUP_BATH = "SetupBath"
     PLACE_IN_FILLED_SINK = "PlaceInFilledSink"
     PLACE_3_IN_FILLED_SINK = "Place3InFilledSink"
 
@@ -1847,9 +1847,9 @@ ALL_TASKS = {
     TaskType.PLACE_TWO_IN: PlaceTwoIn,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
-    TaskType.PREPARE_WATCHING_TV: PrepareWatchingTVTask,
-    TaskType.PREPARE_GOING_TO_BED: PrepareGoingToBedTask,
-    TaskType.PREPARE_FOR_SHOWER: PrepareForShowerTask,
+    TaskType.RELAX_ON_SOFA: PrepareWatchingTVTask,
+    TaskType.READ_BOOK_IN_BED: PrepareGoingToBedTask,
+    TaskType.SETUP_BATH: PrepareForShowerTask,
     TaskType.PLACE_IN_FILLED_SINK: PlaceInFilledSink,
     TaskType.PLACE_3_IN_FILLED_SINK: Place3InFilledSink,
 }
