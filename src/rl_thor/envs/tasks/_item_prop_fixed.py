@@ -139,7 +139,7 @@ class OpenableProp(ItemFixedProp[bool]):
         """
         target_bool = self.target_satisfaction_function.target_value
         object_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
-        # Add `Blinds` object as not openable.
+        # Add `Blinds` and 'ShowerCurtain' object as not openable.
         if object_type not in OPENABLES:
             return not target_bool
         return super().is_object_satisfying(obj_metadata)
