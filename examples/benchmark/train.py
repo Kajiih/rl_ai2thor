@@ -124,7 +124,7 @@ def main(
         do_eval (bool): Evaluate the agent. !! Don't eval with a different environment in a Docker container, both rendering windows might be mixed up.
         randomize_agent_position (bool): Randomize the agent position in the environment.
     """
-    is_single_task = task != AvailableTask.MULTI_TASK
+    is_single_task = task not in {AvailableTask.MULTI_TASK_4, AvailableTask.MULTI_TASK_8}
     if is_single_task:
         model_config["policy_type"] = "CnnPolicy"
     else:
