@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from ai2thor.controller import Controller
 
-from rl_thor.envs.tasks.tasks import PrepareGoingToBedTask
+from rl_thor.envs.tasks.tasks import CleanUpBathroomTask, PrepareGoingToBedTask
 from rl_thor.envs.tasks.tasks_interface import BaseTask
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ def main():
     # generate_look_in_light_book_data(controller)
     # generate_prepare_meal_data(controller)
     # generate_prepare_going_to_bed_data(controller)
+    # generate_clean_up_bathroom_data(controller)
 
     controller.stop()
 
@@ -419,6 +420,131 @@ def generate_prepare_going_to_bed_data(controller: Controller) -> None:
     )
     # book (IsPickedUp 1 + IsCloseTo 2 + IsOpen 1) 4/4
     # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    data_recorder.write_data()
+
+
+def generate_clean_up_bathroom_data(controller: Controller) -> None:
+    """Generate data for the CleanUpBathroom task."""
+    task = CleanUpBathroomTask()
+    data_recorder = TaskDataRecorder(
+        "clean_up_bathroom",
+        controller,
+        "FloorPlan401",
+        test_task_data_dir,
+        task=task,
+        reset_args={"gridSize": 0.05},
+    )
+    # === Event 1: Pick up the cloth ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Cloth|-00.27|+00.04|+01.02",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # cloth/garbage_can (cloth:is_picked_up 1) 1/4
+
+    # === Event 2: Put the cloth in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|+00.05|00.00|+03.88",
+            "forceAction": True,
+        },
+        advancement=4,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4
+
+    # === Event 3: Pick up the soap bar ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "SoapBar|-00.69|+00.62|+01.99",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 4: Put the soap bar in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|+00.05|00.00|+03.88",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 5: Pick up the soap bottle ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "SoapBottle|-03.41|+01.02|+01.29",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 6: Put the soap bottle in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|+00.05|00.00|+03.88",
+            "forceAction": True,
+        },
+        advancement=12,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 7: Pick up the spray bottle ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "SprayBottle|-03.09|+00.23|+00.29",
+            "forceAction": True,
+        },
+        advancement=13,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 8: Put the spray bottle in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|+00.05|00.00|+03.88",
+            "forceAction": True,
+        },
+        advancement=16,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 9: Pick up the toilet paper ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "ToiletPaper|-02.45|+01.03|+03.95",
+            "forceAction": True,
+        },
+        advancement=17,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
+
+    # === Event 10: Put the toilet paper in the garbage can ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "GarbageCan|+00.05|00.00|+03.88",
+            "forceAction": True,
+        },
+        advancement=20,
+        terminated=True,
+    )
+    # cloth/garbage_can:IsContainedIn 4/4 + ...
 
     data_recorder.write_data()
 

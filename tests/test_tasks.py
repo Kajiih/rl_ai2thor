@@ -11,7 +11,15 @@ from ai2thor.server import Event
 from PIL import Image
 
 from rl_thor.envs.sim_objects import SimObjectType
-from rl_thor.envs.tasks.tasks import LookInLight, Open, Pickup, PlaceCooledIn, PrepareGoingToBedTask, PrepareMealTask
+from rl_thor.envs.tasks.tasks import (
+    CleanUpBathroomTask,
+    LookInLight,
+    Open,
+    Pickup,
+    PlaceCooledIn,
+    PrepareGoingToBedTask,
+    PrepareMealTask,
+)
 from rl_thor.envs.tasks.tasks_interface import BaseTask
 
 data_dir = Path(__file__).parent / "data"
@@ -167,4 +175,11 @@ def test_prepare_going_to_bed() -> None:
     """Test the PrepareGoingToBed task."""
     task = PrepareGoingToBedTask()
     task_data_dir = test_task_data_dir / "prepare_going_to_bed"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_clean_up_bathroom() -> None:
+    """Test the CleanUpBathroom task."""
+    task = CleanUpBathroomTask()
+    task_data_dir = test_task_data_dir / "clean_up_bathroom"
     generate_task_tests_from_saved_data(task, task_data_dir)
