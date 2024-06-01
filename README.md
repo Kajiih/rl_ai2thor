@@ -17,6 +17,7 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 ## Contents <!-- omit from toc -->
 
 - [💻 Installation](#-installation)
+  - [Requirements](#requirements)
 - [🏃 Getting Started](#-getting-started)
 - [☁️ Running Headless](#️-running-headless)
   - [Cloud rendering](#cloud-rendering)
@@ -58,6 +59,13 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
     ```bash
     pip install rl-thor
     ```
+
+### Requirements
+
+RL-THOR requires Python 3.12 or later. In addition, it shares the same requirements as AI2-THOR. Notably, Windows systems are not natively supported. For detailed requirements, refer to the [AI2-THOR requirements](https://github.com/allenai/ai2thor/?tab=readme-ov-file#requirements).
+
+<!-- Test and add this as a solution for windows ?
+https://yizhouzhao.medium.com/how-to-use-ai2thor-in-windows-f889abd7efcf -->
 
 ## 🏃 Getting Started
 
