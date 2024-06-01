@@ -151,6 +151,7 @@ class EvalOnEachTaskAndSceneCallback(BaseCallback):
                 "task_type",
                 "episode_max_return",
                 "episode_max_task_advancement",
+                "task_maximum_advancement",
                 "task_completed",
             ])
 
@@ -166,6 +167,7 @@ class EvalOnEachTaskAndSceneCallback(BaseCallback):
                     episode_reward = 0
                     episode_max_reward = 0
                     max_task_advancement = 0
+                    task_maximum_advancement = info.get("task_maximum_advancement", None)
 
                     while not terminated and not truncated:
                         obs_copy = obs.copy()
@@ -187,6 +189,7 @@ class EvalOnEachTaskAndSceneCallback(BaseCallback):
                         "task_type": task_type.__name__,
                         "episode_max_return": episode_max_reward,
                         "episode_max_task_advancement": max_task_advancement,
+                        "task_maximum_advancement": task_maximum_advancement,
                         "task_completed": terminated,
                     }
                     self._log_result(writer, result)
