@@ -71,6 +71,8 @@ class TaskType(StrEnum):
     COOL_DOWN = "CoolDown"
     BRING_CLOSE = "BringClose"
     PLACE_TWO_IN = "PlaceTwoIn"
+    POUR_COFFEE = "PourCoffee"
+    WATCH_TV = "WatchTV"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
     RELAX_ON_SOFA = "RelaxOnSofa"
@@ -1008,6 +1010,97 @@ class SliceAndCookPotato(GraphTask):
             description (str): Text description of the task.
         """
         return "Cook a slice of potato"
+
+
+class PourCoffee(GraphTask):
+    """
+    Task for pouring coffee.
+
+    The Agent has to pickup a mug, place it in a coffee machine, and then toggle the coffee machine.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("mug"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.MUG)},
+                relations={ItemId("coffee_machine"): {RelationTypeId.CONTAINED_IN: {}}},
+            ),
+            ItemId("coffee_machine"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.COFFEE_MACHINE),
+                    IsToggledProp(True),
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Pour coffee"
+
+
+class WatchTV(GraphTask):
+    """
+    Task for watching TV.
+
+    The agent has to switch off the light switch, pick up the remote control, and switch on the TV.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("light_switch"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.LIGHT_SWITCH),
+                    IsToggledProp(False),
+                },
+            ),
+            ItemId("remote_control"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.REMOTE_CONTROL),
+                    IsPickedUpProp(True),
+                },
+            ),
+            ItemId("tv"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.TELEVISION),
+                    IsToggledProp(True),
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """Return a text description of the task."""
+        return "Watch TV"
 
 
 # === Complex Tasks ===
@@ -2106,6 +2199,8 @@ ALL_TASKS = {
     TaskType.COOL_DOWN: CoolDown,
     TaskType.BRING_CLOSE: BringClose,
     TaskType.PLACE_TWO_IN: PlaceTwoIn,
+    TaskType.POUR_COFFEE: PourCoffee,
+    TaskType.WATCH_TV: WatchTV,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
     TaskType.RELAX_ON_SOFA: PrepareWatchingTVTask,

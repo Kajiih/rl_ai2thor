@@ -225,6 +225,15 @@ OBJECT_TYPES_DATA = {
     )
     for sim_object_type, object_type_data in _OBJECT_TYPES_DICT.items()
 }
+# === Fix missing data ===
+# Add CoffeeMachine to compatible_receptacles of Mug
+OBJECT_TYPES_DATA[SimObjectType.MUG] = ObjTypeData(
+    scenes=OBJECT_TYPES_DATA[SimObjectType.MUG].scenes,
+    actionable_properties=OBJECT_TYPES_DATA[SimObjectType.MUG].actionable_properties,
+    materials_properties=OBJECT_TYPES_DATA[SimObjectType.MUG].materials_properties,
+    compatible_receptacles=OBJECT_TYPES_DATA[SimObjectType.MUG].compatible_receptacles | {SimObjectType.COFFEE_MACHINE},
+    contextual_interactions=OBJECT_TYPES_DATA[SimObjectType.MUG].contextual_interactions,
+)
 
 # %% === Sim Object Groups ===
 PICKUPABLES = {
