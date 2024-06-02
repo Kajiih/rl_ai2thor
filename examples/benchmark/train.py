@@ -1,6 +1,5 @@
 """Run a stable-baselines3 agent in the AI2THOR RL environment."""
 
-from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Optional
 
@@ -9,8 +8,7 @@ import typer
 import wandb
 import yaml
 from experiment_utils import EvalOnEachTaskAndSceneCallback, Exp, FullMetricsLogWrapper
-from sb3_contrib import QRDQN
-from stable_baselines3 import A2C, DQN, PPO
+from model_info import MODEL_CONFIG, ModelType, get_model
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
@@ -28,37 +26,6 @@ if TYPE_CHECKING:
 config_path = Path("examples/benchmark/config/environment_config.yaml")
 with config_path.open("r") as file:
     env_config = yaml.safe_load(file)
-
-
-class ModelType(StrEnum):
-    """SB3 compatible models."""
-
-    PPO = "PPO"
-    A2C = "A2C"
-    DQN = "DQN"
-    QRDQN = "QRDQN"
-    RANDOM = "Random"
-
-
-model_config = {
-    "verbose": 1,
-    "progress_bar": True,
-}
-
-
-def get_model(model_name: ModelType) -> type[PPO] | type[A2C] | type[DQN] | type[QRDQN]:
-    """Return the SB3 model class."""
-    match model_name:
-        case ModelType.PPO:
-            return PPO
-        case ModelType.A2C:
-            return A2C
-        case ModelType.DQN:
-            return DQN
-        case ModelType.QRDQN:
-            return QRDQN
-        case ModelType.RANDOM:
-            raise ValueError("Random agent doesn't need a model.")
 
 
 def make_env(
@@ -126,9 +93,9 @@ def main(
     """
     is_single_task = task not in {AvailableTask.MULTI_TASK_4, AvailableTask.MULTI_TASK_8}
     if is_single_task:
-        model_config["policy_type"] = "CnnPolicy"
+        MODEL_CONFIG["policy_type"] = "CnnPolicy"
     else:
-        model_config["policy_type"] = "MultiInputPolicy"
+        MODEL_CONFIG["policy_type"] = "MultiInputPolicy"
 
     task_blueprint_config = get_task_blueprint_config(task, nb_scenes)
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
@@ -207,9 +174,9 @@ def main(
         # === Instantiate the model ===
         sb3_model = get_model(model_name)
         model_args = {
-            "policy": model_config["policy_type"],
+            "policy": MODEL_CONFIG["policy_type"],
             "env": env,
-            "verbose": model_config["verbose"],
+            "verbose": MODEL_CONFIG["verbose"],
             "tensorboard_log": str(experiment.log_dir),
             "seed": seed,
         }
@@ -255,7 +222,7 @@ def main(
 
         train_model.learn(
             total_timesteps=total_timesteps,
-            progress_bar=model_config["progress_bar"],
+            progress_bar=MODEL_CONFIG["progress_bar"],
             callback=CallbackList(callbacks),
         )
 

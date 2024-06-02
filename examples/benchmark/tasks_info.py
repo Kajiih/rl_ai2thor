@@ -26,6 +26,7 @@ class AvailableTask(StrEnum):
     # Gradual tasks
     # 1 item
     BREAK_MUG = "BreakMug"
+    BREAK_STATUE = "BreakStatue"
     PICKUP_KNIFE = "PickupKnife"
     TOGGLE_FAUCET = "ToggleFaucet"
     OPEN_DRAWER = "OpenDrawer"
@@ -300,6 +301,11 @@ task_blueprints_configs = {
         "args": {"broken_object_type": SimObjectType.MUG},
         "scenes": ["FloorPlan1"],
     },
+    AvailableTask.BREAK_STATUE: {
+        "task_type": TaskType.BREAK,
+        "args": {"broken_object_type": SimObjectType.STATUE},
+        "scenes": ["FloorPlan1"],
+    },
     AvailableTask.PICKUP_KNIFE: {
         "task_type": TaskType.PICKUP,
         "args": {"picked_up_object_type": SimObjectType.BUTTER_KNIFE},
@@ -445,6 +451,8 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.CLEAN_UP_LIVING_ROOM,
         AvailableTask.CLEAN_UP_BEDROOM,
         AvailableTask.CLEAN_UP_BATHROOM,
+        AvailableTask.MULTI_TASK_4,
+        AvailableTask.MULTI_TASK_8,
     }:
         action_groups["open_close_actions"] = True
 
@@ -466,6 +474,7 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.READ_BOOK_IN_BED_SIMPLE,
         AvailableTask.POUR_COFFEE,
         AvailableTask.WATCH_TV,
+        AvailableTask.MULTI_TASK_8,
     }:
         action_groups["toggle_actions"] = True
 
@@ -476,11 +485,12 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         AvailableTask.RELAX_ON_SOFA,
         AvailableTask.READ_BOOK_IN_BED,
         AvailableTask.SETUP_BATH,
+        AvailableTask.MULTI_TASK_8,
     }:
         action_groups["slice_actions"] = True
 
     # === Enable throwing ===
-    if task == AvailableTask.BREAK_MUG:
+    if task in {AvailableTask.BREAK_MUG, AvailableTask.BREAK_STATUE}:
         action_groups["throw_actions"] = True
 
     return {"action_groups": action_groups}

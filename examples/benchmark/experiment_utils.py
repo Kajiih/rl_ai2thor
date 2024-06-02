@@ -48,7 +48,7 @@ class Exp:
         if self.id is None:
             self.id = str(uuid.uuid4())
         self.config = self.load_config()
-        self.sorted_scenes = sorted(self.scenes)
+        self.sorted_scenes = sorted(self.scenes)[:20]
 
         # === Type Annotations ===
         self.timestamp: str
@@ -64,7 +64,9 @@ class Exp:
     @property
     def group(self) -> str:
         """Return the group of the experiment."""
-        return f"{"-".join(self.tasks)}"
+        # Limit to 50 characters
+        # return f"{"-".join(self.tasks)}"
+        return f"{self.model}_{"-".join(self.tasks)}"
 
     @property
     def log_dir(self) -> Path:
