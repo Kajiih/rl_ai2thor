@@ -48,7 +48,7 @@ class Exp:
         if self.id is None:
             self.id = str(uuid.uuid4())
         self.config = self.load_config()
-        self.sorted_scenes = sorted(self.scenes)[:20]
+        self.sorted_scenes = sorted(self.scenes)[:5]
 
         # === Type Annotations ===
         self.timestamp: str

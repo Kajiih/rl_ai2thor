@@ -230,7 +230,7 @@ task_blueprints_configs = {
             "FloorPlan207",
             "FloorPlan209",
             "FloorPlan210",
-            "FloorPlan213",
+            "FloorPlan213",  # Doesn't work with the task?
             "FloorPlan215",
             "FloorPlan217",
             "FloorPlan219",
