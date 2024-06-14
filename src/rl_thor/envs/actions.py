@@ -50,27 +50,30 @@ if TYPE_CHECKING:
 class EnvActionName(StrEnum):
     """Enum for environment actions."""
 
-    MOVE_AHEAD = "MoveAhead"
-    MOVE_BACK = "MoveBack"
+    # === Navigation actions ===
+    MOVE_FORWARD = "MoveForward"
+    MOVE_BACKWARD = "MoveBackward"
     MOVE_LEFT = "MoveLeft"
     MOVE_RIGHT = "MoveRight"
     ROTATE_LEFT = "RotateLeft"
     ROTATE_RIGHT = "RotateRight"
     LOOK_UP = "LookUp"
     LOOK_DOWN = "LookDown"
-    CROUCH = "Crouch"
-    STAND = "Stand"
+    CROUCH_DOWN = "CrouchDown"
+    STAND_UP = "StandUp"
     # DONE = "Done"
-    MOVE_HELD_OBJECT_AHEAD_BACK = "MoveHeldObjectAheadBack"
-    MOVE_HELD_OBJECT_RIGHT_LEFT = "MoveHeldObjectRightLeft"
+    # === Held object manipulation actions ===
+    MOVE_HELD_OBJECT_FORWARD_BACKWARD = "MoveHeldObjectForwardBackward"
+    MOVE_HELD_OBJECT_LEFT_RIGHT = "MoveHeldObjectLeftRight"
     MOVE_HELD_OBJECT_UP_DOWN = "MoveHeldObjectUpDown"
     ROTATE_HELD_OBJECT_ROLL = "RotateHeldObjectRoll"
     ROTATE_HELD_OBJECT_PITCH = "RotateHeldObjectPitch"
     ROTATE_HELD_OBJECT_YAW = "RotateHeldObjectYaw"
+    DROP_HELD_OBJECT = "DropHeldObject"
+    THROW_HELD_OBJECT = "ThrowHeldObject"
+    # === Object manipulation actions ===
     PICKUP_OBJECT = "PickupObject"
-    PUT_OBJECT = "PutObject"
-    DROP_HAND_OBJECT = "DropHandObject"
-    THROW_OBJECT = "ThrowObject"
+    PUT_DOWN_OBJECT = "PutDownObject"
     PUSH_OBJECT = "PushObject"
     PULL_OBJECT = "PullObject"
     OPEN_OBJECT = "OpenObject"
@@ -79,7 +82,7 @@ class EnvActionName(StrEnum):
     TOGGLE_OBJECT_ON = "ToggleObjectOn"
     TOGGLE_OBJECT_OFF = "ToggleObjectOff"
     FILL_OBJECT_WITH_LIQUID = "FillObjectWithLiquid"
-    EMPTY_LIQUID_FROM_OBJECT = "EmptyLiquidFromObject"
+    EMPTY_LIQUID_OBJECT = "EmptyLiquidObject"
     BREAK_OBJECT = "BreakObject"
     SLICE_OBJECT = "SliceObject"
     USE_UP_OBJECT = "UseUpObject"
@@ -479,6 +482,7 @@ class HoldingObjectTypeCondition(BaseActionCondition):
         return f"Agent needs to hold an object of type {self.object_type} to perform action {action.name} ({action.ai2thor_action} in ai2thor)!"
 
 
+# TODO: Modify the condition to add the fact that the agent can hold an object filled with liquid
 fill_object_with_liquid_condition = VisibleWaterCondition(
     overriding_message="Agent needs to have visible running water to fill an object with liquid!"
 )
@@ -587,20 +591,20 @@ class PickupPutEnvAction(EnvironmentAction):
 
 
 @dataclass(frozen=True)
-class DropHandObjectEnvAction(EnvironmentAction):
+class DropHeldObjectEnvAction(EnvironmentAction):
     """Base class for drop hand object action."""
 
-    name: EnvActionName = EnvActionName.DROP_HAND_OBJECT
+    name: EnvActionName = EnvActionName.DROP_HELD_OBJECT
     ai2thor_action: Ai2thorAction = Ai2thorAction.DROP_HAND_OBJECT
     action_group: ActionGroup = ActionGroup.DROP_ACTIONS
     _config_dependent_parameters: frozenset[str] = frozenset({"forceAction"})
 
 
 @dataclass(frozen=True)
-class ThrowEnvAction(EnvironmentAction):
+class ThrowHeldEnvAction(EnvironmentAction):
     """Base class for throw object action."""
 
-    name: EnvActionName = EnvActionName.THROW_OBJECT
+    name: EnvActionName = EnvActionName.THROW_HELD_OBJECT
     ai2thor_action: Ai2thorAction = Ai2thorAction.THROW_OBJECT
     action_group: ActionGroup = ActionGroup.THROW_ACTIONS
     _parameter_name: str = "moveMagnitude"
@@ -731,10 +735,10 @@ class FillObjectWithLiquidEnvAction(ConditionalExecutionAction):
 
 
 @dataclass(frozen=True)
-class EmptyLiquidFromObjectEnvAction(EnvironmentAction):
+class EmptyLiquidObjectEnvAction(EnvironmentAction):
     """Base class for empty liquid from object action."""
 
-    name: EnvActionName = EnvActionName.EMPTY_LIQUID_FROM_OBJECT
+    name: EnvActionName = EnvActionName.EMPTY_LIQUID_OBJECT
     ai2thor_action: Ai2thorAction = Ai2thorAction.EMPTY_LIQUID_FROM_OBJECT
     action_group: ActionGroup = ActionGroup.LIQUID_MANIPULATION_ACTIONS
     has_target_object: bool = True
@@ -809,12 +813,12 @@ class CleanObjectEnvAction(ConditionalExecutionAction):
 
 # %% === Action definitions ===
 # === Navigation actions ===
-move_ahead_action = MovementEnvAction(
-    name=EnvActionName.MOVE_AHEAD,
+move_forward_action = MovementEnvAction(
+    name=EnvActionName.MOVE_FORWARD,
     ai2thor_action=Ai2thorAction.MOVE_AHEAD,
 )
-move_back_action = MovementEnvAction(
-    name=EnvActionName.MOVE_BACK,
+move_backward_action = MovementEnvAction(
+    name=EnvActionName.MOVE_BACKWARD,
     ai2thor_action=Ai2thorAction.MOVE_BACK,
 )
 move_left_action = MovementEnvAction(
@@ -841,12 +845,12 @@ look_down_action = HeadMovementEnvAction(
     name=EnvActionName.LOOK_DOWN,
     ai2thor_action=Ai2thorAction.LOOK_DOWN,
 )
-crouch_action = CrouchStandEnvAction(
-    name=EnvActionName.CROUCH,
+crouch_down_action = CrouchStandEnvAction(
+    name=EnvActionName.CROUCH_DOWN,
     ai2thor_action=Ai2thorAction.CROUCH,
 )
-stand_action = CrouchStandEnvAction(
-    name=EnvActionName.STAND,
+stand_up_action = CrouchStandEnvAction(
+    name=EnvActionName.STAND_UP,
     ai2thor_action=Ai2thorAction.STAND,
 )
 # done_action = EnvironmentAction(
@@ -861,14 +865,14 @@ pickup_object_action = PickupPutEnvAction(
     _object_required_property=SimObjFixedProp.PICKUPABLE,
     _config_dependent_parameters=frozenset({"forceAction", "manualInteract"}),
 )
-put_object_action = PickupPutEnvAction(
-    name=EnvActionName.PUT_OBJECT,
+put_down_object_action = PickupPutEnvAction(
+    name=EnvActionName.PUT_DOWN_OBJECT,
     ai2thor_action=Ai2thorAction.PUT_OBJECT,
     _object_required_property=SimObjFixedProp.RECEPTACLE,
     _config_dependent_parameters=frozenset({"forceAction", "placeStationary"}),
 )
-drop_hand_object_action = DropHandObjectEnvAction()
-throw_object_action = ThrowEnvAction()
+drop_held_object_action = DropHeldObjectEnvAction()
+throw_held_object_action = ThrowHeldEnvAction()
 push_object_action = PushPullEnvAction(
     name=EnvActionName.PUSH_OBJECT,
     ai2thor_action=Ai2thorAction.PUSH_OBJECT,
@@ -877,14 +881,14 @@ pull_object_action = PushPullEnvAction(
     name=EnvActionName.PULL_OBJECT,
     ai2thor_action=Ai2thorAction.PULL_OBJECT,
 )
-move_held_object_ahead_back_action = HandMovementEnvAction(
-    name=EnvActionName.MOVE_HELD_OBJECT_AHEAD_BACK,
+move_held_object_forward_backward_action = HandMovementEnvAction(
+    name=EnvActionName.MOVE_HELD_OBJECT_FORWARD_BACKWARD,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
     _parameter_name="ahead",
     _other_ai2thor_parameters={"right": 0, "up": 0},
 )
-move_held_object_right_left_action = HandMovementEnvAction(
-    name=EnvActionName.MOVE_HELD_OBJECT_RIGHT_LEFT,
+move_held_object_left_right_action = HandMovementEnvAction(
+    name=EnvActionName.MOVE_HELD_OBJECT_LEFT_RIGHT,
     ai2thor_action=Ai2thorAction.MOVE_HELD_OBJECT,
     _parameter_name="right",
     _other_ai2thor_parameters={"ahead": 0, "up": 0},
@@ -941,7 +945,7 @@ toggle_object_off_action = ToggleEnvAction(
     ai2thor_action=Ai2thorAction.TOGGLE_OBJECT_OFF,
 )
 fill_object_with_liquid_action = FillObjectWithLiquidEnvAction()
-empty_liquid_from_object_action = EmptyLiquidFromObjectEnvAction()
+empty_liquid_object_action = EmptyLiquidObjectEnvAction()
 break_object_action = BreakObjectEnvAction()
 slice_object_action = SliceObjectEnvAction()
 use_up_object_action = UseUpObjectEnvAction()
@@ -953,27 +957,27 @@ clean_object_action = CleanObjectEnvAction()
 # Note: "CookObject" is not used because it has "magical" effects instead of having contextual effects (like using a toaster to cook bread)
 
 # === Type Annotations ===
-move_ahead_action: EnvironmentAction
-move_back_action: EnvironmentAction
+move_forward_action: EnvironmentAction
+move_backward_action: EnvironmentAction
 move_left_action: EnvironmentAction
 move_right_action: EnvironmentAction
 rotate_left_action: EnvironmentAction
 rotate_right_action: EnvironmentAction
 look_up_action: EnvironmentAction
 look_down_action: EnvironmentAction
-crouch_action: EnvironmentAction
-stand_action: EnvironmentAction
+crouch_down_action: EnvironmentAction
+stand_up_action: EnvironmentAction
 # done_action: EnvironmentAction
-move_held_object_ahead_back_action: EnvironmentAction
-move_held_object_right_left_action: EnvironmentAction
+move_held_object_forward_backward_action: EnvironmentAction
+move_held_object_left_right_action: EnvironmentAction
 move_held_object_up_down_action: EnvironmentAction
 rotate_held_object_roll_action: EnvironmentAction
 rotate_held_object_pitch_action: EnvironmentAction
 rotate_held_object_yaw_action: EnvironmentAction
 pickup_object_action: EnvironmentAction
-put_object_action: EnvironmentAction
-drop_hand_object_action: EnvironmentAction
-throw_object_action: EnvironmentAction
+put_down_object_action: EnvironmentAction
+drop_held_object_action: EnvironmentAction
+throw_held_object_action: EnvironmentAction
 push_object_action: EnvironmentAction
 pull_object_action: EnvironmentAction
 open_object_action: EnvironmentAction
@@ -982,7 +986,7 @@ partial_open_object_action: EnvironmentAction
 toggle_object_on_action: EnvironmentAction
 toggle_object_off_action: EnvironmentAction
 fill_object_with_liquid_action: ConditionalExecutionAction
-empty_liquid_from_object_action: EnvironmentAction
+empty_liquid_object_action: EnvironmentAction
 break_object_action: EnvironmentAction
 slice_object_action: ConditionalExecutionAction
 use_up_object_action: EnvironmentAction
@@ -991,27 +995,27 @@ clean_object_action: ConditionalExecutionAction
 
 # %% === Constants ===
 ALL_ACTIONS: list[EnvironmentAction] = [
-    move_ahead_action,
-    move_back_action,
+    move_forward_action,
+    move_backward_action,
     move_left_action,
     move_right_action,
     rotate_left_action,
     rotate_right_action,
     look_up_action,
     look_down_action,
-    crouch_action,
-    stand_action,
+    crouch_down_action,
+    stand_up_action,
     # done_action, # Not supported in tasks yet
-    move_held_object_ahead_back_action,
-    move_held_object_right_left_action,
+    move_held_object_forward_backward_action,
+    move_held_object_left_right_action,
     move_held_object_up_down_action,
     rotate_held_object_roll_action,
     rotate_held_object_pitch_action,
     rotate_held_object_yaw_action,
+    drop_held_object_action,
+    throw_held_object_action,
     pickup_object_action,
-    put_object_action,
-    drop_hand_object_action,
-    throw_object_action,
+    put_down_object_action,
     push_object_action,
     pull_object_action,
     close_object_action,
@@ -1020,7 +1024,7 @@ ALL_ACTIONS: list[EnvironmentAction] = [
     toggle_object_on_action,
     toggle_object_off_action,
     fill_object_with_liquid_action,
-    empty_liquid_from_object_action,
+    empty_liquid_object_action,
     break_object_action,
     slice_object_action,
     use_up_object_action,

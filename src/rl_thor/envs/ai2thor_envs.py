@@ -195,7 +195,7 @@ class ITHOREnv(
 
         # Handle specific cases
         if config.action_modifiers.simple_movement_actions:
-            for action_name in [EnvActionName.MOVE_BACK, EnvActionName.MOVE_LEFT, EnvActionName.MOVE_RIGHT]:
+            for action_name in [EnvActionName.MOVE_BACKWARD, EnvActionName.MOVE_LEFT, EnvActionName.MOVE_RIGHT]:
                 action_availabilities[action_name] = False
 
         if config.action_modifiers.partial_openness:
