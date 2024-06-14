@@ -8,11 +8,11 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
   <img src="media/ITHOR_illustration.png" alt="Ithor Illustration">
 </p>
 
--> **[Chose images that illustrate the different tasks and key characteristics of the environment/benchmark better]**
+<!-- -> **[Chose images that illustrate the different tasks and key characteristics of the environment/benchmark better]**
 
 -> **[Continue with more details]**
 
--> **[Add gif of agent training]**
+-> **[Add gif of agent training]** -->
 
 ## Contents <!-- omit from toc -->
 
@@ -31,8 +31,8 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 - [🧾 License](#-license)
 - [🤝 Contributing](#-contributing)
 
-**[Add features section?]**
-**[Clearer separation between environment and benchmark?]**
+<!-- **[Add features section?]**
+**[Clearer separation between environment and benchmark?]** -->
 
 ## 💻 Installation
 
@@ -245,7 +245,7 @@ env = gym.make(
 
 ## ➕ Creating new tasks - [WIP]
 
-In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_thor) **[link to documentation]**.
+In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_thor) <!--**[link to documentation]**. -->
 
 Thanks to graph tasks, you can define a new task by describing its agency list. In practice, it is as simple as creating a python dictionary describing the task items, their properties and their relations:
 
@@ -261,13 +261,14 @@ task_description_dict = {
 }
 ```
 
-This code lets you define a new task consisting of putting a hot apple in a plate. `hot_apple` and `plate_receptacle` are identifiers of the items used to defined relations and each property and relation can be found [here](.) **[link to documentation]**. This is enough to automatically create the reward function associated to the graph task.
+This code lets you define a new task consisting of putting a hot apple in a plate. `hot_apple` and `plate_receptacle` are identifiers of the items used to defined relations and each property and relation can be found [here](.) <!--**[link to documentation]**.-->
+This is enough to automatically create the reward function associated to the graph task.
 
--> **[Add explanation how to define task blueprints in the configuration]**
+<!-- -> **[Add explanation how to define task blueprints in the configuration]**
 
--> **[If automatic task creation from dict is not implemented, also add how to create the class corresponding to the task]**
+-> **[If automatic task creation from dict is not implemented, also add how to create the class corresponding to the task]** -->
 
-For more details about how to define new tasks, item properties or relations, see the [dedicated part of the documentation](.) **[create actual documentation]**.
+For more details about how to define new tasks, item properties or relations, see the [dedicated part of the documentation](.) <!-- **[create actual documentation]**. -->
 
 ## 🧮 The Benchmark
 
