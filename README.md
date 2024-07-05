@@ -1,18 +1,12 @@
 # 🤖 RL-THOR
 
-RL-THOR is a lightweight and widely customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/) environment simulation. It provides a rich set of predefined tasks and allows users to create custom tasks and presets for the environment, designed for embodied meta reinforcement learning. The environment supports various continuous and discrete action spaces, and provides various observation modalities such as 1st or 3rd person RGB images, depth maps, and instance segmentation masks **[not supported yet, check if we keep this]**. It also supports multi-task learning and integrates seamlessly with popular RL algorithms implementations like [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
+RL-THOR is a lightweight and customizable reinforcement learning environment based on [AI2-THOR](https://ai2thor.allenai.org/).
 
-AI2-THOR is a photorealistic interactive 3D environment for training AI agents to understand the world in the same way humans do. It is designed to be a general-purpose environment for training AI agents, and it is widely used by the research community. This project aims at providing a simple and efficient way to use AI2-THOR for reinforcement learning research.
+Thanks to AI2-THOR simulation environment, AI agents can explore realistic 3D household environments 🏠, interact with a wide variety of objects 🧹, navigate complex scenes 🧭, and complete meaningful tasks 🏆. The environment is designed to support high-level embodied reasoning and complex interactions, enabling agents to learn and generalize from diverse, scalable tasks.
 
 <p align="center">
   <img src="media/ITHOR_illustration.png" alt="Ithor Illustration">
 </p>
-
-<!-- -> **[Chose images that illustrate the different tasks and key characteristics of the environment/benchmark better]**
-
--> **[Continue with more details]**
-
--> **[Add gif of agent training]** -->
 
 ## Contents <!-- omit from toc -->
 
@@ -30,9 +24,6 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
 - [📔 Citation](#-citation)
 - [🧾 License](#-license)
 - [🤝 Contributing](#-contributing)
-
-<!-- **[Add features section?]**
-**[Clearer separation between environment and benchmark?]** -->
 
 ## 💻 Installation
 
@@ -53,19 +44,15 @@ AI2-THOR is a photorealistic interactive 3D environment for training AI agents t
     pip install -r requirements/dev.txt
     ```
 
-    **[!! Not supported yet !!]**
+    <!-- **[!! Not supported yet !!]**
     Alternatively, if you only want to use predefined settings and task, you can install the PyPI package:
-
     ```bash
     pip install rl-thor
-    ```
+    ``` -->
 
 ### Requirements
 
 RL-THOR requires Python 3.12 or later. In addition, it shares the same requirements as AI2-THOR. Notably, Windows systems are not natively supported. For detailed requirements, refer to the [AI2-THOR requirements](https://github.com/allenai/ai2thor/?tab=readme-ov-file#requirements).
-
-<!-- Test and add this as a solution for windows ?
-https://yizhouzhao.medium.com/how-to-use-ai2thor-in-windows-f889abd7efcf -->
 
 ## 🏃 Getting Started
 
@@ -241,7 +228,8 @@ env = gym.make(
 
 ### 🕹️ Task Configuration
 
-**[Add more details about the task configuration]**
+[WIP]
+<!-- **[Add more details about the task configuration]** -->
 
 ## ➕ Creating new tasks - [WIP]
 

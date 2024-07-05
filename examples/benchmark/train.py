@@ -124,6 +124,7 @@ def main(
 
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
+        mode=wandb_config["mode"],
         project=experiment.project_name,
         sync_tensorboard=wandb_config["sync_tensorboard"],
         monitor_gym=wandb_config["monitor_gym"],

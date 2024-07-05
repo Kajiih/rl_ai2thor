@@ -199,6 +199,7 @@ Error encountered when running action {'action': 'OpenObject', 'objectId': 'Blin
 - [ ] Write changelog (<https://keepachangelog.com/en/1.0.0/>)
 - [ ] Double check pyproject.toml file, especially dependencies
 - [ ] Actually upload package to PyPI
+- [ ] Test and add this as a solution for running on windows ? <https://yizhouzhao.medium.com/how-to-use-ai2thor-in-windows-f889abd7efcf>
 
 - [ ] Create a `Known Issues` section in the `README` to list the AI2THOR related bugs.
 

@@ -25,34 +25,23 @@ class AvailableTask(StrEnum):
 
     # Gradual tasks
     # 1 item
-    BREAK_MUG = "BreakMug"
-    BREAK_STATUE = "BreakStatue"
-    PICKUP_KNIFE = "PickupKnife"
-    TOGGLE_FAUCET = "ToggleFaucet"
-    OPEN_DRAWER = "OpenDrawer"
+    BREAK_BOWL = "BreakBowl"
+    OPEN_TOILET = "OpenToilet"
+    OPEN_BOOK = "OpenBook"
     SWITCH_ON_TV = "SwitchOnTV"
-    PICKUP_MUG = "PickupMug"
     PICKUP_POTATO = "PickupPotato"
     # 2 items
-    COOL_TOMATO = "CoolTomato"
     PLACE_POTATO_IN_FRIDGE = "PlacePotatoInFridge"
     PLACE_NEWSPAPER_ON_SOFA = "PlaceNewspaperOnSofa"
     BRING_TOWEL_CLOTH_CLOSE = "BringTowelClothesClose"
-    COOK_POTATO = "CookPotato"
     POUR_COFFEE = TaskType.POUR_COFFEE
     LOOK_BOOK_IN_LIGHT = "LookBookInLight"
-    PLACE_KNIFE_IN_SINK = "PlaceKnifeInSink"
-    PLACE_MUG_IN_SINK = "PlaceMugInSink"
-    PLACE_KNIFE_IN_FILLED_SINK = "PlaceKnifeInFilledSink"
-    PLACE_MUG_IN_FILLED_SINK = "PlaceMugInFilledSink"
     # 3 items
     WATCH_TV = TaskType.WATCH_TV
     PLACE_PEN_BOOK_ON_DESK = "PlacePenBookOnDesk"
     PLACE_TOMATO_POTATO_IN_FRIDGE = "PlaceTomatoPotatoInFridge"
     SETUP_BATH_SIMPLE = "SetupBathSimple"
     READ_BOOK_IN_BED_SIMPLE = "ReadBookInBedSimple"
-    PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK = "PlaceKnifeBowlMugInFilledSink"
-    SLICE_AND_COOK_POTATO = "SliceAndCookPotato"
 
 
 task_blueprints_configs = {
@@ -296,19 +285,9 @@ task_blueprints_configs = {
         ],
     },
     # 1 item tasks
-    AvailableTask.BREAK_MUG: {
+    AvailableTask.BREAK_BOWL: {
         "task_type": TaskType.BREAK,
-        "args": {"broken_object_type": SimObjectType.MUG},
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.BREAK_STATUE: {
-        "task_type": TaskType.BREAK,
-        "args": {"broken_object_type": SimObjectType.STATUE},
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.PICKUP_KNIFE: {
-        "task_type": TaskType.PICKUP,
-        "args": {"picked_up_object_type": SimObjectType.BUTTER_KNIFE},
+        "args": {"broken_object_type": SimObjectType.BOWL},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.SWITCH_ON_TV: {
@@ -316,20 +295,15 @@ task_blueprints_configs = {
         "args": {"toggled_object_type": SimObjectType.TELEVISION},
         "scenes": ["FloorPlan201"],
     },
-    AvailableTask.OPEN_DRAWER: {
+    AvailableTask.OPEN_BOOK: {
         "task_type": TaskType.OPEN,
-        "args": {"opened_object_type": SimObjectType.DRAWER},
+        "args": {"opened_object_type": SimObjectType.BOOK},
         "scenes": ["FloorPlan301"],
     },
-    AvailableTask.TOGGLE_FAUCET: {
-        "task_type": TaskType.TOGGLE,
-        "args": {"toggled_object_type": SimObjectType.FAUCET},
+    AvailableTask.OPEN_TOILET: {
+        "task_type": TaskType.OPEN,
+        "args": {"opened_object_type": SimObjectType.TOILET},
         "scenes": ["FloorPlan401"],
-    },
-    AvailableTask.PICKUP_MUG: {
-        "task_type": TaskType.PICKUP,
-        "args": {"picked_up_object_type": SimObjectType.MUG},
-        "scenes": ["FloorPlan1"],
     },
     AvailableTask.PICKUP_POTATO: {
         "task_type": TaskType.PICKUP,
@@ -342,19 +316,9 @@ task_blueprints_configs = {
         "args": {},
         "scenes": ["FloorPlan1"],
     },
-    AvailableTask.COOK_POTATO: {
-        "task_type": TaskType.COOK,
-        "args": {"cooked_object_type": SimObjectType.POTATO},
-        "scenes": ["FloorPlan1"],
-    },
     AvailableTask.PLACE_POTATO_IN_FRIDGE: {
         "task_type": TaskType.PLACE_IN,
         "args": {"placed_object_type": SimObjectType.POTATO, "receptacle_type": SimObjectType.FRIDGE},
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.COOL_TOMATO: {
-        "task_type": TaskType.COOL_DOWN,
-        "args": {"cooled_object_type": SimObjectType.TOMATO},
         "scenes": ["FloorPlan1"],
     },
     AvailableTask.LOOK_BOOK_IN_LIGHT: {
@@ -371,21 +335,6 @@ task_blueprints_configs = {
         "task_type": TaskType.BRING_CLOSE,
         "args": {"object_type_1": SimObjectType.TOWEL, "object_type_2": SimObjectType.CLOTH},
         "scenes": ["FloorPlan401"],
-    },
-    AvailableTask.PLACE_KNIFE_IN_SINK: {
-        "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.BUTTER_KNIFE, "receptacle_type": SimObjectType.SINK_BASIN},
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.PLACE_MUG_IN_SINK: {
-        "task_type": TaskType.PLACE_IN,
-        "args": {"placed_object_type": SimObjectType.MUG, "receptacle_type": SimObjectType.SINK_BASIN},
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.PLACE_MUG_IN_FILLED_SINK: {
-        "task_type": TaskType.PLACE_IN_FILLED_SINK,
-        "args": {"placed_object_type": SimObjectType.MUG},
-        "scenes": ["FloorPlan1"],
     },
     # 3 items tasks
     AvailableTask.PLACE_PEN_BOOK_ON_DESK: {
@@ -411,20 +360,6 @@ task_blueprints_configs = {
         },
         "scenes": ["FloorPlan1"],
     },
-    AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK: {
-        "task_type": TaskType.PLACE_IN_FILLED_SINK,
-        "args": {
-            "placed_object_type_1": SimObjectType.BUTTER_KNIFE,
-            "placed_object_type_2": SimObjectType.BOWL,
-            "placed_object_type_3": SimObjectType.MUG,
-        },
-        "scenes": ["FloorPlan1"],
-    },
-    AvailableTask.SLICE_AND_COOK_POTATO: {
-        "task_type": TaskType.SLICE_AND_COOK_POTATO,
-        "args": {},
-        "scenes": ["FloorPlan1"],
-    },
 }
 
 
@@ -438,14 +373,12 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
     # === Enable opening and closing ===
     if task in {
         AvailableTask.PLACE_POTATO_IN_FRIDGE,
-        AvailableTask.COOK_POTATO,
-        AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
         AvailableTask.RELAX_ON_SOFA,
         AvailableTask.READ_BOOK_IN_BED,
         AvailableTask.SETUP_BATH,
-        AvailableTask.OPEN_DRAWER,
-        AvailableTask.COOL_TOMATO,
+        AvailableTask.OPEN_TOILET,
+        AvailableTask.OPEN_BOOK,
         AvailableTask.PLACE_TOMATO_POTATO_IN_FRIDGE,
         AvailableTask.CLEAN_UP_KITCHEN,
         AvailableTask.CLEAN_UP_LIVING_ROOM,
@@ -458,16 +391,10 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
 
     # === Enable toggling ===
     if task in {
-        AvailableTask.PLACE_KNIFE_IN_FILLED_SINK,
-        AvailableTask.PLACE_MUG_IN_FILLED_SINK,
-        AvailableTask.PLACE_KNIFE_BOWL_MUG_IN_FILLED_SINK,
-        AvailableTask.COOK_POTATO,
-        AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
         AvailableTask.RELAX_ON_SOFA,
         AvailableTask.READ_BOOK_IN_BED,
         AvailableTask.SETUP_BATH,
-        AvailableTask.TOGGLE_FAUCET,
         AvailableTask.SWITCH_ON_TV,
         AvailableTask.LOOK_BOOK_IN_LIGHT,
         AvailableTask.SETUP_BATH_SIMPLE,
@@ -480,7 +407,6 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
 
     # === Enable slicing ===
     if task in {
-        AvailableTask.SLICE_AND_COOK_POTATO,
         AvailableTask.PREPARE_MEAL,
         AvailableTask.RELAX_ON_SOFA,
         AvailableTask.READ_BOOK_IN_BED,
@@ -490,7 +416,7 @@ def get_action_groups_override_config(task: AvailableTask) -> dict[str, Any]:
         action_groups["slice_actions"] = True
 
     # === Enable throwing ===
-    if task in {AvailableTask.BREAK_MUG, AvailableTask.BREAK_STATUE}:
+    if task == AvailableTask.BREAK_BOWL:
         action_groups["throw_actions"] = True
 
     return {"action_groups": action_groups}

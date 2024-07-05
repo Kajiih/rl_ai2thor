@@ -3,10 +3,11 @@ wandb:
   sync_tensorboard: true
   monitor_gym: true
   save_code: true
+  mode: offline
   sb3_callback:
     verbose: 2
     model_save_freq: 100_000
-    gradient_save_freq: 10_000
+    gradient_save_freq: 100_000
 
 evaluation:
   nb_episodes: 10
