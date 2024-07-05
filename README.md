@@ -229,7 +229,7 @@ env = gym.make(
 ### 🕹️ Task Configuration
 
 [WIP]
-<!-- **[Add more details about the task configuration]** -->
+<!-- [Add more details about the task configuration] -->
 
 ## ➕ Creating new tasks - [WIP]
 
@@ -262,7 +262,7 @@ For more details about how to define new tasks, item properties or relations, se
 
 ### Reproducing baselines results
 
-Not available yet
+The training script and commands to reproduce the results of the baselines are available in the `examples/benchmark` folder.
 
 ## 📔 Citation
 

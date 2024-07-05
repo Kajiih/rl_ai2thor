@@ -2,6 +2,8 @@
 
 ## Experiments commands
 
+Each command below trains a model on a specific task. The `--no-adv` flag disables the advancement signal in the reward function.
+
 ### 1-item tasks
 
 ```bash
@@ -77,82 +79,84 @@ python examples/benchmark/train.py SetupBathSimple --model PPO --log-metrics --e
 
 ## Benchmark tasks
 
+Each command below trains a model on a specific task of the benchmark.
+
 ### PrepareMeal
 
 ```bash
-python examples/benchmark/train.py PrepareMeal --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py PrepareMeal --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py PrepareMeal --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py PrepareMeal --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py PrepareMeal --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py PrepareMeal --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### CleanUpKitchen
 
 ```bash
-python examples/benchmark/train.py CleanUpKitchen --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py CleanUpKitchen --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py CleanUpKitchen --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py CleanUpKitchen --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py CleanUpKitchen --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py CleanUpKitchen --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### RelaxOnSofa
 
 ```bash
-python examples/benchmark/train.py RelaxOnSofa --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py RelaxOnSofa --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py RelaxOnSofa --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py RelaxOnSofa --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py RelaxOnSofa --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py RelaxOnSofa --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### CleanUpLivingRoom
 
 ```bash
-python examples/benchmark/train.py CleanUpLivingRoom --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py CleanUpLivingRoom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py CleanUpLivingRoom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py CleanUpLivingRoom --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py CleanUpLivingRoom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py CleanUpLivingRoom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### ReadBookInBed
 
 ```bash
-python examples/benchmark/train.py ReadBookInBed --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py ReadBookInBed --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py ReadBookInBed --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py ReadBookInBed --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py ReadBookInBed --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py ReadBookInBed --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### CleanUpBedroom
 
 ```bash
-python examples/benchmark/train.py CleanUpBedroom --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
-python examples/benchmark/train.py CleanUpBedroom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
-python examples/benchmark/train.py CleanUpBedroom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBedroom --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBedroom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBedroom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
 ```
 
 ### SetupBath
 
 ```bash
-python examples/benchmark/train.py SetupBath --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py SetupBath --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py SetupBath --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py SetupBath --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py SetupBath --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py SetupBath --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### CleanUpBathroom
 
 ```bash
-python examples/benchmark/train.py CleanUpBathroom --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
-python examples/benchmark/train.py CleanUpBathroom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
-python examples/benchmark/train.py CleanUpBathroom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBathroom --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBathroom --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
+python examples/benchmark/train.py CleanUpBathroom --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0 --no-adv
 ```
 
 ### MultiTask4
 
 ```bash
-python examples/benchmark/train.py MultiTask4 --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py MultiTask4 --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py MultiTask4 --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py MultiTask4 --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py MultiTask4 --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py MultiTask4 --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
 
 ### MultiTask8
 
 ```bash
-python examples/benchmark/train.py MultiTask8 --model Random -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py MultiTask8 --model PPO -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
-python examples/benchmark/train.py MultiTask8 --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --group --seed 0
+python examples/benchmark/train.py MultiTask8 --model Random -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py MultiTask8 --model PPO -s 100000 --randomize-agent --nb-scenes 1 --seed 0
+python examples/benchmark/train.py MultiTask8 --model QRDQN -s 100000 --randomize-agent --nb-scenes 1 --seed 0
 ```
