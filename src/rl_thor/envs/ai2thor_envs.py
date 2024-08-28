@@ -500,7 +500,7 @@ class ITHOREnv(
             observation (dict[str, NDArray[np.uint8] | str]): Observation of the environment.
             info (dict): Additional information about the environment.
         """
-        print("Resetting environment.")
+        # print("Resetting environment.")
         super().reset(seed=seed, options=options)
         if options is None:
             options = {}
@@ -619,10 +619,10 @@ class ITHOREnv(
         task_completion = False
         # Repeat until a compatible scene is found and remove incompatible ones from the task blueprint
         while not successful_reset or task_completion:
-            print(f"Sampling a scene from the task blueprint {task_blueprint.task_type.__name__}.")
+            # print(f"Sampling a scene from the task blueprint {task_blueprint.task_type.__name__}.")
             sorted_scenes = sorted(task_blueprint.scenes)
             sampled_scene = self.np_random.choice(sorted_scenes)
-            print(f"Sampled scene: {sampled_scene}.")
+            # print(f"Sampled scene: {sampled_scene}.")
 
             successful_reset, task_completion, task_info, scene_initialization_time = (
                 self._reset_controller_task_reward(sampled_scene)

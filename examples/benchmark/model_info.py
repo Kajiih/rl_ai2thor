@@ -18,7 +18,7 @@ class ModelType(StrEnum):
 
 MODEL_CONFIG = {
     "verbose": 1,
-    "progress_bar": True,
+    "progress_bar": False,
 }
 
 

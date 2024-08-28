@@ -11,7 +11,7 @@ from typing import Any
 import yaml
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from rl_thor.envs.ai2thor_envs import BaseAI2THOREnv, ITHOREnv
+from rl_thor.envs.ai2thor_envs import BaseAI2THOREnv
 
 # TODO: Handle config path better
 experiment_config_path = Path(__file__).parent / "config/experiment_config.yaml"
@@ -36,6 +36,7 @@ class Exp:
     model: str
     tasks: Iterable[str]
     scenes: set[str]
+    seed: int
     job_type: str = "train"
     id: str | None = None
     experiment_config_path: Path = experiment_config_path
@@ -58,7 +59,8 @@ class Exp:
     @property
     def name(self) -> str:
         """Return the name of the experiment."""
-        return f"{self.model}_{"-".join(self.tasks)}_{"-".join(self.sorted_scenes)}_{self.timestamp}"
+        # return f"{self.model}_{"-".join(self.tasks)}_{"-".join(self.sorted_scenes)}_{self.seed}_{self.timestamp}"
+        return f"{self.model}_{"-".join(self.tasks)}_{len(self.sorted_scenes)}-scenes_{self.seed}_{self.timestamp}"
 
     # TODO: Improve group naming
     @property

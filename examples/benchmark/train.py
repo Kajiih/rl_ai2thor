@@ -1,5 +1,6 @@
 """Run a stable-baselines3 agent in the AI2THOR RL environment."""
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Optional
 
@@ -59,11 +60,11 @@ def make_env(
 
 
 def main(
-    task: AvailableTask,
+    task: AvailableTask = AvailableTask.PREPARE_MEAL,
     nb_scenes: int = 1,
     model_name: Annotated[ModelType, typer.Option("--model", case_sensitive=False)] = ModelType.PPO,
     rollout_length: Annotated[Optional[int], typer.Option("--rollout", "-r")] = None,  # noqa: UP007
-    total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 1_000_000,
+    total_timesteps: Annotated[int, typer.Option("--timesteps", "-s")] = 3_000_000,
     record: bool = False,
     log_full_env_metrics: Annotated[bool, typer.Option("--log-metrics", "-l")] = False,
     no_task_advancement_reward: Annotated[bool, typer.Option("--no-adv", "-n")] = False,
@@ -101,7 +102,14 @@ def main(
     scenes = {scenes for task_config in task_blueprint_config for scenes in task_config["scenes"]}
 
     # === Load the environment and experiment configurations ===
-    experiment = Exp(model=model_name, tasks=[task], scenes=scenes, project_name=project_name, group_name=group_name)
+    experiment = Exp(
+        model=model_name,
+        tasks=[task],
+        scenes=scenes,
+        seed=seed,
+        project_name=project_name,
+        group_name=group_name,
+    )
     config_override: dict[str, Any] = {"tasks": {"task_blueprints": task_blueprint_config}}
     config_override["no_task_advancement_reward"] = no_task_advancement_reward
     if rollout_length is not None:
@@ -111,7 +119,7 @@ def main(
     # Add action groups override config
     config_override.update(get_action_groups_override_config(task))
     wandb_config = experiment.config["wandb"]
-    tags = ["simple_actions", "single_task", model_name, *scenes, task, experiment.job_type, wandb_config["project"]]
+    tags = ["simple_actions", model_name, *scenes, task, experiment.job_type, wandb_config["project"]]
     tags.extend((
         "single_task" if is_single_task else "multi_task",
         experiment.group_name if experiment.group_name is not None else "no_group",
@@ -122,6 +130,7 @@ def main(
         "randomize_agent_position" if randomize_agent_position else "no_randomize_agent_position",
     ))
 
+    # wandb.require("core")
     run: Run = wandb.init(  # type: ignore
         config=experiment.config | env_config | {"tasks": {"task_blueprints": task_blueprint_config}},
         mode=wandb_config["mode"],
@@ -138,7 +147,13 @@ def main(
     # Save infos about the run
     experiment.log_dir.mkdir(parents=True, exist_ok=True)
     run_info_path = experiment.log_dir / "run_info.yaml"
-    run_info = {"tags": tags, "env_config": env_config, "experiment_config": experiment.config}
+    run_info = {
+        "tags": tags,
+        "env_config": env_config,
+        "experiment_config": experiment.config,
+        "finished": False,
+        "command": " ".join(sys.argv[:]),
+    }
     with run_info_path.open("w") as f:
         yaml.dump(run_info, f)
 
@@ -226,6 +241,10 @@ def main(
             progress_bar=MODEL_CONFIG["progress_bar"],
             callback=CallbackList(callbacks),
         )
+
+    with run_info_path.open("w") as f:
+        run_info["finished"] = True
+        yaml.dump(run_info, f)
 
     env.close()
     run.finish()
