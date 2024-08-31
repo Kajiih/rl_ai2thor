@@ -189,6 +189,7 @@ class SimObjVariableProp(StrEnum):
     POSITION = "position"
     # ROTATION = "rotation"
     # DISTANCE = "distance"
+    RECEPTACLE_OBJ_IDS = "receptacleObjectIds"
 
 
 # TODO: Change this to a union of enums instead of type alias.
@@ -215,12 +216,14 @@ class ObjTypeData:
 
 
 OBJECT_TYPES_DATA: dict[SimObjectType, ObjTypeData]
+# TEMP: Remove Sink from compatible_recepatacles
+# TODO: Let sink in compatible_recepatacles when target object selection with the object closest to the center point of the field of view is implemented
 OBJECT_TYPES_DATA = {
     SimObjectType(sim_object_type): ObjTypeData(
         scenes=object_type_data["scenes"],
         actionable_properties=frozenset(object_type_data["actionable_properties"]),
         materials_properties=frozenset(object_type_data["materials_properties"]),
-        compatible_receptacles=frozenset(object_type_data["compatible_receptacles"]),
+        compatible_receptacles=frozenset(set(object_type_data["compatible_receptacles"]) - {SimObjectType.SINK}),
         contextual_interactions=object_type_data["contextual_interactions"],
     )
     for sim_object_type, object_type_data in _OBJECT_TYPES_DICT.items()
@@ -246,6 +249,10 @@ RECEPTACLES = {
     for object_type in SimObjectType
     if SimObjFixedProp.RECEPTACLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
+# !! Sink are not considered receptacle because it causes problems to some agents
+# TODO: Solve by implementing target object selection with the object closest to the center point of the field of view of the agent rather than the closest to the agent physically.
+RECEPTACLES -= {SimObjectType.SINK}
+
 MOVEABLES = {
     object_type
     for object_type in SimObjectType
@@ -269,7 +276,7 @@ OPENABLES = {
     for object_type in SimObjectType
     if SimObjFixedProp.OPENABLE in OBJECT_TYPES_DATA[object_type].actionable_properties
 }
-# !! Blinds and ShowerCurtains are not openable because it cause a `TimeOutError`, see the dedicated section in README
+# !! Blinds and ShowerCurtains are not openable because it cause a `TimeOutError`, see the dedicated section in TODOs (Bug TODOs/AI2THOR related)
 OPENABLES -= {SimObjectType.BLINDS, SimObjectType.SHOWER_CURTAIN}
 
 

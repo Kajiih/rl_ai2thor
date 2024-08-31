@@ -7,7 +7,7 @@ TODO: Finish module docstring.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Container
+from collections.abc import Callable, Container, Sized
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -43,11 +43,11 @@ class FillableLiquid(StrEnum):
     # coffee and wine are not supported yet
 
 
-ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid | str
+ItemPropValue = int | float | bool | TemperatureValue | SimObjectType | FillableLiquid | str | list
 
 
 # %% === Property Satisfaction Functions ===
-class BasePSF[T: ItemPropValue](ABC):
+class BasePSF[T](ABC):
     """
     Base class for functions used to define the set of acceptable values for a property to be satisfied.
 
@@ -74,7 +74,7 @@ class BasePSF[T: ItemPropValue](ABC):
 
 
 class SingleValuePSF[T: ItemPropValue](BasePSF[T]):
-    """Defines a property satisfaction function that only accepts a single value."""
+    """Property satisfaction function that only accepts a single value."""
 
     def __init__(self, target_value: T) -> None:
         """Initialize the target value."""
@@ -90,7 +90,7 @@ class SingleValuePSF[T: ItemPropValue](BasePSF[T]):
 
 
 class MultiValuePSF[T: ItemPropValue](BasePSF[T]):
-    """Defines a property satisfaction function that accepts a set of values."""
+    """Property satisfaction function that accepts a set of values."""
 
     def __init__(self, target_values: Container[T]) -> None:
         """Initialize the target values."""
@@ -103,7 +103,7 @@ class MultiValuePSF[T: ItemPropValue](BasePSF[T]):
 
 
 class RangePSF(BasePSF[float | int]):
-    """Defines a property satisfaction function that accepts a range of values."""
+    """Property satisfaction function that accepts a range of values."""
 
     def __init__(self, min_value: float | int, max_value: float | int) -> None:
         """Initialize the range."""
@@ -114,6 +114,50 @@ class RangePSF(BasePSF[float | int]):
     def __call__(self, prop_value: float | int) -> bool:
         """Return True if the value is in the range."""
         return self.min_value <= prop_value <= self.max_value
+
+
+class SizeLimitPSF[T: Sized](BasePSF[T]):
+    """Property satisfaction function that checks if a container's size meets a specified limit."""
+
+    def __init__(self, max_elements: int, expect_less_or_equal: bool = True) -> None:
+        """
+        Initialize the property satisfaction function.
+
+        Args:
+            max_elements (int): The maximum number of elements allowed in the container for it to
+                satisfy the property.
+            expect_less_or_equal (bool): Whether to expect the container to have less or equal
+                elements than `max_elements`. Set to False to expect strictly more elements.
+        """
+        super().__init__(max_elements, expect_less_or_equal)
+        self.max_elements = max_elements
+        self.expect_less_or_equal = expect_less_or_equal
+
+    def __call__(self, prop_value: T) -> bool:
+        """
+        Return True if the container size meets the criteria based on `expect_less_or_equal`.
+
+        Args:
+            prop_value (T): The container to check.
+
+        Returns:
+            bool: True if the container meets the size limit criteria, False otherwise.
+        """
+        return (len(prop_value) <= self.max_elements) != self.expect_less_or_equal
+
+
+class EmptyContainerPSF[T: Sized](SizeLimitPSF[T]):
+    """Property satisfaction function that accepts any empty container."""
+
+    def __init__(self, expect_empty: bool = True) -> None:
+        """
+        Initialize the property satisfaction function.
+
+        Args:
+            expect_empty (bool): Whether the container should be empty or not.
+                                 Set to False to accept a container that is NOT empty.
+        """
+        super().__init__(max_elements=0, expect_less_or_equal=expect_empty)
 
 
 class GenericPSF[T: ItemPropValue](BasePSF[T]):
@@ -144,8 +188,7 @@ type PropSatFunction[T: ItemPropValue] = BasePSF[T] | Callable[[T], bool]
 # %% === Item properties  ===
 # TODO? Add action validity checking (action group, etc)
 # TODO: Check if we need to add a hash
-# TODO: Support multiple candidate required properties
-# TODO: Make only variable prop having auxiliary properties and items
+# TODO: Reimplement so that the base item property doesn't rely on PSF and create a new class for AI2-THOR-properties related properties (that drectly use the value of on of the object's metadata) to simplify making simple properties (those properties need PSF to define acceptable values (we may need to give a better name than PSF)).
 class BaseItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     """
     Base class for item properties in the definition of a task.
@@ -154,8 +197,8 @@ class BaseItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     attribute is the instance itself. If the property is variable (can be changed by the agent),
     the candidate_required_prop attribute has to be defined in the subclass.
 
-    T1 is the type that the property value can take and T2 is the type that the candidate required
-    property value can take.
+    T1 is the type that the property value can take
+    T2 is the type that the candidate required property value can take.
 
     auxiliary_properties and auxiliary_items are used to define auxiliary goals: the conditions that
     should be satisfied either by the same item this property belongs to or by any other items in
@@ -180,7 +223,7 @@ class BaseItemProp[T1: ItemPropValue, T2: ItemPropValue](ABC):
     candidate_required_prop: ItemFixedProp[T2] | None = None
     is_fixed: bool
 
-    def __init__(self, target_satisfaction_function: PropSatFunction[T1] | T1) -> None:
+    def __init__(self, target_satisfaction_function: PropSatFunction[T1] | T1 | Any) -> None:
         """Initialize the Property object."""
         if isinstance(target_satisfaction_function, ItemPropValue):
             target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
@@ -314,8 +357,9 @@ class BaseAuxProp[T1: ItemPropValue, T2: ItemPropValue](ItemVariableProp[T1, T2]
     """
     Base class for auxiliary properties of an item property or a relation.
 
-    An auxiliary property is a variable property and has no auxiliary properties or auxiliary items
-    itself.
+    An auxiliary property is a variable property, if have auxiliary properties or items, they
+    become auxliary to the main property instead (and duplicates are deleted).
+    # TODO: Implement this
 
     The main point of an auxiliary property is that if its main property is satisfied, the auxiliary
     property is also considered satisfied. Also, we add the score of the auxiliary property to the
@@ -330,10 +374,14 @@ class BaseAuxProp[T1: ItemPropValue, T2: ItemPropValue](ItemVariableProp[T1, T2]
     """
 
     def __init__(
-        self, variable_prop_type: type[ItemVariableProp[T1, T2]], target_satisfaction_function: PropSatFunction[T1] | T1
+        self,
+        variable_prop_type: type[ItemVariableProp[T1, T2]],
+        target_satisfaction_function: PropSatFunction[T1]
+        | T1,  # TODO: change this part of the implementation because not all properties use a PSF
     ) -> None:
         """Initialize the Property object."""
         variable_prop_type.__init__(self, target_satisfaction_function)
+        # TODO: Implement auxiliary properties of auxiliary properties here
 
         self.target_ai2thor_property = variable_prop_type.target_ai2thor_property
 

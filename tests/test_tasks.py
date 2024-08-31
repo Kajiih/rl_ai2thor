@@ -12,16 +12,20 @@ from PIL import Image
 
 from rl_thor.envs.sim_objects import SimObjectType
 from rl_thor.envs.tasks.tasks import (
+    CleanToilets,
     CleanUpBathroomTask,
     CleanUpBedroomTask,
     CleanUpKitchenTask,
     CleanUpLivingRoomTask,
+    ClearDiningTable,
+    DoHomework,
     LookInLight,
     Open,
     Pickup,
     PlaceCooledIn,
     PrepareGoingToBedTask,
     PrepareMealTask,
+    WashCutleryTask,
 )
 from rl_thor.envs.tasks.tasks_interface import BaseTask
 
@@ -108,7 +112,7 @@ def generate_task_tests_from_saved_data(task: BaseTask, task_data_dir: Path) -> 
 
 
 # Mock ai2thor controller
-@pytest.fixture()
+@pytest.fixture
 def ai2thor_controller():
     """Create a mock ai2thor controller."""
     controller = Controller()
@@ -178,6 +182,35 @@ def test_prepare_going_to_bed() -> None:
     """Test the PrepareGoingToBed task."""
     task = PrepareGoingToBedTask()
     task_data_dir = test_task_data_dir / "prepare_going_to_bed"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_WashCutleryTask() -> None:
+    """Test the WashCutleryTask task."""
+    task = WashCutleryTask()
+    task_data_dir = test_task_data_dir / "WashCutleryTask"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+# TODO: Uncomment when the task is fixed
+# def test_ClearDiningTable() -> None:
+#     """Test the ClearDiningTable task."""
+#     task = ClearDiningTable()
+#     task_data_dir = test_task_data_dir / "ClearDiningTable"
+#     generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_DoHomeworkTask() -> None:
+    """Test the DoHomework task."""
+    task = DoHomework()
+    task_data_dir = test_task_data_dir / "DoHomework"
+    generate_task_tests_from_saved_data(task, task_data_dir)
+
+
+def test_CleanToilets() -> None:
+    """Test the CleanToilets task."""
+    task = CleanToilets()
+    task_data_dir = test_task_data_dir / "CleanToilets"
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 

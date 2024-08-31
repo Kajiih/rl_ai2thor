@@ -8,12 +8,19 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from ai2thor.controller import Controller
 
+from rl_thor.envs.tasks._item_prop_variable import RECEPTACLE_MAX_OBJECTS_PROP_LIMIT  # noqa: PLC2701
 from rl_thor.envs.tasks.tasks import (
+    ArrangeCutleryTask,
+    CleanToilets,
     CleanUpBathroomTask,
     CleanUpBedroomTask,
     CleanUpKitchenTask,
     CleanUpLivingRoomTask,
+    ClearDiningTable,
+    DoHomework,
+    PileUpDishes,
     PrepareGoingToBedTask,
+    WashCutleryTask,
 )
 from rl_thor.envs.tasks.tasks_interface import BaseTask
 
@@ -33,6 +40,11 @@ def main():
     # generate_look_in_light_book_data(controller)
     # generate_prepare_meal_data(controller)
     # generate_prepare_going_to_bed_data(controller)
+    # generate_WashCutleryTask_data(controller)
+    # generate_ClearDiningTable_data(controller)
+    # TODO: test generate_ClearDiningTable_data when fixed
+    # generate_DoHomework_data(controller)
+    # generate_CleanToilets_data(controller)
     # generate_clean_up_kitchen_data(controller)
     # generate_clean_up_living_room_data(controller)
     # generate_clean_up_bedroom_data(controller)
@@ -429,6 +441,565 @@ def generate_prepare_going_to_bed_data(controller: Controller) -> None:
     )
     # book (IsPickedUp 1 + IsCloseTo 2 + IsOpen 1) 4/4
     # desk_lamp (IsCloseTo 2 + IsToggled=True 1) 3/3
+
+    data_recorder.write_data()
+
+
+# Broken because bowl can't go in mug
+def generate_PileUpDishes_data(controller: Controller) -> None:
+    """Generate data for the PileUpDishes task."""
+    task = PileUpDishes()
+    data_recorder = TaskDataRecorder(
+        "PileUpDishes",
+        controller,
+        "FloorPlan1",
+        test_task_data_dir,
+        task=task,
+    )
+
+    # === Event 1: Pick up the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # plate/counter_top (plate:is_picked_up 1) 1/4
+
+    # === Event 2: Put the plate on the counter top ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "CounterTop|+00.69|+00.95|-02.48",
+            "forceAction": True,
+        },
+        advancement=4,
+    )
+    # plate/counter_top:contained_in 4/4
+
+    # === Event 3: Pick up the bowl ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Bowl|+00.27|+01.10|-00.75",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # plate/counter_top:contained_in 4/4 + bowl/plate (bowl:is_picked_up 1) 1/4
+
+    # === Event 4: Put the bowl on the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # plate/counter_top:contained_in 4/4 + bowl/plate:contained_in 4/4
+
+    # === Event 5: Pick up the spoon ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Spoon|+00.98|+00.77|-02.29",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # plate/counter_top:contained_in 4/4  + bowl/plate:contained_in 4/4 + spoon/bowl (spoon:is_picked_up 1) 1/4
+
+    # === Event 6: Put the spoon in the bowl ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Bowl|+00.27|+01.10|-00.75",
+            "forceAction": True,
+        },
+        advancement=12,
+        terminated=True,
+    )
+    # plate/counter_top:contained_in 4/4 + bowl/plate:contained_in 4/4 + spoon/bowl:contained_in 4/4
+
+    data_recorder.write_data()
+
+
+def generate_ArrangeCutleryTask_data(controller: Controller) -> None:
+    """Generate data for the ArrangeCutleryTask task."""
+    task = ArrangeCutleryTask()
+    data_recorder = TaskDataRecorder(
+        "ArrangeCutleryTask",
+        controller,
+        "FloorPlan1",
+        test_task_data_dir,
+        task=task,
+    )
+
+    # === Event 1: Pick up the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # plate/counter_top (plate:is_picked_up 1) 1/4
+
+    # === Event 2: Put the plate on the counter top ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Sink|-01.90|+00.97|-01.50|SinkBasin",
+            "forceAction": True,
+        },
+        advancement=4,
+    )
+    # plate/counter_top:contained_in 4/4
+
+    # === Event 3: Pick up the knife ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Knife|-01.70|+00.79|-00.22",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate (knife:is_picked_up 1) 1/4
+
+    # === Event 4: Put the knife on the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4
+
+    # === Event 5: Pick up the fork ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Fork|+00.95|+00.77|-02.37",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4 + fork/plate (fork:is_picked_up 1) 1/4
+
+    # === Event 6: Put the fork on the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=12,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4 + fork/plate:contained_in 4/4
+
+    # === Event 7: Pick up the spoon ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Spoon|+00.98|+00.77|-02.29",
+            "forceAction": True,
+        },
+        advancement=13,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4 + fork/plate:contained_in 4/4 + spoon/plate (spoon:is_picked_up 1) 1/4
+
+    # === Event 8: Put the spoon on the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=16,
+        terminated=True,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4 + fork/plate:contained_in 4/4 + spoon/plate:contained_in 4/4
+
+    # TEMP:
+
+    # === Event 8: Put the spoon on the plate ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Plate|+00.96|+01.65|-02.61",
+            "forceAction": True,
+        },
+        advancement=16,
+        terminated=True,
+    )
+    # plate/counter_top:contained_in 4/4 + knife/plate:contained_in 4/4 + fork/plate:contained_in 4/4 + spoon/plate:contained_in 4/4
+
+    data_recorder.write_data()
+
+
+def generate_WashCutleryTask_data(controller: Controller) -> None:
+    """Generate data for the WashCutleryTask task."""
+    task = WashCutleryTask()
+    data_recorder = TaskDataRecorder(
+        "WashCutleryTask",
+        controller,
+        "FloorPlan1",
+        test_task_data_dir,
+        task=task,
+    )
+
+    # === Event 1: Pick up the knife ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Knife|-01.70|+00.79|-00.22",
+            "forceAction": True,
+        },
+        advancement=1,
+    )
+    # knife/sink_basin (knife:is_picked_up 1) 1/4
+
+    # === Event 2: Put the knife in the sink basin ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Sink|-01.90|+00.97|-01.50|SinkBasin",
+            "forceAction": True,
+        },
+        advancement=4,
+    )
+    # knife/sink_basin:contained_in 4/4
+
+    # === Event 3: Pick up the fork ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Fork|+00.95|+00.77|-02.37",
+            "forceAction": True,
+        },
+        advancement=5,
+    )
+    # knife/sink_basin:contained_in 4/4 + fork/sink_basin (fork:is_picked_up 1) 1/4
+
+    # === Event 4: Put the fork in the sink basin ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Sink|-01.90|+00.97|-01.50|SinkBasin",
+            "forceAction": True,
+        },
+        advancement=8,
+    )
+    # knife/sink_basin:contained_in 4/4 + fork/sink_basin:contained_in 4/4
+
+    # === Event 5: Pick up the spoon ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": "Spoon|+00.98|+00.77|-02.29",
+            "forceAction": True,
+        },
+        advancement=9,
+    )
+    # knife/sink_basin:contained_in 4/4 + fork/sink_basin:contained_in 4/4 + spoon/sink_basin (spoon:is_picked_up 1) 1/4
+
+    # === Event 6: Put the spoon in the sink basin ===
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": "Sink|-01.90|+00.97|-01.50|SinkBasin",
+            "forceAction": True,
+        },
+        advancement=12,
+    )
+    # knife/sink_basin:contained_in 4/4 + fork/sink_basin:contained_in 4/4 + spoon/sink_basin:contained_in 4/4
+
+    # === Event 7: Toggle the faucet on ===
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOn",
+            "objectId": "Faucet|-02.15|+00.91|-01.50",
+            "forceAction": True,
+        },
+        advancement=13,
+        terminated=True,
+    )
+    # knife/sink_basin:contained_in 4/4 + fork/sink_basin:contained_in 4/4 + spoon/sink_basin:contained_in 4/4 + faucet:is_toggled_on 1/1
+
+    data_recorder.write_data()
+
+
+def generate_ClearDiningTable_data(controller: Controller) -> None:
+    """Generate data for the CleanUpKitchen task."""
+    dining_table_receptacleObjectIds = [
+        "Laptop|-01.70|+00.68|+01.66",
+        "CreditCard|-01.94|+00.68|+01.80",
+        "Plate|-02.40|+00.68|+01.68",
+        "Book|-01.87|+00.68|+01.17",
+        "Newspaper|-02.76|+00.68|+01.18",
+        "Pencil|-02.83|+00.68|+01.51",
+        "Pen|-03.00|+00.69|+01.46",
+    ]
+    init_advancement = RECEPTACLE_MAX_OBJECTS_PROP_LIMIT - len(dining_table_receptacleObjectIds)
+    task = ClearDiningTable()
+    data_recorder = TaskDataRecorder(
+        "ClearDiningTable",
+        controller,
+        "FloorPlan201",
+        test_task_data_dir,
+        task=task,
+        init_advancement=init_advancement,
+    )
+
+    for object_id in dining_table_receptacleObjectIds:
+        terminated = object_id == dining_table_receptacleObjectIds[-1]  # Terminate on last object pickup
+        # === Pick up the object ===
+        data_recorder.record_step(
+            action_args={
+                "action": "PickupObject",
+                "objectId": object_id,
+                "forceAction": True,
+            },
+            advancement=advancement,
+            terminated=terminated,
+        )
+        # Increment advancement by 1 for each pickup action
+        advancement += 1
+
+        # === Drop the object ===
+        data_recorder.record_step(
+            action_args={
+                "action": "DropHandObject",
+                "forceAction": True,
+            },
+            advancement=advancement,
+            terminated=terminated,
+        )
+
+    data_recorder.write_data()
+
+
+def generate_DoHomework_data(controller: Controller) -> None:
+    """Generate data for the DoHomework task."""
+    drawer_id = "Drawer|-01.31|+00.45|-00.58"
+    pencil_id = "Pencil|+02.01|+00.81|-01.17"
+    laptop_id = "Laptop|-00.50|+00.56|+00.29"
+    cellphone_id = "CellPhone|-00.26|+00.56|+00.52"
+
+    task = DoHomework()
+    advancement = 2  # drawer(isOpen=False 1) cellphone/drawer:contained_in (cellphone:isPickedUp=True 1)
+    data_recorder = TaskDataRecorder(
+        "DoHomework",
+        controller,
+        "FloorPlan301",
+        test_task_data_dir,
+        task=task,
+        init_advancement=advancement,
+    )
+
+    # === Event 1: Toggle off the cellphone ===
+    # cellphone (isToggled=False)
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOff",
+            "objectId": cellphone_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 2: Open the drawer ===
+    # drawer(isOpen=False -1) + cellphone/drawer:contained_in (drawer:isOpen=True 1)
+    advancement += 0
+    data_recorder.record_step(
+        action_args={
+            "action": "OpenObject",
+            "objectId": drawer_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 3: Put the cellphone in the drawer ===
+    # drawer:contained_in +2
+    advancement += 2
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": drawer_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 4: Close the drawer ===
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "CloseObject",
+            "objectId": drawer_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 5: Toggle off the laptop ===
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "ToggleObjectOff",
+            "objectId": laptop_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 6: Close the laptop ===
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "CloseObject",
+            "objectId": laptop_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 7: Pick up the pencil ===
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": pencil_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 8: Rotate left to look at the desk ===
+    data_recorder.record_step(
+        action_args={
+            "action": "RotateLeft",
+            "forceAction": True,
+            "degrees": 90,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 9: Move forward to have the desk visible ===
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "MoveAhead",
+            "moveMagnitude": 1,
+            "forceAction": True,
+        },
+        advancement=advancement,
+        terminated=True,  # Task ends after the desk is visible
+    )
+
+    data_recorder.write_data()
+
+
+def generate_CleanToilets_data(controller: Controller) -> None:
+    """Generate data for the CleanToilets task."""
+    toilet_paper_hanger_id = "ToiletPaperHanger|-00.43|+00.78|+02.28"
+    toilet_paper_id = "ToiletPaper|-02.45|+01.03|+03.95"
+    toilet_id = "Toilet|+00.06|+00.00|+03.10"
+    spray_bottle_id = "SprayBottle|-03.09|+00.23|+00.29"
+    scrub_brush_id = "ScrubBrush|+00.40|+00.00|+02.69"
+
+    task = CleanToilets()
+    advancement = 0
+    data_recorder = TaskDataRecorder(
+        "CleanToilets",
+        controller,
+        "FloorPlan401",
+        test_task_data_dir,
+        task=task,
+        init_advancement=advancement,
+    )
+
+    # === Event 1: Pick up the toilet paper roll ===
+    # toilet_paper_roll (isPickedUp=True)
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": toilet_paper_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 2: Put the toilet paper roll on the hanger ===
+    # toilet_paper_hanger (toilet_paper_roll:contained_in)
+    advancement += 3
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": toilet_paper_hanger_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 3: Pick up the spray bottle ===
+    # spray_bottle (isPickedUp=True)
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": spray_bottle_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 4: Put the spray bottle on the toilet ===
+    # toilet (spray_bottle:contained_in)
+    advancement += 3
+    data_recorder.record_step(
+        action_args={
+            "action": "PutObject",
+            "objectId": toilet_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 5: Open the toilet lid ===
+    # toilet (isOpen=True)
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "OpenObject",
+            "objectId": toilet_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+    )
+
+    # === Event 6: Pick up the scrub brush ===
+    # scrub_brush (isPickedUp=True)
+    advancement += 1
+    data_recorder.record_step(
+        action_args={
+            "action": "PickupObject",
+            "objectId": scrub_brush_id,
+            "forceAction": True,
+        },
+        advancement=advancement,
+        terminated=True,  # Task ends after picking up the scrub brush
+    )
 
     data_recorder.write_data()
 

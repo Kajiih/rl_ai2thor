@@ -20,6 +20,7 @@ from rl_thor.envs.sim_objects import (
     SimObjFixedProp,
     SimObjVariableProp,
 )
+from rl_thor.envs.tasks._item_prop_variable import ReceptacleClearedProp
 from rl_thor.envs.tasks.item_prop import (
     IsBrokenProp,
     IsCookedProp,
@@ -530,7 +531,7 @@ class LookInLight(GraphTask):
 
     def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
         """
-        Switch of all light sources in the scene.
+        Switch off all light sources in the scene.
 
         Args:
             controller (Controller): AI2-THOR controller at the beginning of the episode.
@@ -1297,6 +1298,198 @@ class ExtendedPrepareMealTask(PrepareMealTask):
         return "Prepare a meal by putting a plate with a cooked potato slice with a fork and a knife on the same counter top"
 
 
+# !! Broken because bowls doesn't have plates as a compatible receptacle
+class PileUpDishes(GraphTask):
+    """
+    Task for piling up dishes.
+
+    The task requires putting a spoon in a bowl, the bowl on a plate, and the plate on a counter top.
+
+    This task is supposed to be used with Kitchen scenes.
+
+    This task is NOT used for the RL-THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("counter_top"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.COUNTER_TOP)},
+            ),
+            ItemId("plate"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PLATE)},
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("bowl"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.BOWL)},
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("spoon"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SPOON)},
+                relations={
+                    ItemId("bowl"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Pile up dishes by putting a spoon in a bowl, the bowl on a plate, and the plate on a counter top "
+
+
+class ArrangeCutleryTask(GraphTask):
+    """
+    Task for arranging cutlery on a plate.
+
+    The task requires putting a knife, a fork, and a spoon on a plate, and placing the plate on a counter top.
+
+    This task is supposed to be used with Kitchen scenes.
+
+    This task is NOT used for the RL-THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("counter_top"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.COUNTER_TOP)},
+            ),
+            ItemId("plate"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PLATE)},
+                relations={
+                    ItemId("counter_top"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("knife"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.KNIFE)},
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("fork"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.FORK)},
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("spoon"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SPOON)},
+                relations={
+                    ItemId("plate"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return (
+            "Arrange cutlery by placing a knife, a fork, and a spoon on a plate, and placing the plate on a counter top"
+        )
+
+
+class WashCutleryTask(GraphTask):
+    """
+    Task for washing cutlery.
+
+    The task requires putting a knife, a fork, and a spoon in a sink basin and toggling a faucet.
+
+    This task is supposed to be used with Kitchen scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("sink_basin"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SINK_BASIN)},
+            ),
+            ItemId("knife"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.KNIFE)},
+                relations={
+                    ItemId("sink_basin"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("fork"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.FORK)},
+                relations={
+                    ItemId("sink_basin"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("spoon"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SPOON)},
+                relations={
+                    ItemId("sink_basin"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("faucet"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.FAUCET),
+                    IsToggledProp(True),
+                },
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Wash cutlery by putting a knife, a fork, and a spoon in a sink basin and toggling a faucet"
+
+
 class PrepareWatchingTVTask(GraphTask):
     """
     Task for preparing for watching TV.
@@ -1457,6 +1650,92 @@ class ExtendedPrepareWatchingTVTask(PrepareWatchingTVTask):
         return "Prepare for watching TV by putting a newspaper and a switched on laptop on a sofa and looking at a turned on TV. Also turn off the light switch"
 
 
+class ClearDiningTable(GraphTask):
+    """
+    Task for clearing the dining table.
+
+    The task requires removing all items from a dining table.
+    # TODO: Add the fact that no item should be held too
+
+    This task is supposed to be used with Dining Room scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("dining_table"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.DINING_TABLE),
+                    ReceptacleClearedProp(True),
+                },
+            ),
+        }
+
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
+        """
+        Put a pickupable object on the dining table if there is nothing on it.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        """
+        last_event: Event = controller.last_event  # type: ignore
+        # === Find empty tables ===
+        empty_dining_tables = [
+            obj_metadata[SimObjFixedProp.OBJECT_ID]
+            for obj_metadata in last_event.metadata["objects"]
+            if obj_metadata[SimObjFixedProp.OBJECT_TYPE] == SimObjectType.DINING_TABLE
+            and len(obj_metadata[SimObjVariableProp.RECEPTACLE_OBJ_IDS]) == 0
+        ]
+        if not empty_dining_tables:
+            return True
+
+        # === Find pickupables ===
+        pickupables = [
+            obj_metadata[SimObjFixedProp.OBJECT_ID]
+            for obj_metadata in last_event.metadata["objects"]
+            if obj_metadata[SimObjFixedProp.PICKUPABLE] == True
+        ]
+
+        # === Put one pickupable on every empty table
+        for i, table_id in enumerate(empty_dining_tables):
+            controller.step(
+                action=Ai2thorAction.PICKUP_OBJECT,
+                objectId=pickupables[i],
+                forceAction=True,
+            )
+            controller.step(
+                action=Ai2thorAction.PUT_OBJECT,
+                objectId=table_id,
+                forceAction=True,
+            )
+
+        return True
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clear the dining table by removing all objects from it"
+
+
 class PrepareGoingToBedTask(GraphTask):
     """
     Task for preparing for going to bed.
@@ -1613,6 +1892,193 @@ class ExtendedPrepareGoingToBedTask(PrepareGoingToBedTask):
             description (str): Text description of the task.
         """
         return "Prepare for going to bed by turning off the light switch, turning on a desk lamp and holding an open book close to it. Also close the blinds"
+
+
+class DoHomeworkOld(GraphTask):
+    """
+    Task for doing homework.
+
+    The task requires putting an open book and a pencil on the desk, carrying a pen, and looking at the book.
+
+    This task is supposed to be used with Bedroom or Study scenes.
+
+    This task is not used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("desk"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.DESK)},
+            ),
+            ItemId("book"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.BOOK),
+                    IsOpenProp(True),
+                    VisibleProp(True),
+                },
+                relations={
+                    ItemId("desk"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("pencil"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.PENCIL)},
+                relations={
+                    ItemId("desk"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("pen"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.PEN),
+                    IsPickedUpProp(True),
+                }
+            ),
+        }
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Do homework by putting an open book and a pencil on the desk, carrying a pen, and looking at the book"
+
+
+class DoHomework(GraphTask):
+    """
+    Task for doing homework.
+
+    The task requires turning off and putting a cellphone in a closed drawer, turning off and
+    closing the laptop, picking up a pencil, and having a desk visible.
+
+    This task is supposed to be used with Bedroom or Study scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("desk"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.DESK),
+                    VisibleProp(True),
+                },
+            ),
+            ItemId("drawer"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.DRAWER),
+                    IsOpenProp(False),
+                },
+            ),
+            ItemId("cellphone"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.CELL_PHONE),
+                    IsToggledProp(False),
+                },
+                relations={
+                    ItemId("drawer"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("laptop"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.LAPTOP),
+                    IsToggledProp(False),
+                    IsOpenProp(False),
+                }
+            ),
+            ItemId("pencil"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.PENCIL),
+                    IsPickedUpProp(True),
+                }
+            ),
+        }
+
+    @classmethod
+    def _reset_preprocess(cls, controller: Controller) -> bool:
+        """
+        Turn on and open laptops, turn on and pick up cellphones.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+        holding_item = False
+
+        for obj_metadata in last_event.metadata["objects"]:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+
+            # === Turn on and open laptops ===
+            if obj_type == SimObjectType.LAPTOP:
+                if not obj_metadata[SimObjVariableProp.IS_OPEN]:
+                    controller.step(
+                        action=Ai2thorAction.OPEN_OBJECT,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+                if not obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                    controller.step(
+                        action=Ai2thorAction.TOGGLE_OBJECT_ON,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+
+            # === Turn on and pick up cellphones ===
+            if obj_type == SimObjectType.CELL_PHONE and not holding_item:
+                if not obj_metadata[SimObjVariableProp.IS_TOGGLED]:
+                    controller.step(
+                        action=Ai2thorAction.TOGGLE_OBJECT_ON,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+                if not obj_metadata[SimObjVariableProp.IS_PICKED_UP]:
+                    controller.step(
+                        action=Ai2thorAction.PICKUP_OBJECT,
+                        objectId=obj_id,
+                        forceAction=True,
+                    )
+                holding_item = True
+
+        return True
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Do homework by turning off and putting a cellphone in a closed drawer, turning off and closing the laptop, picking up a pencil, and ensuring the desk is visible."
 
 
 class PrepareForShowerTask(GraphTask):
@@ -1799,6 +2265,111 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
             description (str): Text description of the task.
         """
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
+
+
+class CleanToilets(GraphTask):
+    """
+    Task for cleaning the toilets.
+
+    The task requires putting a toilet paper roll on the toilet paper hanger, opening the toilet lid,
+    putting the spray bottle on the toilets, and holding the scrub brush.
+
+    This task is supposed to be used with Bathroom scenes.
+
+    This task is used for the RL THOR benchmark.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the task."""
+        task_description_dict = self._create_task_description_dict()
+        super().__init__(task_description_dict)
+
+    @classmethod
+    def _create_task_description_dict(cls) -> TaskDict:
+        """
+        Create the task description dictionary for the task.
+
+        Returns:
+            task_description_dict (TaskDict): Task description dictionary.
+        """
+        return {
+            ItemId("toilet_paper_hanger"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.TOILET_PAPER_HANGER)},
+            ),
+            ItemId("toilet_paper_roll"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.TOILET_PAPER)},
+                relations={
+                    ItemId("toilet_paper_hanger"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("toilet"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.TOILET),
+                    IsOpenProp(True),
+                },
+            ),
+            ItemId("spray_bottle"): TaskItemData(
+                properties={ObjectTypeProp(SimObjectType.SPRAY_BOTTLE)},
+                relations={
+                    ItemId("toilet"): {RelationTypeId.CONTAINED_IN: {}},
+                },
+            ),
+            ItemId("scrub_brush"): TaskItemData(
+                properties={
+                    ObjectTypeProp(SimObjectType.SCRUB_BRUSH),
+                    IsPickedUpProp(True),
+                },
+            ),
+        }
+
+    def _reset_preprocess(self, controller: Controller) -> bool:  # noqa: PLR6301
+        """
+        Drop toilet paper on the floor if it is on the toilet paper hanger.
+
+        Args:
+            controller (Controller): AI2-THOR controller at the beginning of the episode.
+
+        Returns:
+            preprocess_successful (bool): Whether the preprocess was successful.
+        """
+        last_event: Event = controller.last_event  # type: ignore
+        objects_metadata = last_event.metadata["objects"]
+        organized_metadata = {obj_metadata["objectId"]: obj_metadata for obj_metadata in objects_metadata}
+
+        # Iterate over all objects in the scene
+        for obj_metadata in objects_metadata:
+            obj_type = obj_metadata[SimObjFixedProp.OBJECT_TYPE]
+            obj_id = obj_metadata[SimObjFixedProp.OBJECT_ID]
+
+            # Check if the object is toilet paper on the toilet paper hanger
+            if obj_type == SimObjectType.TOILET_PAPER and obj_metadata["parentReceptacles"]:
+                parent_obj_id = obj_metadata["parentReceptacles"][0]
+                parent_obj_type = organized_metadata[parent_obj_id][SimObjFixedProp.OBJECT_TYPE]
+                if parent_obj_type == SimObjectType.TOILET_PAPER_HANGER:
+                    # Pick up the toilet paper
+                    controller.step(
+                        action=Ai2thorAction.PICKUP_OBJECT,
+                        objectId=obj_id,
+                        forceAction=True,
+                        # manualInteract=True,
+                    )
+                    # Drop it on the floor
+                    controller.step(
+                        action=Ai2thorAction.DROP_HAND_OBJECT,
+                        forceAction=True,
+                    )
+
+        return True
+
+    @classmethod
+    def text_description(cls) -> str:
+        """
+        Return a text description of the task.
+
+        Returns:
+            description (str): Text description of the task.
+        """
+        return "Clean the toilets by putting a toilet paper roll on the hanger, opening the toilet lid, placing a spray bottle on the toilet, and holding a scrub brush"
 
 
 class CleanUpKitchenTask(GraphTask):
