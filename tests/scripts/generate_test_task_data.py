@@ -11,13 +11,13 @@ from ai2thor.controller import Controller
 from rl_thor.envs.tasks._item_prop_variable import RECEPTACLE_MAX_OBJECTS_PROP_LIMIT  # noqa: PLC2701
 from rl_thor.envs.tasks.tasks import (
     ArrangeCutleryTask,
-    CleanToilets,
+    CleanToiletsTask,
     CleanUpBathroomTask,
     CleanUpBedroomTask,
     CleanUpKitchenTask,
     CleanUpLivingRoomTask,
     ClearDiningTable,
-    DoHomework,
+    DoHomeworkTask,
     PileUpDishes,
     PrepareGoingToBedTask,
     WashCutleryTask,
@@ -793,7 +793,7 @@ def generate_DoHomework_data(controller: Controller) -> None:
     laptop_id = "Laptop|-00.50|+00.56|+00.29"
     cellphone_id = "CellPhone|-00.26|+00.56|+00.52"
 
-    task = DoHomework()
+    task = DoHomeworkTask()
     advancement = 2  # drawer(isOpen=False 1) cellphone/drawer:contained_in (cellphone:isPickedUp=True 1)
     data_recorder = TaskDataRecorder(
         "DoHomework",
@@ -917,7 +917,7 @@ def generate_CleanToilets_data(controller: Controller) -> None:
     spray_bottle_id = "SprayBottle|-03.09|+00.23|+00.29"
     scrub_brush_id = "ScrubBrush|+00.40|+00.00|+02.69"
 
-    task = CleanToilets()
+    task = CleanToiletsTask()
     advancement = 0
     data_recorder = TaskDataRecorder(
         "CleanToilets",

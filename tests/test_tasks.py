@@ -12,13 +12,13 @@ from PIL import Image
 
 from rl_thor.envs.sim_objects import SimObjectType
 from rl_thor.envs.tasks.tasks import (
-    CleanToilets,
+    CleanToiletsTask,
     CleanUpBathroomTask,
     CleanUpBedroomTask,
     CleanUpKitchenTask,
     CleanUpLivingRoomTask,
     ClearDiningTable,
-    DoHomework,
+    DoHomeworkTask,
     LookInLight,
     Open,
     Pickup,
@@ -202,14 +202,14 @@ def test_WashCutleryTask() -> None:
 
 def test_DoHomeworkTask() -> None:
     """Test the DoHomework task."""
-    task = DoHomework()
+    task = DoHomeworkTask()
     task_data_dir = test_task_data_dir / "DoHomework"
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 
 def test_CleanToilets() -> None:
     """Test the CleanToilets task."""
-    task = CleanToilets()
+    task = CleanToiletsTask()
     task_data_dir = test_task_data_dir / "CleanToilets"
     generate_task_tests_from_saved_data(task, task_data_dir)
 

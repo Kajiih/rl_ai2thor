@@ -76,9 +76,13 @@ class TaskType(StrEnum):
     WATCH_TV = "WatchTV"
     # === Benchmark tasks ===
     PREPARE_MEAL = "PrepareMeal"
+    WASH_CUTLERY = "WashCutlery"
     RELAX_ON_SOFA = "RelaxOnSofa"
+    CLEAR_DINING_TABLE = "ClearDiningTable"
     READ_BOOK_IN_BED = "ReadBookInBed"
+    DO_HOMEWORK = "DoHomework"
     SETUP_BATH = "SetupBath"
+    CLEAN_TOILETS = "CleanToilets"
     CLEAN_UP_KITCHEN = "CleanUpKitchen"
     CLEAN_UP_LIVING_ROOM = "CleanUpLivingRoom"
     CLEAN_UP_BEDROOM = "CleanUpBedroom"
@@ -1957,7 +1961,7 @@ class DoHomeworkOld(GraphTask):
         return "Do homework by putting an open book and a pencil on the desk, carrying a pen, and looking at the book"
 
 
-class DoHomework(GraphTask):
+class DoHomeworkTask(GraphTask):
     """
     Task for doing homework.
 
@@ -2267,7 +2271,7 @@ class ExtendedPrepareForShowerTask(PrepareForShowerTask):
         return "Prepare for a shower by putting a towel on a towel holder, a soap bar in the bathtub and turning on the shower head. Also put cloths in the garbage can"
 
 
-class CleanToilets(GraphTask):
+class CleanToiletsTask(GraphTask):
     """
     Task for cleaning the toilets.
 
@@ -2774,9 +2778,13 @@ ALL_TASKS = {
     TaskType.WATCH_TV: WatchTV,
     # === Benchmark tasks ===
     TaskType.PREPARE_MEAL: PrepareMealTask,
+    TaskType.WASH_CUTLERY: WashCutleryTask,
     TaskType.RELAX_ON_SOFA: PrepareWatchingTVTask,
+    TaskType.CLEAR_DINING_TABLE: ClearDiningTable,
     TaskType.READ_BOOK_IN_BED: PrepareGoingToBedTask,
+    TaskType.DO_HOMEWORK: DoHomeworkTask,
     TaskType.SETUP_BATH: PrepareForShowerTask,
+    TaskType.CLEAN_TOILETS: CleanToiletsTask,
     TaskType.CLEAN_UP_KITCHEN: CleanUpKitchenTask,
     TaskType.CLEAN_UP_BEDROOM: CleanUpBedroomTask,
     TaskType.CLEAN_UP_LIVING_ROOM: CleanUpLivingRoomTask,
