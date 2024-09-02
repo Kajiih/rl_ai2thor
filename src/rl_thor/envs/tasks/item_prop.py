@@ -37,6 +37,8 @@ from rl_thor.envs.tasks._item_prop_variable import (
     IsToggledProp,
     IsUsedUpProp,
     OpennessProp,
+    ReceptacleClearedProp,
+    ReceptacleMaxObjectsProp,
     VisibleProp,
 )
 from rl_thor.envs.tasks.item_prop_interface import ItemProp

@@ -10,17 +10,16 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rl_thor.envs.sim_objects import OBJECT_TYPES_DATA, SimObjFixedProp, SimObjId, SimObjMetadata
 from rl_thor.envs.tasks._item_prop_fixed import PickupableProp, ReceptacleProp
 from rl_thor.envs.tasks._item_prop_variable import IsOpenIfPossibleProp, IsPickedUpProp
-from rl_thor.envs.tasks.item_prop_interface import RelationAuxProp
 from rl_thor.envs.tasks.items import ItemId
 from rl_thor.utils.ai2thor_utils import compute_objects_2d_distance
 
 if TYPE_CHECKING:
-    from rl_thor.envs.tasks.item_prop_interface import ItemFixedProp
+    from rl_thor.envs.tasks.item_prop_interface import ItemFixedProp, ItemVariableProp, RelationAuxProp
     from rl_thor.envs.tasks.items import CandidateId, TaskItem
 
 
@@ -72,7 +71,7 @@ class Relation(ABC):
     type_id: RelationTypeId
     inverse_relation_type_id: RelationTypeId
     candidate_required_prop: ItemFixedProp | None = None
-    auxiliary_properties: frozenset[RelationAuxProp] = frozenset()
+    auxiliary_properties_blueprint: frozenset[tuple[type[RelationAuxProp], Any]] = frozenset()
 
     def __init__(
         self,
@@ -99,12 +98,21 @@ class Relation(ABC):
 
         # self.are_candidates_compatible = functools.lru_cache(maxsize=None)(self._uncached_are_candidates_compatible)
 
+        # === Handle auxiliary properties ===
+        self.auxiliary_properties_blueprint_list = list(self.auxiliary_properties_blueprint)
+        self.auxiliary_properties = frozenset([
+            prop_blueprint[0](*prop_blueprint[1:], main_relation=self)
+            for prop_blueprint in self.auxiliary_properties_blueprint_list
+        ])
+
         # === Type Annotations ===
         self.main_item_id: ItemId
         self.related_item_id: ItemId
         self.inverse_relation: Relation
         self.main_item: TaskItem
         self.related_item: TaskItem
+        self.auxiliary_properties: frozenset[RelationAuxProp]
+        self.auxiliary_properties_blueprint_list: list[tuple[type[RelationAuxProp], Any]]
         self.maximum_advancement: int
 
     def init_maximum_advancement(self) -> None:
@@ -266,7 +274,7 @@ class ReceptacleOfRelation(Relation):
     type_id = RelationTypeId.RECEPTACLE_OF
     inverse_relation_type_id = RelationTypeId.CONTAINED_IN
     candidate_required_prop = ReceptacleProp(True)
-    auxiliary_properties = frozenset({RelationAuxProp(IsOpenIfPossibleProp, True)})
+    auxiliary_properties_blueprint = frozenset({(IsOpenIfPossibleProp, True)})
 
     def __init__(
         self,
@@ -323,7 +331,7 @@ class ContainedInRelation(Relation):
     type_id = RelationTypeId.CONTAINED_IN
     inverse_relation_type_id = RelationTypeId.RECEPTACLE_OF
     candidate_required_prop = PickupableProp(True)
-    auxiliary_properties = frozenset({RelationAuxProp(IsPickedUpProp, True)})
+    auxiliary_properties_blueprint = frozenset({(IsPickedUpProp, True)})
 
     def __init__(
         self,
@@ -379,7 +387,7 @@ class CloseToRelation(Relation):
 
     type_id = RelationTypeId.CLOSE_TO
     inverse_relation_type_id = RelationTypeId.CLOSE_TO
-    auxiliary_properties = frozenset({RelationAuxProp(IsPickedUpProp, True)})
+    auxiliary_properties_blueprint = frozenset({(IsPickedUpProp, True)})
 
     def __init__(
         self,

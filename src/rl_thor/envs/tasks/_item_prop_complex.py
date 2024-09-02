@@ -11,8 +11,6 @@ TODO: Finish module docstring.
 
 from __future__ import annotations
 
-from typing import Any
-
 from rl_thor.envs.sim_objects import (
     COOKING_SOURCES,
     HEAT_SOURCES,
@@ -32,6 +30,7 @@ from rl_thor.envs.tasks._item_prop_fixed import (
 )
 from rl_thor.envs.tasks._item_prop_variable import IndirectIsToggledProp, IsPickedUpProp, IsToggledProp
 from rl_thor.envs.tasks.item_prop_interface import (
+    AI2ThorBasedProp,
     FillableLiquid,
     ItemVariableProp,
     MultiValuePSF,
@@ -39,13 +38,13 @@ from rl_thor.envs.tasks.item_prop_interface import (
     TemperatureValue,
 )
 from rl_thor.envs.tasks.items import AuxItem
-from rl_thor.envs.tasks.relations import ContainedInRelation, ReceptacleOfRelation
+from rl_thor.envs.tasks.relations import ReceptacleOfRelation, Relation
 
 
 # %% === Property Definitions ===
 # TODO: Support filling with other liquids and contextual interactions
 # TODO: Add sink as an auxiliary item and a contained_in relation -> doesn't work, we need "fill_liquid" action
-class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
+class IsFilledWithLiquidProp(AI2ThorBasedProp[bool, bool], ItemVariableProp[bool]):
     """Is filled with liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_FILLED_WITH_LIQUID
@@ -63,7 +62,7 @@ class IsFilledWithLiquidProp(ItemVariableProp[bool, bool]):
 
 # TODO: Support filling with other liquids and contextual interactions
 # TODO: Add IsFilledWithLiquidProp as auxiliary property
-class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
+class FillLiquidProp(AI2ThorBasedProp[FillableLiquid, bool], ItemVariableProp[bool]):
     """Fill liquid item property."""
 
     target_ai2thor_property = SimObjVariableProp.FILL_LIQUID
@@ -71,7 +70,7 @@ class FillLiquidProp(ItemVariableProp[FillableLiquid, bool]):
 
 
 # TODO: Add sink as an auxiliary item and a contained_in relation -> Check if that works
-class IsDirtyProp(ItemVariableProp[bool, bool]):
+class IsDirtyProp(AI2ThorBasedProp[bool, bool], ItemVariableProp[bool]):
     """Is dirty item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_DIRTY
@@ -91,7 +90,7 @@ class IsDirtyProp(ItemVariableProp[bool, bool]):
 # TODO: Implement better handling for StoveBurner not being directly toggleable.
 # TODO: Implement contextual cooking interactions (e.g. toaster...)
 # TODO: Implement cooking with Microwave that requires to be open to put the object inside first.
-class IsCookedProp(ItemVariableProp[bool, bool]):
+class IsCookedProp(AI2ThorBasedProp[bool, bool], ItemVariableProp[bool]):
     """
     Property for cooked items.
 
@@ -116,7 +115,7 @@ class IsCookedProp(ItemVariableProp[bool, bool]):
 # TODO: Implement contextual temperature interactions (e.g. coffee machine and mugs...)
 # TODO: Add the fact that the Microwave has to be open to put the object inside first then closed then turned on.
 # TODO: Add the fact that the Fridge has to be open to put the object inside first then closed.
-class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
+class TemperatureProp(AI2ThorBasedProp[TemperatureValue, None], ItemVariableProp[None]):
     """
     Property for items with a certain temperature.
 
@@ -127,7 +126,12 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
 
     target_ai2thor_property = SimObjVariableProp.TEMPERATURE
 
-    def __init__(self, target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue) -> None:
+    def __init__(
+        self,
+        target_satisfaction_function: SingleValuePSF[TemperatureValue] | TemperatureValue,
+        main_prop: ItemVariableProp | None = None,
+        main_relation: Relation | None = None,
+    ) -> None:
         """Initialize the Property object."""
         if isinstance(target_satisfaction_function, TemperatureValue):
             target_satisfaction_function = SingleValuePSF(target_satisfaction_function)
@@ -154,11 +158,11 @@ class TemperatureProp(ItemVariableProp[TemperatureValue, Any]):
                 )
             })
 
-        super().__init__(target_satisfaction_function)
+        super().__init__(target_satisfaction_function, main_prop=main_prop, main_relation=main_relation)
         self.target_satisfaction_function: SingleValuePSF[TemperatureValue]
 
 
-class BaseIsSlicedProp(ItemVariableProp[bool, bool]):
+class BaseIsSlicedProp(AI2ThorBasedProp[bool, bool], ItemVariableProp):
     """Is sliced item property."""
 
     target_ai2thor_property = SimObjVariableProp.IS_SLICED

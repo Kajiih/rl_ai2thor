@@ -42,7 +42,6 @@ def main():
     # generate_prepare_going_to_bed_data(controller)
     # generate_WashCutleryTask_data(controller)
     # generate_ClearDiningTable_data(controller)
-    # TODO: test generate_ClearDiningTable_data when fixed
     # generate_DoHomework_data(controller)
     # generate_CleanToilets_data(controller)
     # generate_clean_up_kitchen_data(controller)
@@ -747,7 +746,8 @@ def generate_ClearDiningTable_data(controller: Controller) -> None:
         "Pencil|-02.83|+00.68|+01.51",
         "Pen|-03.00|+00.69|+01.46",
     ]
-    init_advancement = RECEPTACLE_MAX_OBJECTS_PROP_LIMIT - len(dining_table_receptacleObjectIds)
+    advancement = RECEPTACLE_MAX_OBJECTS_PROP_LIMIT - len(dining_table_receptacleObjectIds) + 1
+    # Satisfied ReceptacleMaxObjects props + IsOpenIfPossible
     task = ClearDiningTable()
     data_recorder = TaskDataRecorder(
         "ClearDiningTable",
@@ -755,11 +755,15 @@ def generate_ClearDiningTable_data(controller: Controller) -> None:
         "FloorPlan201",
         test_task_data_dir,
         task=task,
-        init_advancement=init_advancement,
+        init_advancement=advancement,
     )
-
+    terminated = False
     for object_id in dining_table_receptacleObjectIds:
-        terminated = object_id == dining_table_receptacleObjectIds[-1]  # Terminate on last object pickup
+        # Terminate and + 1 on last object pickup
+        if object_id == dining_table_receptacleObjectIds[-1]:
+            terminated = True
+            advancement += 1
+        advancement += 1  # Increment advancement by 1 for each pickup action
         # === Pick up the object ===
         data_recorder.record_step(
             action_args={
@@ -770,8 +774,6 @@ def generate_ClearDiningTable_data(controller: Controller) -> None:
             advancement=advancement,
             terminated=terminated,
         )
-        # Increment advancement by 1 for each pickup action
-        advancement += 1
 
         # === Drop the object ===
         data_recorder.record_step(

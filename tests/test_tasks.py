@@ -192,12 +192,11 @@ def test_WashCutleryTask() -> None:
     generate_task_tests_from_saved_data(task, task_data_dir)
 
 
-# TODO: Uncomment when the task is fixed
-# def test_ClearDiningTable() -> None:
-#     """Test the ClearDiningTable task."""
-#     task = ClearDiningTable()
-#     task_data_dir = test_task_data_dir / "ClearDiningTable"
-#     generate_task_tests_from_saved_data(task, task_data_dir)
+def test_ClearDiningTable() -> None:
+    """Test the ClearDiningTable task."""
+    task = ClearDiningTable()
+    task_data_dir = test_task_data_dir / "ClearDiningTable"
+    generate_task_tests_from_saved_data(task, task_data_dir)
 
 
 def test_DoHomeworkTask() -> None:
