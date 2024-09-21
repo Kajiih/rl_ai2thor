@@ -79,7 +79,7 @@ More examples and training scripts can be found in the `examples` folder of this
 
 To go further, we recommend you to get familiar with the [concepts of the ITHOR simulation environment](https://ai2thor.allenai.org/ithor/documentation/concepts) and [our documentation](https://github.com/Kajiih/rl_thor) **[create actual documentation]** to understand how tasks are defined.
 
-## ☁️ Running Headless
+<!-- ## ☁️ Running Headless
 
 By default AI2-THOR opens up a Unity window each time a Controller is instantiated, but there are several ways to run AI2-THOR in headless mode, which is useful for training agents on a remote server or in a cloud environment. Depending on your needs, you can use one of the following methods:
 
@@ -124,13 +124,13 @@ In the container, you can instantiate the controller, for example, run the test 
 
 ```bash
 python example_agent.py
-```
+``` -->
 
 ## ✏️ Environment Configuration
 
 The environment can be configured through a `yaml` file or by dictionary when instantiating the environment.
 
-For a complete enumeration of the configuration options, see [Configuration](https://github.com/Kajiih/rl_thor). **[create actual documentation]**
+For a complete enumeration of the configuration options, see [Configuration](https://github.com/Kajiih/rl_thor). <!-- **[create actual documentation]** -->
 
 If unspecified, the environment configuration is equivalent to the file `configurations/environment_config.yaml` of this repository.
 
@@ -225,13 +225,13 @@ env = gym.make(
     config_override=config_override,
 )
 ```
-
+<!-- 
 ### 🕹️ Task Configuration
 
 [WIP]
-<!-- [Add more details about the task configuration] -->
+[Add more details about the task configuration] -->
 
-## ➕ Creating new tasks - [WIP]
+## ➕ Creating new tasks <!--- [WIP]-->
 
 In AI2-THOR RL, we use a specific task description format called [Graph Task](https://github.com/Kajiih/rl_thor) <!--**[link to documentation]**. -->
 
